@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Star, Heart, Filter, Zap } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Star, Heart, Filter, Zap, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { useCart } from '../context';
 import { Product } from '../types';
 import { calculatePrice } from '../data/products';
@@ -8,10 +8,17 @@ import { calculatePrice } from '../data/products';
 export const Shop: React.FC = () => {
     const { currency, wishlist, toggleWishlist } = useCart();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const categoryFilter = searchParams.get('category');
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Filter & Sort State
+    const [sortBy, setSortBy] = useState('featured');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -42,10 +49,52 @@ export const Shop: React.FC = () => {
         toggleWishlist(product);
     };
 
-    // Filter products by category if specified
-    const filteredProducts = categoryFilter
-        ? products.filter(p => p.category && p.category.toLowerCase() === categoryFilter.toLowerCase())
-        : products;
+    // Filter & Sort Logic
+    const processedProducts = useMemo(() => {
+        let result = [...products];
+
+        // 1. Category Filter
+        if (categoryFilter) {
+            result = result.filter(p => p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
+        }
+
+        // 2. Price Filter
+        if (minPrice || maxPrice) {
+            const min = minPrice ? Number(minPrice) : 0;
+            const max = maxPrice ? Number(maxPrice) : Infinity;
+            result = result.filter(p => {
+                const price = calculatePrice(p).final;
+                return price >= min && price <= max;
+            });
+        }
+
+        // 3. Sorting
+        result.sort((a, b) => {
+            const priceA = calculatePrice(a).final;
+            const priceB = calculatePrice(b).final;
+
+            switch (sortBy) {
+                case 'price-asc':
+                    return priceA - priceB;
+                case 'price-desc':
+                    return priceB - priceA;
+                case 'rating':
+                    return (b.rating || 0) - (a.rating || 0);
+                case 'newest':
+                    const idA = Number(a.id);
+                    const idB = Number(b.id);
+                    if (!isNaN(idA) && !isNaN(idB)) {
+                        return idB - idA;
+                    }
+                    return String(b.id).localeCompare(String(a.id));
+                default:
+                    // Featured/Default - randomize or keep original order
+                    return 0;
+            }
+        });
+
+        return result;
+    }, [products, categoryFilter, minPrice, maxPrice, sortBy]);
 
     if (loading) {
         return (
@@ -61,38 +110,130 @@ export const Shop: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header with Filter Info */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-extrabold text-gray-900">
-                        {categoryFilter ? `${categoryFilter} Products` : 'All Products'}
-                    </h1>
-                    {categoryFilter && (
-                        <div className="mt-2 flex items-center gap-2">
-                            <Filter className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm text-gray-600">
-                                Filtered by: <span className="font-semibold text-primary">{categoryFilter}</span>
-                            </span>
-                            <Link to="/shop" className="ml-2 text-sm text-blue-600 hover:underline">
-                                Clear filter
-                            </Link>
+                {/* Header & Controls */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-gray-900">
+                            {categoryFilter ? `${categoryFilter}` : 'All Products'}
+                        </h1>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Showing {processedProducts.length} product{processedProducts.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Mobile Filter Toggle */}
+                        <button
+                            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                            className="md:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <Filter className="w-4 h-4" /> Filters
+                        </button>
+
+                        {/* Sort Dropdown */}
+                        <div className="relative group">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:border-primary/50 transition-colors cursor-pointer">
+                                <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="appearance-none bg-transparent border-none focus:ring-0 text-gray-700 pr-4 cursor-pointer outline-none"
+                                >
+                                    <option value="featured">Featured</option>
+                                    <option value="price-asc">Price: Low to High</option>
+                                    <option value="price-desc">Price: High to Low</option>
+                                    <option value="rating">Top Rated</option>
+                                    <option value="newest">Newest</option>
+                                </select>
+                                <ChevronDown className="w-4 h-4 text-gray-400 pointer-events-none absolute right-3" />
+                            </div>
                         </div>
-                    )}
-                    <p className="mt-2 text-sm text-gray-500">
-                        Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
-                    </p>
+                    </div>
+                </div>
+
+                {/* Filters Section */}
+                <div className={`mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all duration-300 ${isFilterExpanded ? 'block' : 'hidden md:block'}`}>
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                        {/* Price Range */}
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Price Range:</span>
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
+                                    <input
+                                        type="number"
+                                        placeholder="Min"
+                                        value={minPrice}
+                                        onChange={(e) => setMinPrice(e.target.value)}
+                                        className="w-24 pl-6 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    />
+                                </div>
+                                <span className="text-gray-400">-</span>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
+                                    <input
+                                        type="number"
+                                        placeholder="Max"
+                                        value={maxPrice}
+                                        onChange={(e) => setMaxPrice(e.target.value)}
+                                        className="w-24 pl-6 pr-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Active Filter Badges */}
+                        {(minPrice || maxPrice || categoryFilter) && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <div className="h-6 w-px bg-gray-200 mx-2 hidden md:block"></div>
+                                {categoryFilter && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                                        Category: {categoryFilter}
+                                        <Link to="/shop" className="hover:text-primary-dark ml-1"><span className="sr-only">Remove</span>×</Link>
+                                    </div>
+                                )}
+                                {(minPrice || maxPrice) && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+                                        Price: {minPrice || '0'} - {maxPrice || 'Any'}
+                                        <button onClick={() => { setMinPrice(''); setMaxPrice(''); }} className="hover:text-red-500 ml-1">×</button>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setMinPrice('');
+                                        setMaxPrice('');
+                                        setSortBy('featured');
+                                        if (categoryFilter) navigate('/shop');
+                                    }}
+                                    className="text-xs text-gray-500 hover:text-red-600 underline"
+                                >
+                                    Clear all
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Products Grid */}
-                {filteredProducts.length === 0 ? (
-                    <div className="text-center py-16">
-                        <p className="text-gray-500 text-lg">No products found in this category.</p>
-                        <Link to="/shop" className="mt-4 inline-block text-primary hover:underline">
-                            View all products
-                        </Link>
+                {processedProducts.length === 0 ? (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                        <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Filter className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900">No products found</h3>
+                        <p className="text-gray-500 text-sm mt-1 max-w-sm mx-auto">
+                            We couldn't find any products matching your current filters. Try adjusting your search criteria.
+                        </p>
+                        <button
+                            onClick={() => { setMinPrice(''); setMaxPrice(''); setSortBy('featured'); }}
+                            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium text-sm"
+                        >
+                            Clear Filters
+                        </button>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {filteredProducts.map((product) => {
+                        {processedProducts.map((product) => {
                             const prices = calculatePrice(product);
                             const productId = product.id || (product as any)._id;
                             return (

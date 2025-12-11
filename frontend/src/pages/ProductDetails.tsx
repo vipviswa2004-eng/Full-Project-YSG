@@ -41,6 +41,29 @@ export const ProductDetails: React.FC = () => {
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
     const [isZoomed, setIsZoomed] = useState(false);
 
+    // Save to recently viewed
+    useEffect(() => {
+        if (product && product.id) {
+            try {
+                const stored = localStorage.getItem('recentlyViewed');
+                let viewedIds: string[] = stored ? JSON.parse(stored) : [];
+
+                // Remove if already exists (to move to front)
+                viewedIds = viewedIds.filter(vId => vId !== product.id);
+
+                // Add to front
+                viewedIds.unshift(product.id);
+
+                // Keep max 10
+                viewedIds = viewedIds.slice(0, 10);
+
+                localStorage.setItem('recentlyViewed', JSON.stringify(viewedIds));
+            } catch (e) {
+                console.error("Failed to save recently viewed", e);
+            }
+        }
+    }, [product]);
+
     // Review State
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewRating, setReviewRating] = useState(5);

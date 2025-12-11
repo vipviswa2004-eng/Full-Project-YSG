@@ -22,7 +22,9 @@ const ProductSchema = new mongoose.Schema({
     maxLimit: { type: Number, default: 10 }
   },
   sectionId: String,
-  shopCategoryId: String
+  shopCategoryId: String,
+  isTrending: { type: Boolean, default: false },
+  isBestseller: { type: Boolean, default: false }
 }, { id: false });
 
 const UserSchema = new mongoose.Schema({

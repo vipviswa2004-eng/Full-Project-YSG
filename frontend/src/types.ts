@@ -54,6 +54,8 @@ export interface Product {
   reviewsCount?: number;
   sectionId?: string; // Link to shop section
   shopCategoryId?: string; // Link to shop category
+  isTrending?: boolean;
+  isBestseller?: boolean;
 }
 
 export interface CartItem extends Product {

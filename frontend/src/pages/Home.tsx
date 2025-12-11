@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { products, calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context';
-import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Briefcase, Sparkles } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Briefcase, Sparkles, History } from 'lucide-react';
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory } from '../types';
 
@@ -50,11 +50,94 @@ const HERO_SLIDES = [
   }
 ];
 
+const RecentlyViewed: React.FC = () => {
+  const { products: allProducts, currency, wishlist, toggleWishlist } = useCart();
+  const [recentProducts, setRecentProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('recentlyViewed');
+      if (stored) {
+        const ids = JSON.parse(stored);
+        // Map IDs to products, maintaining order
+        const viewed = ids
+          .map((id: string) => allProducts.find(p => p.id === id || (p as any)._id === id) || products.find(p => p.id === id))
+          .filter(Boolean);
+        setRecentProducts(viewed);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [allProducts]);
+
+  if (recentProducts.length === 0) return null;
+
+  const formatPrice = (price: number) => {
+    return currency === 'INR'
+      ? `₹${price.toLocaleString('en-IN')}`
+      : `$${(price * 0.012).toFixed(2)}`;
+  };
+
+  const isInWishlist = (id: string) => wishlist.some(p => p.id === id);
+
+  const handleWishlistToggle = (e: React.MouseEvent, product: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto py-8 px-4 border-t border-gray-100">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <History className="w-6 h-6 text-gray-700" /> Recently Viewed
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+        {recentProducts.slice(0, 5).map((product) => {
+          const prices = calculatePrice(product);
+          const productId = product.id || (product as any)._id;
+          return (
+            <div key={productId} className="relative group">
+              <Link to={`/product/${productId}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
+                <div className="relative aspect-square bg-white overflow-hidden">
+                  <img className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
+                  {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+                </div>
+
+                <div className="p-2.5 flex flex-col flex-grow">
+                  <div className="flex-1">
+                    <h3 className="text-xs font-semibold text-gray-800 line-clamp-2 h-8 leading-4 group-hover:text-primary transition-colors">{product.name}</h3>
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-sm font-bold text-gray-900">{formatPrice(prices.final)}</span>
+                    {(product.discount !== undefined && product.discount > 0) && (
+                      <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+
+              <button
+                onClick={(e) => handleWishlistToggle(e, product)}
+                className={`absolute top-1.5 right-1.5 p-1 bg-white rounded-full shadow-sm transition-all hover:scale-110 z-20 ${isInWishlist(productId) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
+              >
+                <Heart className={`w-3.5 h-3.5 ${isInWishlist(productId) ? 'fill-current' : ''}`} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export const Home: React.FC = () => {
-  const { currency, wishlist, toggleWishlist, setIsGiftAdvisorOpen } = useCart();
+  const { currency, wishlist, toggleWishlist, setIsGiftAdvisorOpen, products: contextProducts } = useCart();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [sections, setSections] = useState<Section[]>([]);
   const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
+
+  // Use context products if available, fallback to local
+  const displayProducts = contextProducts.length > 0 ? contextProducts : products;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -205,7 +288,7 @@ export const Home: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-          {products.slice(0, 8).map((product) => {
+          {displayProducts.filter(p => p.isTrending).map((product) => {
             const prices = calculatePrice(product);
             return (
               <div key={product.id} className="relative group">
@@ -247,10 +330,62 @@ export const Home: React.FC = () => {
           })}
         </div>
 
+        {/* Bestsellers Grid */}
+        <div className="max-w-7xl mx-auto py-8 px-4 mt-8">
+          <div className="flex justify-between items-center mb-6">
+            <div><h2 className="text-2xl md:text-3xl font-bold text-gray-900">Best Sellers 🏆</h2><p className="text-sm text-gray-500 mt-1">Our most popular products loved by everyone</p></div>
+            <Link to="/products?sort=Bestsellers" className="text-primary font-bold text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-4 h-4" /></Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+            {displayProducts.filter(p => p.isBestseller).map((product) => {
+              const prices = calculatePrice(product);
+              return (
+                <div key={product.id} className="relative group">
+                  <Link to={`/product/${product.id}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
+                    <div className="relative aspect-square bg-white overflow-hidden">
+                      <img className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
+                      {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+
+                      <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
+                        <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 flex flex-col flex-grow">
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{product.category}</p>
+                        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-10 leading-5">{product.name}</h3>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
+                          <span className="text-[10px] text-gray-400">(1.2k)</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
+                        <div><span className="text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-xs text-gray-400 line-through ml-2">{formatPrice(prices.original)}</span></div>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <button
+                    onClick={(e) => handleWishlistToggle(e, product)}
+                    className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                  >
+                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="mt-8 text-center md:hidden">
           <Link to="/products" className="inline-block border border-gray-300 bg-white text-gray-800 px-8 py-3 rounded-full font-bold text-sm shadow-sm">Browse All Products</Link>
         </div>
       </div>
+
+      {/* Recently Viewed */}
+      <RecentlyViewed />
 
       {/* Corporate Banner */}
       <div className="bg-gray-900 py-12 mt-8">

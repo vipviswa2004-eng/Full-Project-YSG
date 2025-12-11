@@ -716,7 +716,28 @@ export const Admin: React.FC = () => {
                             <div className="flex-1 p-8 overflow-y-auto">
                                 {editTab === 'vital' && (<div className="space-y-6">
                                     {/* Vital Info Fields */}
-                                    <div className="grid grid-cols-2 gap-6"><div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={e => setEditedProduct({ ...editedProduct, name: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Price</label><input type="number" value={editedProduct.pdfPrice} onChange={e => setEditedProduct({ ...editedProduct, pdfPrice: parseFloat(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Stock</label><input type="number" value={editedProduct.stock || 0} onChange={e => setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Discount (%)</label><input type="number" min="0" max="100" value={editedProduct.discount || 0} onChange={e => setEditedProduct({ ...editedProduct, discount: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" /></div><div><label className="block text-sm font-medium text-gray-700">Final Price (Calculated)</label><input type="text" value={editedProduct.pdfPrice && editedProduct.discount ? Math.round(editedProduct.pdfPrice * (1 - editedProduct.discount / 100)) : editedProduct.pdfPrice} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 font-bold text-green-600" /></div><div><label className="block text-sm font-medium text-gray-700">Category</label><select value={editedProduct.category} onChange={e => setEditedProduct({ ...editedProduct, category: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="">-- Select Category --</option>{shopCategories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select></div><div><label className="block text-sm font-medium text-gray-700">Status</label><select value={editedProduct.status || 'Active'} onChange={e => setEditedProduct({ ...editedProduct, status: e.target.value as any })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Active">Active</option><option value="Draft">Draft</option><option value="Out of Stock">Out of Stock</option></select></div><div><label className="block text-sm font-medium text-gray-700">Rating (Auto-calculated)</label><input type="number" step="0.1" min="0" max="5" value={editedProduct.rating || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div><div><label className="block text-sm font-medium text-gray-700">Reviews Count (Auto-calculated)</label><input type="number" min="0" value={editedProduct.reviewsCount || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div></div></div>)}
+                                    <div className="grid grid-cols-2 gap-6"><div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={e => setEditedProduct({ ...editedProduct, name: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Price</label><input type="number" value={editedProduct.pdfPrice} onChange={e => setEditedProduct({ ...editedProduct, pdfPrice: parseFloat(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Stock</label><input type="number" value={editedProduct.stock || 0} onChange={e => setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Discount (%)</label><input type="number" min="0" max="100" value={editedProduct.discount || 0} onChange={e => setEditedProduct({ ...editedProduct, discount: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" /></div><div><label className="block text-sm font-medium text-gray-700">Final Price (Calculated)</label><input type="text" value={editedProduct.pdfPrice && editedProduct.discount ? Math.round(editedProduct.pdfPrice * (1 - editedProduct.discount / 100)) : editedProduct.pdfPrice} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 font-bold text-green-600" /></div><div><label className="block text-sm font-medium text-gray-700">Category</label><select value={editedProduct.category} onChange={e => setEditedProduct({ ...editedProduct, category: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="">-- Select Category --</option>{shopCategories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select></div><div><label className="block text-sm font-medium text-gray-700">Status</label><select value={editedProduct.status || 'Active'} onChange={e => setEditedProduct({ ...editedProduct, status: e.target.value as any })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Active">Active</option><option value="Draft">Draft</option><option value="Out of Stock">Out of Stock</option></select></div><div><label className="block text-sm font-medium text-gray-700">Rating (Auto-calculated)</label><input type="number" step="0.1" min="0" max="5" value={editedProduct.rating || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div><div><label className="block text-sm font-medium text-gray-700">Reviews Count (Auto-calculated)</label><input type="number" min="0" value={editedProduct.reviewsCount || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div>
+                                        <div className="flex items-center gap-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="isTrending"
+                                                checked={editedProduct.isTrending || false}
+                                                onChange={e => setEditedProduct({ ...editedProduct, isTrending: e.target.checked })}
+                                                className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="isTrending" className="font-bold text-gray-700">Trending Product (Show on Home)</label>
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="isBestseller"
+                                                checked={editedProduct.isBestseller || false}
+                                                onChange={e => setEditedProduct({ ...editedProduct, isBestseller: e.target.checked })}
+                                                className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="isBestseller" className="font-bold text-gray-700">Bestseller Product (Show on Home)</label>
+                                        </div>
+                                    </div></div>)}
                                 {editTab === 'images' && (
                                     <div className="space-y-6">
                                         {/* Main Image */}
@@ -922,10 +943,37 @@ export const Admin: React.FC = () => {
 
                                         <div className="border-t pt-6 mt-6">
                                             <div className="flex justify-between items-center mb-4">
-                                                <h4 className="font-bold text-lg">Light Base</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.name || 'Light Base'}
+                                                        onChange={(e) => {
+                                                            const newName = e.target.value;
+                                                            const existing = editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base');
+                                                            if (existing) {
+                                                                const updatedVariations = editedProduct.variations?.map(v =>
+                                                                    (v.id === 'lb_variation' || v.name === 'Light Base') ? { ...v, name: newName, id: 'lb_variation' } : v
+                                                                );
+                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                            } else {
+                                                                const newVariation: Variation = {
+                                                                    id: 'lb_variation',
+                                                                    name: newName,
+                                                                    options: []
+                                                                };
+                                                                setEditedProduct({
+                                                                    ...editedProduct,
+                                                                    variations: [...(editedProduct.variations || []), newVariation]
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="font-bold text-lg border-b border-dashed border-gray-400 focus:border-primary focus:outline-none bg-transparent hover:border-solid w-48"
+                                                        placeholder="Variation Name"
+                                                    />
+                                                </div>
                                                 <button
                                                     onClick={() => {
-                                                        const lbVariation = editedProduct.variations?.find(v => v.name === 'Light Base');
+                                                        const lbVariation = editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base');
                                                         if (lbVariation) {
                                                             const newOption: VariationOption = {
                                                                 id: `lb_${Date.now()}`,
@@ -934,7 +982,7 @@ export const Admin: React.FC = () => {
                                                                 priceAdjustment: 0
                                                             };
                                                             const updatedVariations = editedProduct.variations?.map(v =>
-                                                                v.name === 'Light Base' ? { ...v, options: [...v.options, newOption] } : v
+                                                                (v.id === 'lb_variation' || v.name === 'Light Base') ? { ...v, options: [...v.options, newOption] } : v
                                                             );
                                                             setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                         } else {
@@ -961,7 +1009,7 @@ export const Admin: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.name === 'Light Base')?.options.map((option, idx) => (
+                                                {editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.options.map((option, idx) => (
                                                     <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                         <div className="grid grid-cols-4 gap-4">
                                                             <div>
@@ -971,7 +1019,7 @@ export const Admin: React.FC = () => {
                                                                     value={option.label}
                                                                     onChange={(e) => {
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Light Base') {
+                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                 return {
                                                                                     ...v,
                                                                                     options: v.options.map(o =>
@@ -995,7 +1043,7 @@ export const Admin: React.FC = () => {
                                                                     value={option.description || ''}
                                                                     onChange={(e) => {
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Light Base') {
+                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                 return {
                                                                                     ...v,
                                                                                     options: v.options.map(o =>
@@ -1019,7 +1067,7 @@ export const Admin: React.FC = () => {
                                                                     value={option.size || ''}
                                                                     onChange={(e) => {
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Light Base') {
+                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                 return {
                                                                                     ...v,
                                                                                     options: v.options.map(o =>
@@ -1043,7 +1091,7 @@ export const Admin: React.FC = () => {
                                                                     value={option.priceAdjustment}
                                                                     onChange={(e) => {
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Light Base') {
+                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                 return {
                                                                                     ...v,
                                                                                     options: v.options.map(o =>
@@ -1067,14 +1115,14 @@ export const Admin: React.FC = () => {
                                                                 <button
                                                                     onClick={() => {
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Light Base') {
+                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                 return {
                                                                                     ...v,
                                                                                     options: v.options.filter(o => o.id !== option.id)
                                                                                 };
                                                                             }
                                                                             return v;
-                                                                        }).filter(v => v.name !== 'Light Base' || v.options.length > 0);
+                                                                        }).filter(v => (v.id !== 'lb_variation' && v.name !== 'Light Base') || v.options.length > 0);
                                                                         setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                     }}
                                                                     className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
