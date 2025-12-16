@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Youtube } from 'lucide-react';
 
 export const Footer: React.FC = () => {
@@ -27,15 +27,16 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li><a href="#" className="hover:text-accent">Terms & Conditions</a></li>
-              <li><a href="#" className="hover:text-accent">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-accent">Shipping Info</a></li>
+              <li><Link to="/terms" className="hover:text-accent">Terms & Conditions</Link></li>
+              <li><Link to="/privacy" className="hover:text-accent">Privacy Policy</Link></li>
+              <li><Link to="/shipping" className="hover:text-accent">Shipping Info</Link></li>
+              <li><Link to="/returns" className="hover:text-accent">Return Policy</Link></li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Stay Connected</h3>
             <div className="flex space-x-4">
-              <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-pink-600 transition-colors group">
+              <a href="https://www.instagram.com/ucgroups_yathessigngalaxy" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-pink-600 transition-colors group">
                 <Instagram className="w-5 h-5 text-white" />
               </a>
               <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-blue-600 transition-colors group">

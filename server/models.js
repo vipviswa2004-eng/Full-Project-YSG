@@ -112,6 +112,51 @@ const WhatsAppLeadSchema = new mongoose.Schema({
   status: { type: String, default: 'New' } // New, Contacted, Converted
 });
 
+const SellerSchema = new mongoose.Schema({
+  id: String,
+  companyName: String,
+  contactPerson: String,
+  email: String,
+  phone: String,
+  status: { type: String, default: 'Pending' },
+  rating: { type: Number, default: 0 },
+  balance: { type: Number, default: 0 },
+  returnRate: { type: Number, default: 0 },
+  joinedDate: { type: Date, default: Date.now }
+});
+
+const TransactionSchema = new mongoose.Schema({
+  id: String,
+  orderId: String,
+  amount: Number,
+  type: String,
+  status: String,
+  date: { type: Date, default: Date.now },
+  method: String
+});
+
+const ReturnRequestSchema = new mongoose.Schema({
+  id: String,
+  orderId: String,
+  customerName: String,
+  productName: String,
+  reason: String,
+  status: { type: String, default: 'Pending' },
+  amount: Number,
+  date: { type: Date, default: Date.now }
+});
+
+const CouponSchema = new mongoose.Schema({
+  id: String,
+  code: { type: String, unique: true },
+  discountType: String,
+  value: Number,
+  expiryDate: Date,
+  usageLimit: Number,
+  usedCount: { type: Number, default: 0 },
+  status: { type: String, default: 'Active' }
+});
+
 module.exports = {
   Product: mongoose.model('Product', ProductSchema),
   User: mongoose.model('User', UserSchema),
@@ -122,5 +167,9 @@ module.exports = {
   Size: mongoose.model('Size', SizeSchema),
   Section: mongoose.model('Section', SectionSchema),
   ShopCategory: mongoose.model('ShopCategory', ShopCategorySchema),
-  WhatsAppLead: mongoose.model('WhatsAppLead', WhatsAppLeadSchema)
+  WhatsAppLead: mongoose.model('WhatsAppLead', WhatsAppLeadSchema),
+  Seller: mongoose.model('Seller', SellerSchema),
+  Transaction: mongoose.model('Transaction', TransactionSchema),
+  ReturnRequest: mongoose.model('ReturnRequest', ReturnRequestSchema),
+  Coupon: mongoose.model('Coupon', CouponSchema)
 };

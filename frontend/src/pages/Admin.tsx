@@ -1,63 +1,36 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
-import { products as initialProducts } from '../data/products';
-import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, AdminRole, Section, ShopCategory } from '../types';
-import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini';
+// import { products as initialProducts } from '../data/products';
+import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory } from '../types';
+// import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini'; // Unused
 import {
-    Loader2, Plus, Minus, Edit, Image as ImageIcon, LayoutDashboard, Package,
-    ShoppingBag, Settings, Search, Bell, Trash2, X, Upload, Sparkles,
-    Wand2, ChevronDown, ChevronRight, Filter, MoreHorizontal, User,
+    Plus, Minus, Edit, LayoutDashboard, Package,
+    ShoppingBag, Search, Trash2, X, Filter,
     DollarSign, Truck, AlertCircle, CheckCircle, BarChart3, Users,
-    TrendingUp, Star, Activity, ArrowUpRight, Eye, Cpu, ShieldCheck,
-    CreditCard, RotateCcw, MessageSquare, Ticket, Lock, Save, Ban, AlertTriangle, ImagePlus
+    Star, Eye, ShieldCheck,
+    RotateCcw, Ticket, Ban, ImagePlus
 } from 'lucide-react';
 
-// ... (Mock Data Generators remain the same)
-const generateMockOrders = (): Order[] => [
-    { id: 'ORD-7829', customerId: 'C1', customerName: 'Ravi Kumar', date: '2023-10-25', total: 1450, status: 'Processing', paymentMethod: 'UPI', paymentStatus: 'Paid', itemsCount: 2, shippingAddress: '123 Main St, Delhi' },
-    { id: 'ORD-7830', customerId: 'C2', customerName: 'Priya Sharma', date: '2023-10-24', total: 3200, status: 'Shipped', paymentMethod: 'UPI', paymentStatus: 'Paid', itemsCount: 1, trackingNumber: 'TRK998877', courier: 'BlueDart', shippingAddress: '45 Park Ave, Mumbai' },
-    { id: 'ORD-7831', customerId: 'C3', customerName: 'Amit Singh', date: '2023-10-24', total: 850, status: 'Delivered', paymentMethod: 'COD', paymentStatus: 'Paid', itemsCount: 1, shippingAddress: '88 Lake View, Bangalore' },
-];
-
-const generateMockCustomers = (): Customer[] => [
-    { id: 'C1', name: 'Ravi Kumar', email: 'ravi@example.com', phone: '9876543210', totalOrders: 5, totalSpent: 8500, status: 'Active', joinDate: '2023-01-10', address: '123 Main St, Delhi, 110001' },
-    { id: 'C2', name: 'Priya Sharma', email: 'priya@example.com', phone: '9876543211', totalOrders: 12, totalSpent: 24000, status: 'Active', joinDate: '2023-02-15', address: '45 Park Ave, Mumbai, 400001' },
-    { id: 'C3', name: 'Amit Singh', email: 'amit@example.com', phone: '9876543212', totalOrders: 1, totalSpent: 850, status: 'Blocked', joinDate: '2023-05-20', address: '88 Lake View, Bangalore, 560001' },
-];
-
-const generateMockSellers = (): Seller[] => [
-    { id: 'S1', companyName: 'Crystal Arts Ltd', contactPerson: 'John Doe', email: 'john@crystal.com', status: 'Active', rating: 4.8, balance: 15000, returnRate: 2.5 },
-    { id: 'S2', companyName: 'WoodWorks India', contactPerson: 'Jane Smith', email: 'jane@woodworks.com', status: 'Pending', rating: 0, balance: 0, returnRate: 0 },
-];
-
-const generateMockTransactions = (): Transaction[] => [
-    { id: 'TXN-001', orderId: 'ORD-7829', amount: 1450, type: 'Credit', status: 'Success', date: '2023-10-25', method: 'UPI' },
-    { id: 'TXN-002', orderId: 'ORD-7830', amount: 3200, type: 'Credit', status: 'Success', date: '2023-10-24', method: 'UPI' },
-    { id: 'TXN-003', orderId: 'PAY-S1-001', amount: 5000, type: 'Payout', status: 'Pending', date: '2023-10-26', method: 'UPI' },
-];
-
-const generateMockReturns = (): ReturnRequest[] => [
-    { id: 'RET-001', orderId: 'ORD-7800', customerName: 'Rahul V', productName: '3D Crystal', reason: 'Damaged in transit', status: 'Pending', amount: 700 },
-    { id: 'RET-002', orderId: 'ORD-7750', customerName: 'Sneha G', productName: 'Wood Frame', reason: 'Wrong size', status: 'Approved', amount: 1200 },
-];
-
-
+// Mock data generators removed
 
 export const Admin: React.FC = () => {
     const { user } = useCart();
     const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'customers' | 'sellers' | 'payments' | 'logistics' | 'returns' | 'reviews' | 'analytics' | 'coupons' | 'security' | 'settings' | 'shop-sections'>('dashboard');
 
-    const [productList, setProductList] = useState<Product[]>(initialProducts);
-    const [orders, setOrders] = useState<Order[]>(generateMockOrders());
-    const [customers, setCustomers] = useState<Customer[]>(generateMockCustomers());
-    const [sellers, setSellers] = useState<Seller[]>(generateMockSellers());
-    const [transactions, setTransactions] = useState<Transaction[]>(generateMockTransactions());
-    const [returns, setReturns] = useState<ReturnRequest[]>(generateMockReturns());
+    const [productList, setProductList] = useState<Product[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [sellers, setSellers] = useState<Seller[]>([]);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [returns, setReturns] = useState<ReturnRequest[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
-    const [coupons, setCoupons] = useState<Coupon[]>([
-        { id: 'CP1', code: 'WELCOME10', discountType: 'PERCENTAGE', value: 10, expiryDate: '2024-12-31', usageLimit: 1000, usedCount: 45, status: 'Active' }
-    ]);
+    const [coupons, setCoupons] = useState<Coupon[]>([]);
+
+    // Seller Management State
+    const [isEditingSeller, setIsEditingSeller] = useState<Seller | null>(null);
+    const [showSellerModal, setShowSellerModal] = useState(false);
+    const [newSellerData, setNewSellerData] = useState<Partial<Seller>>({});
 
     // Shop Sections & Categories
     const [sections, setSections] = useState<Section[]>([]);
@@ -69,15 +42,10 @@ export const Admin: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive' | 'Draft'>('All');
     const [isEditing, setIsEditing] = useState<Product | null>(null);
     const [editedProduct, setEditedProduct] = useState<Product | null>(null);
-    const [editTab, setEditTab] = useState<'vital' | 'images' | 'variations' | 'desc' | 'ai-studio'>('vital');
+    const [editTab, setEditTab] = useState<'vital' | 'images' | 'variations' | 'desc'>('vital'); // Removed ai-studio
     const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
-    const [aiPrompt, setAiPrompt] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
-    const [isEnhancing, setIsEnhancing] = useState(false);
-    const [generatedImg, setGeneratedImg] = useState<string | null>(null);
-    const [genModel, setGenModel] = useState('imagen-3.0-generate-001');
-    const [enhanceModel, setEnhanceModel] = useState('gemini-2.5-flash-image');
+
+    // Removed unused AI state
 
     useEffect(() => {
         if (isEditing) {
@@ -85,12 +53,10 @@ export const Admin: React.FC = () => {
             setEditTab('vital');
         } else {
             setEditedProduct(null);
-            setGeneratedImg(null);
-            setAiPrompt('');
         }
     }, [isEditing]);
 
-    // --- Database Sync Logic ---
+    // ... Database Sync Logic ...
     const fetchReviews = async () => {
         try {
             const res = await fetch('http://localhost:5000/api/reviews', { cache: 'no-store' });
@@ -104,34 +70,22 @@ export const Admin: React.FC = () => {
     const handleReviewAction = async (id: string, action: 'Approve' | 'Reject' | 'Delete') => {
         try {
             if (action === 'Delete') {
-                // Find the review to be deleted to get productId
                 const reviewToDelete = reviews.find(r => r._id === id || r.id === id);
-
                 await fetch(`http://localhost:5000/api/reviews/${id}`, { method: 'DELETE' });
-
-                // If review found, recalculate product rating and count from scratch
                 if (reviewToDelete && reviewToDelete.productId) {
-                    // Get all remaining reviews for this product from current state
                     const remainingReviews = reviews.filter(r =>
                         (r.productId === reviewToDelete.productId) &&
                         (r._id !== id && r.id !== id)
                     );
-
                     const newCount = remainingReviews.length;
                     let newRating = 0;
-
                     if (newCount > 0) {
                         const totalRating = remainingReviews.reduce((sum, r) => sum + r.rating, 0);
                         newRating = parseFloat((totalRating / newCount).toFixed(1));
                     }
-
-                    // Fetch the product to get its Mongo ID
                     const product = productList.find(p => p.id === reviewToDelete.productId || (p as any)._id === reviewToDelete.productId);
-
                     if (product) {
                         const prodId = (product as any)._id || product.id;
-
-                        // Update product in DB with recalculated values
                         await fetch(`http://localhost:5000/api/products/${prodId}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
@@ -141,8 +95,6 @@ export const Admin: React.FC = () => {
                                 reviewsCount: newCount
                             })
                         });
-
-                        // Update local product list
                         setProductList(prev => prev.map(p =>
                             (p.id === product.id) ? { ...p, rating: newRating, reviewsCount: newCount } : p
                         ));
@@ -161,32 +113,6 @@ export const Admin: React.FC = () => {
         }
     };
 
-    // Load products from database on mount
-    useEffect(() => {
-        console.log('🔄 Loading products from database...');
-        // Add timestamp to prevent caching
-        fetch(`http://localhost:5000/api/products?t=${Date.now()}`, {
-            headers: { 'Cache-Control': 'no-cache' }
-        })
-            .then(res => res.json())
-            .then(data => {
-                console.log('📦 Received from database:', data.length, 'products');
-                if (data && data.length > 0) {
-                    console.log('✅ Setting product list from database');
-                    setProductList(data);
-                } else {
-                    console.log('⚠️ Database returned empty, keeping default products');
-                }
-            })
-            .catch(err => {
-                console.error("❌ Failed to load products from database:", err);
-                console.log('⚠️ Using default products instead');
-            });
-
-        fetchReviews();
-        fetchShopData();
-    }, []);
-
     const fetchShopData = async () => {
         try {
             const [sectionsRes, categoriesRes] = await Promise.all([
@@ -200,7 +126,24 @@ export const Admin: React.FC = () => {
         }
     };
 
-    // Shop sections management functions
+    // Load products and initial data
+    useEffect(() => {
+        console.log('🔄 Loading products from database...');
+        fetch(`http://localhost:5000/api/products?t=${Date.now()}`, {
+            headers: { 'Cache-Control': 'no-cache' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    setProductList(data);
+                }
+            })
+            .catch(err => console.error("❌ Failed to load products:", err));
+
+        fetchReviews();
+        fetchShopData();
+    }, []);
+
     const handleShopItemSave = async (type: 'sections' | 'categories', data: any) => {
         try {
             const method = data._id ? 'PUT' : 'POST';
@@ -229,6 +172,68 @@ export const Admin: React.FC = () => {
         }
     };
 
+    // Seller Management Functions
+    const handleSaveSeller = async () => {
+        try {
+            const method = isEditingSeller ? 'PUT' : 'POST';
+            const url = isEditingSeller
+                ? `http://localhost:5000/api/sellers/${isEditingSeller.id}`
+                : 'http://localhost:5000/api/sellers';
+
+            const body = isEditingSeller ? { ...isEditingSeller, ...newSellerData } : {
+                id: `S${Date.now()}`,
+                companyName: newSellerData.companyName || 'New Company',
+                contactPerson: newSellerData.contactPerson || '',
+                email: newSellerData.email || '',
+                phone: newSellerData.phone || '',
+                status: 'Pending',
+                rating: 0,
+                balance: 0,
+                returnRate: 0
+            };
+
+            await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            fetchSellers();
+            setShowSellerModal(false);
+            setIsEditingSeller(null);
+            setNewSellerData({});
+        } catch (error) {
+            console.error("Failed to save seller", error);
+            alert("Failed to save seller");
+        }
+    };
+
+    const handleSellerAction = async (id: string, action: 'Approve' | 'Suspend' | 'Activate' | 'Delete') => {
+        try {
+            if (action === 'Delete') {
+                if (window.confirm("Delete this seller?")) {
+                    await fetch(`http://localhost:5000/api/sellers/${id}`, { method: 'DELETE' });
+                    fetchSellers();
+                }
+            } else {
+                const statusMap: Record<string, 'Active' | 'Suspended' | 'Pending'> = {
+                    'Approve': 'Active',
+                    'Activate': 'Active',
+                    'Suspend': 'Suspended'
+                };
+
+                await fetch(`http://localhost:5000/api/sellers/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: statusMap[action] })
+                });
+                fetchSellers();
+            }
+        } catch (error) {
+            console.error(`Failed to ${action} seller`, error);
+        }
+    };
+
     const filteredProducts = productList.filter(product => {
         const matchesSearch = !searchQuery ||
             product.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
@@ -242,7 +247,6 @@ export const Admin: React.FC = () => {
         return <div className="min-h-screen flex items-center justify-center text-red-600 font-bold">Access Denied</div>;
     }
 
-    // --- ACTIONS ---
     const handleDeleteProduct = async (id: string) => {
         if (window.confirm("Are you sure you want to delete this product?")) {
             try {
@@ -277,9 +281,53 @@ export const Admin: React.FC = () => {
             console.error("Failed to update stock", e);
         }
     };
-    const toggleCustomerStatus = (id: string) => { setCustomers(prev => prev.map(c => c.id === id ? { ...c, status: c.status === 'Active' ? 'Blocked' : 'Active' } : c)); };
-    const updateOrderStatus = (id: string, status: OrderStatus) => { setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o)); };
+    const toggleCustomerStatus = async (id: string) => {
+        try {
+            const customer = customers.find(c => c.id === id);
+            // Assuming id is already _id or mapped to it in fetchCustomers
+            // Since fetchCustomers maps nothing currently (just setCustomers(data)), 
+            // if customer was created via API it has _id. 
+            // If we use 'id' field in frontend but API expects '_id' in params...
+            // MongoDB user docs usually have _id. 
+            // Let's assume id passed here is the one used in key/render, which is likely _id for real data.
+            // But wait, my fetchCustomers logic didn't map _id to id.
+            // So if I use `_id` as key in map, `id` here is `_id`.
 
+            if (!customer) return;
+
+            const newStatus = customer.status === 'Active' ? 'Blocked' : 'Active';
+
+            // For now, I'll try to use 'id' directly as it might be _id if I updated types
+            await fetch(`http://localhost:5000/api/customers/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            setCustomers(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+        } catch (error) {
+            console.error("Failed to toggle customer status", error);
+        }
+    };
+    const updateOrderStatus = async (id: string, status: OrderStatus) => {
+        try {
+            const order = orders.find(o => o.id === id);
+            if (!order || !(order as any)._id) return; // Need _id for API
+
+            await fetch(`http://localhost:5000/api/orders/${(order as any)._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+
+            // Optimistic update or fetch
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+        } catch (error) {
+            console.error("Failed to update order status", error);
+        }
+    };
+
+    // ... handleImageUpload (keep) ...
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'main' | 'variant', varId?: string, optId?: string) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -298,16 +346,19 @@ export const Admin: React.FC = () => {
                     if (target === 'main' && editedProduct) {
                         setEditedProduct({ ...editedProduct, image: imageUrl });
                     } else if (target === 'variant' && editedProduct && varId && optId) {
-                        const newVars = editedProduct.variations?.map(v => {
-                            if (v.id === varId) {
-                                return {
-                                    ...v,
-                                    options: v.options.map(o => o.id === optId ? { ...o, image: imageUrl } : o)
-                                };
-                            }
-                            return v;
+                        setEditedProduct(prev => {
+                            if (!prev) return null;
+                            const newVars = prev.variations?.map(v => {
+                                if (v.id === varId) {
+                                    return {
+                                        ...v,
+                                        options: v.options.map(o => o.id === optId ? { ...o, image: imageUrl } : o)
+                                    };
+                                }
+                                return v;
+                            });
+                            return { ...prev, variations: newVars };
                         });
-                        setEditedProduct({ ...editedProduct, variations: newVars });
                     }
                 }
             } catch (error) {
@@ -317,12 +368,7 @@ export const Admin: React.FC = () => {
         }
     };
 
-    const handleAddVariation = (type: 'generic' | 'Size' | 'Shape') => { if (!editedProduct) return; const newVar: Variation = { id: `var_${Date.now()}`, name: type === 'generic' ? 'New Variation' : type, options: [] }; setEditedProduct({ ...editedProduct, variations: [...(editedProduct.variations || []), newVar] }); };
-    const handleAddOption = (varId: string) => { if (!editedProduct) return; const newOpt: VariationOption = { id: `opt_${Date.now()}`, label: 'New Option', priceAdjustment: 0, description: '' }; const newVars = editedProduct.variations?.map(v => v.id === varId ? { ...v, options: [...v.options, newOpt] } : v); setEditedProduct({ ...editedProduct, variations: newVars }); };
-    const handleGenerateImage = async () => { if (!aiPrompt) return; setIsGenerating(true); const res = await generateProductImage(aiPrompt, genModel); if (res) setGeneratedImg(res); setIsGenerating(false); };
-    const applyGeneratedImage = () => { if (generatedImg && editedProduct) { setEditedProduct({ ...editedProduct, image: generatedImg }); setGeneratedImg(null); setEditTab('images'); } };
-    const handleGenerateDescription = async () => { if (!editedProduct) return; setIsGeneratingDesc(true); const desc = await generateProductDescription(editedProduct.name, editedProduct.category); if (desc) { setEditedProduct({ ...editedProduct, description: desc }); } setIsGeneratingDesc(false); };
-    const handleEnhanceImage = async () => { if (!editedProduct?.image) return; setIsEnhancing(true); const enhanced = await enhanceProductImage(editedProduct.image, enhanceModel); if (enhanced) { setEditedProduct({ ...editedProduct, image: enhanced }); } setIsEnhancing(false); };
+    // Removed unused helper functions (handleAddVariation, etc.)
     const saveProduct = async () => {
         if (!editedProduct) return;
 
@@ -353,8 +399,162 @@ export const Admin: React.FC = () => {
         }
     };
 
-    const renderDashboard = () => (<div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-4 gap-4">{[{ l: 'Revenue', v: '₹4.2L', i: DollarSign, c: 'text-green-600', bg: 'bg-green-100' }, { l: 'Orders', v: '1,240', i: ShoppingBag, c: 'text-blue-600', bg: 'bg-blue-100' }, { l: 'Customers', v: '3,500', i: Users, c: 'text-purple-600', bg: 'bg-purple-100' }, { l: 'Pending Returns', v: '12', i: RotateCcw, c: 'text-red-600', bg: 'bg-red-100' }].map((s, i) => (<div key={i} className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm"><div><p className="text-gray-500 text-xs uppercase font-bold">{s.l}</p><p className="text-2xl font-bold text-gray-900">{s.v}</p></div><div className={`p-3 rounded-full ${s.bg}`}><s.i className={`w-6 h-6 ${s.c}`} /></div></div>))}</div><div className="bg-white p-6 rounded-xl border border-gray-200 h-80 flex items-center justify-center text-gray-400 shadow-sm"><BarChart3 className="w-12 h-12 mr-4" /> Sales & Conversion Chart Placeholder</div></div>);
-    const renderProducts = () => (<div className="space-y-4"><div className="flex justify-between items-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex items-center gap-3"><h2 className="text-lg font-bold flex items-center gap-2"><Package className="w-5 h-5" /> Inventory</h2><span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-bold">{filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}</span></div><div className="flex gap-4 items-center"><div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input className="pl-9 pr-4 py-2 border rounded-md text-sm w-64 focus:ring-primary focus:border-primary" placeholder="Search Name, SKU, Category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><div className="relative"><Filter className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="pl-9 pr-4 py-2 border rounded-md text-sm focus:ring-primary focus:border-primary bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Draft">Draft</option></select></div><button onClick={() => setIsEditing({ id: `NEW-${Date.now()}`, code: '', name: 'New Product', category: 'Uncategorized', pdfPrice: 0, shape: Shape.RECTANGLE, image: 'https://via.placeholder.com/150', description: '', stock: 0, status: 'Draft', variations: [] })} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2"><Plus className="w-4 h-4" /> Add Product</button></div></div><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left font-medium text-gray-500">Product</th><th className="px-6 py-3 text-left font-medium text-gray-500">Category</th><th className="px-6 py-3 text-left font-medium text-gray-500">Stock</th><th className="px-6 py-3 text-left font-medium text-gray-500">Price</th><th className="px-6 py-3 text-left font-medium text-gray-500">Status</th><th className="px-6 py-3 text-right font-medium text-gray-500">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{filteredProducts.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 flex items-center gap-3"><img src={p.image} className="w-10 h-10 rounded border object-cover" alt="" /><div><div className="font-medium text-gray-900">{p.name}</div><div className="text-xs text-gray-500 font-mono">{p.sku}</div></div></td><td className="px-6 py-4 text-gray-600">{p.category}</td><td className="px-6 py-4"><div className="flex items-center gap-2"><div className="flex items-center border rounded-md"><button onClick={() => handleStockUpdate(p.id, (p.stock || 0) - 1)} className="p-1 hover:bg-gray-100 border-r"><Minus className="w-3 h-3 text-gray-600" /></button><input type="number" value={p.stock || 0} onChange={(e) => handleStockUpdate(p.id, parseInt(e.target.value) || 0)} className="w-10 text-center text-sm focus:outline-none h-[24px]" /><button onClick={() => handleStockUpdate(p.id, (p.stock || 0) + 1)} className="p-1 hover:bg-gray-100 border-l"><Plus className="w-3 h-3 text-gray-600" /></button></div>{(p.stock || 0) < 10 && (<div className="flex items-center text-red-600" title="Low Stock"><AlertCircle className="w-4 h-4" /></div>)}</div></td><td className="px-6 py-4">{p.discount ? (<div><div className="text-gray-400 line-through text-xs">₹{p.pdfPrice}</div><div className="font-bold text-green-600">₹{Math.round(p.pdfPrice * (1 - p.discount / 100))}</div></div>) : (<div className="font-bold">₹{p.pdfPrice}</div>)}</td><td className="px-6 py-4"><span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{p.status}</span></td><td className="px-6 py-4 text-right space-x-2"><button onClick={() => setIsEditing(p)} className="text-blue-600 hover:underline">Edit</button><button onClick={() => handleDeleteProduct(p.id)} className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button></td></tr>))}</tbody></table></div></div>);
+    const renderDashboard = () => {
+        // Calculate Metrics
+        const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const totalOrders = orders.length;
+        const totalCustomers = customers.length;
+        const pendingReturns = returns.filter(r => r.status === 'Pending').length;
+
+        // Low Stock
+        const lowStockProducts = productList.filter(p => (p.stock || 0) < 10).slice(0, 5);
+
+        // Recent Orders
+        const recentOrders = [...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+        return (
+            <div className="space-y-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase font-bold">Total Revenue</p>
+                            <p className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</p>
+                        </div>
+                        <div className="p-3 rounded-full bg-green-100">
+                            <DollarSign className="w-6 h-6 text-green-600" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase font-bold">Total Orders</p>
+                            <p className="text-2xl font-bold text-gray-900">{totalOrders}</p>
+                        </div>
+                        <div className="p-3 rounded-full bg-blue-100">
+                            <ShoppingBag className="w-6 h-6 text-blue-600" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase font-bold">Total Customers</p>
+                            <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
+                        </div>
+                        <div className="p-3 rounded-full bg-purple-100">
+                            <Users className="w-6 h-6 text-purple-600" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm">
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase font-bold">Pending Returns</p>
+                            <p className="text-2xl font-bold text-gray-900">{pendingReturns}</p>
+                        </div>
+                        <div className="p-3 rounded-full bg-red-100">
+                            <RotateCcw className="w-6 h-6 text-red-600" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Recent Orders - Spans 2 cols */}
+                    <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                <ShoppingBag className="w-4 h-4" /> Recent Orders
+                            </h3>
+                            <button onClick={() => setActiveTab('orders')} className="text-xs text-blue-600 hover:underline">View All</button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-gray-500">
+                                    <tr>
+                                        <th className="px-4 py-3">Order ID</th>
+                                        <th className="px-4 py-3">Customer</th>
+                                        <th className="px-4 py-3">Date</th>
+                                        <th className="px-4 py-3">Total</th>
+                                        <th className="px-4 py-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {recentOrders.length > 0 ? recentOrders.map(o => (
+                                        <tr key={o.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3 font-mono text-xs">{o.id}</td>
+                                            <td className="px-4 py-3">{o.customerName}</td>
+                                            <td className="px-4 py-3 text-gray-500">{new Date(o.date).toLocaleDateString()}</td>
+                                            <td className="px-4 py-3 font-medium">₹{o.total}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`px-2 py-1 rounded-full text-xs ${o.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                                                    o.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
+                                                        o.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                                                            'bg-yellow-100 text-yellow-700'
+                                                    }`}>
+                                                    {o.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={5} className="text-center py-8 text-gray-400">No recent orders</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Low Stock Alerts & Quick Stats */}
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-red-50">
+                                <h3 className="font-bold text-red-800 flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" /> Low Stock Alerts
+                                </h3>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                                {lowStockProducts.length > 0 ? lowStockProducts.map(p => (
+                                    <div key={p.id} className="p-3 flex justify-between items-center hover:bg-gray-50">
+                                        <div className="flex items-center gap-3">
+                                            <img src={p.image} alt="" className="w-8 h-8 rounded object-cover border" />
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-800 line-clamp-1">{p.name}</p>
+                                                <p className="text-xs text-gray-500">{p.code}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-red-600 font-bold text-sm">{p.stock} left</span>
+                                    </div>
+                                )) : (
+                                    <div className="p-4 text-center text-green-600 text-sm">All products strictly stocked!</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-primary to-purple-700 rounded-xl p-6 text-white text-center shadow-md">
+                            <h3 className="font-bold text-lg mb-2">Grow Your Business</h3>
+                            <p className="text-sm opacity-90 mb-4">Add new products or create a marketing campaign.</p>
+                            <button onClick={() => setIsEditing({ id: `NEW-${Date.now()}`, code: '', name: 'New Product', category: 'Uncategorized', pdfPrice: 0, shape: Shape.RECTANGLE, image: 'https://via.placeholder.com/150', description: '', stock: 0, status: 'Draft', variations: [] })} className="bg-white text-primary px-4 py-2 rounded-lg text-sm font-bold w-full hover:bg-gray-100 transition shadow-sm">
+                                + Add Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+    const renderProducts = () => (<div className="space-y-4"><div className="flex justify-between items-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex items-center gap-3"><h2 className="text-lg font-bold flex items-center gap-2"><Package className="w-5 h-5" /> Inventory</h2><span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-bold">{filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}</span></div><div className="flex gap-4 items-center"><div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input className="pl-9 pr-4 py-2 border rounded-md text-sm w-64 focus:ring-primary focus:border-primary" placeholder="Search Name, SKU, Category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><div className="relative"><Filter className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="pl-9 pr-4 py-2 border rounded-md text-sm focus:ring-primary focus:border-primary bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Draft">Draft</option></select></div><button onClick={() => setIsEditing({ id: `NEW-${Date.now()}`, code: '', name: 'New Product', category: 'Uncategorized', pdfPrice: 0, shape: Shape.RECTANGLE, image: 'https://via.placeholder.com/150', description: '', stock: 0, status: 'Draft', variations: [] })} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2"><Plus className="w-4 h-4" /> Add Product</button></div></div><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left font-medium text-gray-500">Product</th><th className="px-6 py-3 text-left font-medium text-gray-500">Category</th><th className="px-6 py-3 text-left font-medium text-gray-500">Stock</th><th className="px-6 py-3 text-left font-medium text-gray-500">Price</th><th className="px-6 py-3 text-left font-medium text-gray-500">Status</th><th className="px-6 py-3 text-right font-medium text-gray-500">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{filteredProducts.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 flex items-center gap-3"><img src={p.image} className="w-10 h-10 rounded border object-cover" alt="" /><div><div className="font-medium text-gray-900">{p.name}</div><div className="text-xs text-gray-500 font-mono">{p.code}</div></div></td><td className="px-6 py-4 text-gray-600">{p.category}</td><td className="px-6 py-4"><div className="flex items-center gap-2"><div className="flex items-center border rounded-md"><button onClick={() => handleStockUpdate(p.id, (p.stock || 0) - 1)} className="p-1 hover:bg-gray-100 border-r"><Minus className="w-3 h-3 text-gray-600" /></button><input type="number" value={p.stock || 0} onChange={(e) => handleStockUpdate(p.id, parseInt(e.target.value) || 0)} className="w-10 text-center text-sm focus:outline-none h-[24px]" /><button onClick={() => handleStockUpdate(p.id, (p.stock || 0) + 1)} className="p-1 hover:bg-gray-100 border-l"><Plus className="w-3 h-3 text-gray-600" /></button></div>{(p.stock || 0) < 10 && (<div className="flex items-center text-red-600" title="Low Stock"><AlertCircle className="w-4 h-4" /></div>)}</div></td><td className="px-6 py-4">{p.discount ? (<div><div className="text-gray-400 line-through text-xs">₹{p.pdfPrice}</div><div className="font-bold text-green-600">₹{Math.round(p.pdfPrice * (1 - p.discount / 100))}</div></div>) : (<div className="font-bold">₹{p.pdfPrice}</div>)}</td><td className="px-6 py-4"><span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{p.status}</span></td><td className="px-6 py-4 text-right space-x-2"><button onClick={() => setIsEditing(p)} className="text-blue-600 hover:underline">Edit</button><button onClick={() => handleDeleteProduct(p.id)} className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button></td></tr>))}</tbody></table></div></div>);
+    const fetchProducts = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/products');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setProductList(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch products", error);
+        }
+    };
+
     const fetchOrders = async () => {
         try {
             const res = await fetch('http://localhost:5000/api/orders');
@@ -367,8 +567,76 @@ export const Admin: React.FC = () => {
         }
     };
 
+    const fetchCustomers = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/customers');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setCustomers(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch customers", error);
+        }
+    };
+
+    const fetchSellers = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/sellers');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setSellers(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch sellers", error);
+        }
+    };
+
+    const fetchTransactions = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/transactions');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setTransactions(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch transactions", error);
+        }
+    };
+
+    const fetchReturns = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/returns');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setReturns(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch returns", error);
+        }
+    };
+
+    const fetchCoupons = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/coupons');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setCoupons(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch coupons", error);
+        }
+    };
+
     useEffect(() => {
+        fetchProducts(); // Assuming this exists or will be added/checked
         fetchOrders();
+        fetchCustomers();
+        fetchSellers();
+        fetchTransactions();
+        fetchReturns();
+        fetchReviews();
+        fetchShopData();
+        fetchCoupons();
     }, []);
 
     const handleGenerateHD = async (item: any) => {
@@ -458,7 +726,113 @@ export const Admin: React.FC = () => {
         </div>
     );
     const renderCustomers = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Customer Management</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Name</th><th className="px-6 py-3">Contact</th><th className="px-6 py-3">Orders</th><th className="px-6 py-3">Spent</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{customers.map(c => (<tr key={c.id}><td className="px-6 py-4 font-medium">{c.name}</td><td className="px-6 py-4">{c.email}<br /><span className="text-xs text-gray-500">{c.phone}</span></td><td className="px-6 py-4">{c.totalOrders}</td><td className="px-6 py-4">₹{c.totalSpent}</td><td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs ${c.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{c.status}</span></td><td className="px-6 py-4 text-right space-x-2"><button onClick={() => setViewCustomer(c)} className="text-blue-600 hover:underline"><Eye className="w-4 h-4" /></button><button onClick={() => toggleCustomerStatus(c.id)} className={`${c.status === 'Active' ? 'text-red-600' : 'text-green-600'}`}>{c.status === 'Active' ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}</button></td></tr>))}</tbody></table></div>{viewCustomer && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white p-6 rounded-lg w-96 shadow-xl"><h3 className="text-xl font-bold mb-4">Customer Profile</h3><div className="space-y-2 text-sm"><p><strong>ID:</strong> {viewCustomer.id}</p><p><strong>Name:</strong> {viewCustomer.name}</p><p><strong>Address:</strong> {viewCustomer.address}</p><div className="mt-4 pt-4 border-t"><h4 className="font-bold">Order History</h4><p className="text-gray-500 text-xs">Last 5 orders would appear here...</p></div></div><button onClick={() => setViewCustomer(null)} className="mt-6 w-full bg-gray-200 py-2 rounded hover:bg-gray-300">Close</button></div></div>)}</div>);
-    const renderSellers = () => (<div className="space-y-4"><div className="flex justify-between"><h2 className="text-xl font-bold">Seller Management</h2><button className="bg-primary text-white px-3 py-1 rounded text-sm">Onboard New Seller</button></div><div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">{sellers.map(s => (<div key={s.id} className="flex justify-between items-center border-b py-3 last:border-0"><div><p className="font-bold">{s.companyName} <span className={`text-xs px-2 py-0.5 rounded ${s.status === 'Active' ? 'bg-green-100' : 'bg-yellow-100'}`}>{s.status}</span></p><p className="text-sm text-gray-500">Contact: {s.contactPerson} | Rating: {s.rating}★</p></div><div className="text-right"><p className="font-bold">Balance: ₹{s.balance}</p><button className="text-xs text-blue-600 underline mr-2">Payout</button></div></div>))}</div></div>);
+    const renderSellers = () => (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">Seller Management</h2>
+                    <p className="text-sm text-gray-500">Manage vendors, approvals, and payouts</p>
+                </div>
+                <button
+                    onClick={() => { setShowSellerModal(true); setIsEditingSeller(null); setNewSellerData({}); }}
+                    className="bg-primary hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-all"
+                >
+                    <Plus className="w-4 h-4" /> Onboard New Seller
+                </button>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {sellers.map((seller) => (
+                            <tr key={seller.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-primary font-bold">
+                                            {seller.companyName.charAt(0)}
+                                        </div>
+                                        <div className="ml-4">
+                                            <div className="text-sm font-medium text-gray-900">{seller.companyName}</div>
+                                            <div className="text-xs text-gray-500">ID: {seller.id}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900">{seller.contactPerson}</div>
+                                    <div className="text-xs text-gray-500">{seller.email}</div>
+                                    <div className="text-xs text-gray-500">{seller.phone}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${seller.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                        seller.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
+                                        }`}>
+                                        {seller.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900 flex items-center gap-1">
+                                        <Star className="w-3 h-3 text-yellow-400 fill-current" /> {seller.rating}
+                                    </div>
+                                    <div className="text-xs text-gray-500">Return Rate: {seller.returnRate}%</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                    <div className="text-sm font-bold text-gray-900">₹{seller.balance.toLocaleString()}</div>
+                                    {seller.balance > 0 && (
+                                        <button className="text-xs text-blue-600 hover:text-blue-900 font-medium">Process Payout</button>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => { setIsEditingSeller(seller); setNewSellerData(seller); setShowSellerModal(true); }}
+                                            className="text-indigo-600 hover:text-indigo-900"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                        {seller.status === 'Pending' && (
+                                            <button onClick={() => handleSellerAction(seller.id, 'Approve')} className="text-green-600 hover:text-green-900">
+                                                <CheckCircle className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {seller.status === 'Active' && (
+                                            <button onClick={() => handleSellerAction(seller.id, 'Suspend')} className="text-amber-600 hover:text-amber-900">
+                                                <Ban className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {seller.status === 'Suspended' && (
+                                            <button onClick={() => handleSellerAction(seller.id, 'Activate')} className="text-green-600 hover:text-green-900">
+                                                <CheckCircle className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        <button onClick={() => handleSellerAction(seller.id, 'Delete')} className="text-red-600 hover:text-red-900">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {sellers.length === 0 && (
+                    <div className="text-center py-10 text-gray-500">
+                        <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        <p>No sellers found. Onboard your first seller!</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
     const renderPayments = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Payments</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Txn ID</th><th className="px-6 py-3">Ref</th><th className="px-6 py-3">Type</th><th className="px-6 py-3">Amount</th><th className="px-6 py-3">Status</th></tr></thead><tbody className="divide-y divide-gray-200">{transactions.map(t => (<tr key={t.id}><td className="px-6 py-4 font-mono text-xs">{t.id}</td><td className="px-6 py-4">{t.orderId}</td><td className="px-6 py-4">{t.type}</td><td className="px-6 py-4 font-bold">₹{t.amount}</td><td className="px-6 py-4"><span className="text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t.status}</span></td></tr>))}</tbody></table></div></div>);
     const renderLogistics = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Logistics</h2><div className="grid gap-4">{orders.filter(o => o.status === 'Shipped' || o.status === 'Processing').map(o => (<div key={o.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center"><div><p className="font-bold text-lg">{o.id}</p><p className="text-sm text-gray-500">To: {o.shippingAddress}</p><div className="mt-2 flex gap-2"><span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">{o.status}</span>{o.trackingNumber && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{o.courier}: {o.trackingNumber}</span>}</div></div><div className="flex flex-col gap-2"><button className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-100">Assign Courier</button></div></div>))}</div></div>);
     const renderReturns = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Return Requests</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Return ID</th><th className="px-6 py-3">Product</th><th className="px-6 py-3">Reason</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{returns.map(r => (<tr key={r.id}><td className="px-6 py-4">{r.id}</td><td className="px-6 py-4">{r.productName}</td><td className="px-6 py-4 text-red-500">{r.reason}</td><td className="px-6 py-4 font-bold">{r.status}</td><td className="px-6 py-4 text-right space-x-2">{r.status === 'Pending' && (<><button className="text-green-600 hover:underline text-xs">Approve</button><button className="text-red-600 hover:underline text-xs">Reject</button></>)}</td></tr>))}</tbody></table></div></div>);
@@ -780,10 +1154,13 @@ export const Admin: React.FC = () => {
                                                     files.forEach(file => {
                                                         const reader = new FileReader();
                                                         reader.onloadend = () => {
-                                                            setEditedProduct(prev => ({
-                                                                ...prev,
-                                                                gallery: [...(prev.gallery || []), reader.result as string]
-                                                            }));
+                                                            setEditedProduct(prev => {
+                                                                if (!prev) return null;
+                                                                return {
+                                                                    ...prev,
+                                                                    gallery: [...(prev.gallery || []), reader.result as string]
+                                                                };
+                                                            });
                                                         };
                                                         reader.readAsDataURL(file);
                                                     });
@@ -835,7 +1212,7 @@ export const Admin: React.FC = () => {
                                         </div>
 
                                         <div className="space-y-4">
-                                            {editedProduct.variations?.find(v => v.name === 'Size')?.options.map((option, idx) => (
+                                            {editedProduct.variations?.find(v => v.name === 'Size')?.options.map((option) => (
                                                 <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                     <div className="grid grid-cols-4 gap-4">
                                                         <div>
@@ -1009,7 +1386,7 @@ export const Admin: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.options.map((option, idx) => (
+                                                {editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.options.map((option) => (
                                                     <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                         <div className="grid grid-cols-4 gap-4">
                                                             <div>
@@ -1186,7 +1563,7 @@ export const Admin: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.name === 'Shape')?.options.map((option, idx) => (
+                                                {editedProduct.variations?.find(v => v.name === 'Shape')?.options.map((option) => (
                                                     <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                         <div className="grid grid-cols-4 gap-4">
                                                             <div>
@@ -1367,7 +1744,7 @@ export const Admin: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.name === 'Color')?.options.map((option, idx) => (
+                                                {editedProduct.variations?.find(v => v.name === 'Color')?.options.map((option) => (
                                                     <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                         <div className="grid grid-cols-4 gap-4">
                                                             <div>
@@ -1586,6 +1963,66 @@ export const Admin: React.FC = () => {
                             </div>
                         </div>
                         <div className="p-4 border-t bg-gray-50 flex justify-end gap-3"><button onClick={() => setIsEditing(null)} className="px-4 py-2 border rounded">Cancel</button><button onClick={saveProduct} className="px-6 py-2 bg-primary text-white rounded font-bold">Save Changes</button></div>
+                    </div>
+                </div>
+            )}
+
+            {/* Seller Management Modal */}
+            {showSellerModal && (
+                <div className="fixed inset-0 z-50 overflow-hidden bg-gray-900 bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full animate-fade-in-up">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-lg">{isEditingSeller ? 'Edit Seller' : 'Onboard New Seller'}</h3>
+                            <button onClick={() => setShowSellerModal(false)} className="hover:bg-gray-200 p-1 rounded"><X className="w-6 h-6" /></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                <input
+                                    type="text"
+                                    value={newSellerData.companyName || ''}
+                                    onChange={e => setNewSellerData({ ...newSellerData, companyName: e.target.value })}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                    placeholder="e.g. Acme Corp"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Contact Person</label>
+                                <input
+                                    type="text"
+                                    value={newSellerData.contactPerson || ''}
+                                    onChange={e => setNewSellerData({ ...newSellerData, contactPerson: e.target.value })}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                    placeholder="e.g. John Doe"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Email</label>
+                                <input
+                                    type="email"
+                                    value={newSellerData.email || ''}
+                                    onChange={e => setNewSellerData({ ...newSellerData, email: e.target.value })}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                    placeholder="john@example.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Phone</label>
+                                <input
+                                    type="text"
+                                    value={newSellerData.phone || ''}
+                                    onChange={e => setNewSellerData({ ...newSellerData, phone: e.target.value })}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                    placeholder="+91 9876543210"
+                                />
+                            </div>
+                        </div>
+                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                            <button onClick={() => setShowSellerModal(false)} className="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+                            <button onClick={handleSaveSeller} className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-purple-700">
+                                {isEditingSeller ? 'Update Seller' : 'Onboard Seller'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

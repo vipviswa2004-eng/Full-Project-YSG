@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, User, Product } from './types';
 // Use local data as fallback/initial state until DB fetch works
-import { products as localProducts } from './data/products';
+// import { products as localProducts } from './data/products';
 
 interface AppContextType {
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
   removeFromCart: (cartId: string) => void;
+  updateCartItemQuantity: (cartId: string, quantity: number) => void;
   wishlist: Product[];
   toggleWishlist: (product: Product) => void;
   user: User | null;
@@ -57,7 +58,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
   });
-  const [dbProducts, setDbProducts] = useState<Product[]>(localProducts); // Default to local
+  // Use empty array as initial state to ensure only DB products are shown
+  // import { products as localProducts } from './data/products'; 
+
+  const [dbProducts, setDbProducts] = useState<Product[]>([]); // Default to empty
 
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [isGiftAdvisorOpen, setIsGiftAdvisorOpen] = useState(false);
@@ -66,45 +70,47 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const API_URL = 'http://localhost:5000/api';
 
   // Fetch Products from DB on Mount // Initial Data Load
+  // Fetch Products and User sequentially to ensure hydration works
   useEffect(() => {
-    fetch(`${API_URL}/products?t=${Date.now()}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) setDbProducts(data);
-      })
-      .catch(err => console.log("Backend not connected, using local data.", err));
+    const initData = async () => {
+      let fetchedProducts: Product[] = [];
 
-    // Check for Session User (Google Auth)
-    fetch(`${API_URL}/current_user`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then(async (data) => {
-        if (data && (data.email || data.googleId)) {
-          setUserState(data);
-          localStorage.setItem("user", JSON.stringify(data));
+      // 1. Fetch Products from DB
+      try {
+        const prodRes = await fetch(`${API_URL}/products?t=${Date.now()}`);
+        const prodData = await prodRes.json();
+        if (prodData && prodData.length > 0) {
+          fetchedProducts = prodData;
+          setDbProducts(prodData);
+        }
+      } catch (err) {
+        console.log("Backend not connected or empty, using empty list.", err);
+      }
 
-          // Fetch cart and wishlist from database
+      // 2. Check for Session User
+      try {
+        const userRes = await fetch(`${API_URL}/current_user`, { credentials: "include" });
+        const userData = await userRes.json();
+
+        if (userData && (userData.email || userData.googleId)) {
+          setUserState(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+
+          // 3. Fetch specific user data (cart/wishlist) from DB
           try {
-            const userDataRes = await fetch(`${API_URL}/user/${data.email}`);
-            const userData = await userDataRes.json();
+            const dbUserRes = await fetch(`${API_URL}/user/${userData.email}`);
+            const dbUser = await dbUserRes.json();
 
-            // Hydrate cart from DB
-            if (userData.cart && userData.cart.length > 0) {
-              // Fetch full product details for each cart item
-              const cartItems: CartItem[] = await Promise.all(
-                userData.cart.map(async (dbItem: any) => {
-                  // Find the product in the products list
-                  const product = dbProducts.find(p => p.id === dbItem.productId);
+            // Hydrate Cart
+            if (dbUser.cart && dbUser.cart.length > 0) {
+              const cartItems = await Promise.all(
+                dbUser.cart.map(async (dbItem: any) => {
+                  // Use fetchedProducts variable, not state
+                  const product = fetchedProducts.find(p => p.id === dbItem.productId);
+                  if (!product) return null;
 
-                  if (!product) {
-                    console.warn(`Product ${dbItem.productId} not found for cart item`);
-                    return null;
-                  }
-
-                  // Reconstruct full CartItem with product data + saved cart data
                   return {
-                    ...product, // Spread all product fields
+                    ...product,
                     cartId: `${dbItem.productId}-${Date.now()}-${Math.random()}`,
                     quantity: dbItem.quantity || 1,
                     customName: dbItem.customName || '',
@@ -117,32 +123,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   } as CartItem;
                 })
               );
-
-              // Filter out null items (products that don't exist anymore)
-              const validCartItems = cartItems.filter(item => item !== null) as CartItem[];
-              setCart(validCartItems);
-              console.log('✅ Cart loaded from MongoDB:', validCartItems.length, 'items');
+              setCart(cartItems.filter((item): item is CartItem => item !== null));
             }
 
-            // Hydrate wishlist from DB
-            if (userData.wishlist && userData.wishlist.length > 0) {
-              const wishlistProducts = localProducts.filter(p =>
-                userData.wishlist.includes(p.id)
-              );
-              setWishlist(wishlistProducts);
+            // Hydrate Wishlist
+            if (dbUser.wishlist && dbUser.wishlist.length > 0) {
+              const wishlistItems = fetchedProducts.filter(p => dbUser.wishlist.includes(p.id));
+              setWishlist(wishlistItems);
             }
+
+            // Update Admin Status
+            setUserState({ ...userData, isAdmin: dbUser.isAdmin });
+            localStorage.setItem("user", JSON.stringify({ ...userData, isAdmin: dbUser.isAdmin }));
+
           } catch (e) {
-            console.error("Failed to fetch user data", e);
+            console.error("Failed to fetch extended user data", e);
           }
         } else {
-          // No user logged in - cart and wishlist already loaded from localStorage in state initialization
-          console.log('No user session found, using localStorage data');
+          console.log('No user session found.');
         }
-      })
-      .catch(() => {
-        // No user logged in - cart and wishlist already loaded from localStorage in state initialization
-        console.log('User check failed, using localStorage data');
-      });
+      } catch (e) {
+        console.log('User session check failed', e);
+      }
+    };
+
+    initData();
   }, []);
 
   // Wrapper for setUser to sync with DB
@@ -190,8 +195,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (dbUser.wishlist && dbUser.wishlist.length > 0) {
-          // Fetch full product details for wishlist items
-          const wishlistProducts = localProducts.filter(p =>
+          // Fetch full product details for wishlist items from DB products
+          // Use dbProducts state which should be populated by now if app is loaded
+          const wishlistProducts = dbProducts.filter(p =>
             dbUser.wishlist.includes(p.id)
           );
           setWishlist(wishlistProducts);
@@ -269,6 +275,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart(prev => prev.filter(item => item.cartId !== cartId));
   };
 
+  const updateCartItemQuantity = (cartId: string, quantity: number) => {
+    if (quantity < 1) return;
+    setCart(prev => prev.map(item =>
+      item.cartId === cartId ? { ...item, quantity: quantity } : item
+    ));
+  };
+
   const toggleWishlist = (product: Product) => {
     setWishlist(prev => {
       const exists = prev.find(p => p.id === product.id);
@@ -280,7 +293,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AppContext.Provider value={{ cart, addToCart, removeFromCart, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, products: dbProducts }}>
+    <AppContext.Provider value={{ cart, addToCart, removeFromCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, products: dbProducts }}>
       {children}
     </AppContext.Provider>
   );

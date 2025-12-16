@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Menu, X, Sparkles, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart } from 'lucide-react';
 import { useCart } from '../context';
-import { products } from '../data/products';
+// import { products } from '../data/products';
 import { Product } from '../types';
 
 export const Navbar: React.FC = () => {
-  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen } = useCart();
+  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products } = useCart();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -48,7 +48,7 @@ export const Navbar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() && products.length > 0) {
       const query = searchQuery.toLowerCase();
       const filtered = products.filter(p =>
         p.name.toLowerCase().includes(query) ||
@@ -61,7 +61,7 @@ export const Navbar: React.FC = () => {
       setSuggestions([]);
       setShowSuggestions(true);
     }
-  }, [searchQuery]);
+  }, [searchQuery, products]);
 
   const saveRecentSearch = (term: string) => {
     if (!term.trim()) return;
@@ -280,6 +280,7 @@ export const Navbar: React.FC = () => {
               <div className="hidden md:flex items-center space-x-6">
                 <Link to="/" className="text-gray-700 hover:text-primary font-medium">Home</Link>
                 <Link to="/products" className="text-gray-700 hover:text-primary font-medium">Shop</Link>
+                <Link to="/corporate" className="text-gray-700 hover:text-primary font-medium">Corporate</Link>
                 {user?.isAdmin && <Link to="/admin" className="text-red-600 hover:text-red-800 font-medium">Admin</Link>}
               </div>
               <div className="flex items-center space-x-3">
@@ -368,6 +369,7 @@ export const Navbar: React.FC = () => {
               <div className="flex-1 overflow-y-auto py-4 space-y-2">
                 <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">Home</Link>
                 <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">Shop All</Link>
+                <Link to="/corporate" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">Corporate Orders</Link>
                 <Link to="/cart" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">My Cart ({cart.length})</Link>
                 <Link
                   to="/wishlist"

@@ -10,6 +10,7 @@ export const Shop: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const categoryFilter = searchParams.get('category');
+    const searchQuery = searchParams.get('q');
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -53,7 +54,17 @@ export const Shop: React.FC = () => {
     const processedProducts = useMemo(() => {
         let result = [...products];
 
-        // 1. Category Filter
+        // 1. Search Filter (Higher priority)
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(p =>
+                p.name.toLowerCase().includes(query) ||
+                (p.category && p.category.toLowerCase().includes(query)) ||
+                (p.description && p.description.toLowerCase().includes(query))
+            );
+        }
+
+        // 2. Category Filter
         if (categoryFilter) {
             result = result.filter(p => p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
         }
@@ -114,7 +125,7 @@ export const Shop: React.FC = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900">
-                            {categoryFilter ? `${categoryFilter}` : 'All Products'}
+                            {searchQuery ? `Results for "${searchQuery}"` : (categoryFilter ? categoryFilter : 'All Products')}
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
                             Showing {processedProducts.length} product{processedProducts.length !== 1 ? 's' : ''}
@@ -183,13 +194,27 @@ export const Shop: React.FC = () => {
                         </div>
 
                         {/* Active Filter Badges */}
-                        {(minPrice || maxPrice || categoryFilter) && (
+                        {(minPrice || maxPrice || categoryFilter || searchQuery) && (
                             <div className="flex items-center gap-2 flex-wrap">
                                 <div className="h-6 w-px bg-gray-200 mx-2 hidden md:block"></div>
                                 {categoryFilter && (
                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
                                         Category: {categoryFilter}
-                                        <Link to="/shop" className="hover:text-primary-dark ml-1"><span className="sr-only">Remove</span>×</Link>
+                                        <button onClick={() => {
+                                            const newParams = new URLSearchParams(searchParams);
+                                            newParams.delete('category');
+                                            navigate({ search: newParams.toString() });
+                                        }} className="hover:text-primary-dark ml-1"><span className="sr-only">Remove</span>×</button>
+                                    </div>
+                                )}
+                                {searchQuery && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full border border-purple-200">
+                                        Search: {searchQuery}
+                                        <button onClick={() => {
+                                            const newParams = new URLSearchParams(searchParams);
+                                            newParams.delete('q');
+                                            navigate({ search: newParams.toString() });
+                                        }} className="hover:text-purple-900 ml-1">×</button>
                                     </div>
                                 )}
                                 {(minPrice || maxPrice) && (
@@ -203,7 +228,7 @@ export const Shop: React.FC = () => {
                                         setMinPrice('');
                                         setMaxPrice('');
                                         setSortBy('featured');
-                                        if (categoryFilter) navigate('/shop');
+                                        if (categoryFilter || searchQuery) navigate('/shop');
                                     }}
                                     className="text-xs text-gray-500 hover:text-red-600 underline"
                                 >

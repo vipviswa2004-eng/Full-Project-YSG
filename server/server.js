@@ -6,7 +6,7 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory } = require('./models');
+const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, Seller, Transaction, ReturnRequest, Coupon } = require('./models');
 
 const app = express();
 const PORT = 5000;
@@ -215,7 +215,7 @@ app.get("/api/logout", (req, res) => {
 app.get("/api/orders", async (req, res) => {
   try {
     const orders = await Order.find().sort({ date: -1 });
-    res.json(orders);
+    res.json(orders.map(o => ({ ...o.toObject(), id: o._id })));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -762,6 +762,125 @@ app.delete("/api/shop-categories/:id", async (req, res) => {
   try {
     await ShopCategory.findByIdAndDelete(req.params.id);
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- CUSTOMERS (USERS) ----------
+app.get("/api/customers", async (req, res) => {
+  try {
+    const users = await User.find({ isAdmin: false });
+    // Map _id to id for frontend compatibility if needed, or just return users
+    res.json(users.map(u => ({ ...u.toObject(), id: u._id })));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/customers/:id", async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- SELLERS ----------
+app.get("/api/sellers", async (req, res) => {
+  try {
+    const sellers = await Seller.find();
+    res.json(sellers);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/sellers", async (req, res) => {
+  try {
+    const seller = new Seller(req.body);
+    await seller.save();
+    res.json(seller);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/sellers/:id", async (req, res) => {
+  try {
+    let query = { _id: req.params.id };
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { id: req.params.id };
+    }
+    const seller = await Seller.findOneAndUpdate(query, req.body, { new: true });
+    res.json(seller);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/sellers/:id", async (req, res) => {
+  try {
+    let query = { _id: req.params.id };
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { id: req.params.id };
+    }
+    await Seller.findOneAndDelete(query);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- TRANSACTIONS ----------
+app.get("/api/transactions", async (req, res) => {
+  try {
+    const transactions = await Transaction.find().sort({ date: -1 });
+    res.json(transactions);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- RETURNS ----------
+app.get("/api/returns", async (req, res) => {
+  try {
+    const returns = await ReturnRequest.find().sort({ date: -1 });
+    res.json(returns);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/returns/:id", async (req, res) => {
+  try {
+    let query = { _id: req.params.id };
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { id: req.params.id };
+    }
+    const retRequest = await ReturnRequest.findOneAndUpdate(query, req.body, { new: true });
+    res.json(retRequest);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- COUPONS ----------
+app.get("/api/coupons", async (req, res) => {
+  try {
+    const coupons = await Coupon.find();
+    res.json(coupons);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/coupons", async (req, res) => {
+  try {
+    const coupon = new Coupon(req.body);
+    await coupon.save();
+    res.json(coupon);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

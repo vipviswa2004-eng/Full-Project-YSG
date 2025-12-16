@@ -139,6 +139,7 @@ export interface Seller {
   companyName: string;
   contactPerson: string;
   email: string;
+  phone?: string;
   status: 'Active' | 'Pending' | 'Suspended';
   rating: number;
   balance: number;

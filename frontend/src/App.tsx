@@ -12,6 +12,11 @@ import { ProductDetails } from './pages/ProductDetails';
 import { Cart } from './pages/Cart';
 import { Admin } from './pages/Admin';
 import { Wishlist } from './pages/Wishlist';
+import { CorporateGifting } from './pages/CorporateGifting';
+import { TermsConditions } from './pages/TermsConditions';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { ShippingInfo } from './pages/ShippingInfo';
+import { ReturnPolicy } from './pages/ReturnPolicy';
 import { CartProvider } from './context';
 
 const AppContent: React.FC = () => {
@@ -30,6 +35,11 @@ const AppContent: React.FC = () => {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/corporate" element={<CorporateGifting />} />
+          <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/shipping" element={<ShippingInfo />} />
+          <Route path="/returns" element={<ReturnPolicy />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
