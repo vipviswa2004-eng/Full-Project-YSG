@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Sparkles, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Sparkles, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context';
 // import { products } from '../data/products';
 import { Product } from '../types';
@@ -9,6 +9,7 @@ export const Navbar: React.FC = () => {
   const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products } = useCart();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
@@ -187,23 +188,28 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-100">
+      <nav className="sticky top-0 z-50 bg-gray-900 shadow-md border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-primary md:hidden" title="Open menu"><Menu className="h-6 w-6" /></button>
-              <Link to="/" className="flex-shrink-0 flex items-center gap-2">
-                <Sparkles className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                <div><span className="font-bold text-lg md:text-xl tracking-tight text-gray-900 leading-none block">SIGN GALAXY</span><span className="text-[10px] text-gray-500 tracking-widest uppercase hidden md:block">Yathes Personalized Gifts</span></div>
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-primary md:hidden p-1" title="Open menu">
+                <Menu className="h-6 w-6" />
+              </button>
+              <Link to="/" className="flex-shrink-0 flex items-center gap-1.5 focus:outline-none">
+                <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-accent shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-black text-base md:text-xl tracking-tighter text-accent leading-none block">SIGN GALAXY</span>
+                  <span className="text-[8px] md:text-[10px] text-gray-400 tracking-widest uppercase hidden sm:block">Yathes Personalized Gifts</span>
+                </div>
               </Link>
             </div>
 
             <div className="hidden md:flex flex-1 mx-8 items-center justify-center" ref={desktopSearchRef}>
               <div className="relative w-full max-w-lg">
-                <input type="text" placeholder="Search for gifts..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={handleSearch} onFocus={() => setShowSuggestions(true)} />
+                <input type="text" placeholder="Search for gifts..." className="w-full pl-10 pr-4 py-2 border border-gray-700 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:bg-gray-700 focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={handleSearch} onFocus={() => setShowSuggestions(true)} />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 {showSuggestions && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in-down">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-xl shadow-xl border border-gray-700 overflow-hidden z-50 animate-fade-in-down">
                     {suggestions.length > 0 && (
                       <div className="py-2">
                         <p className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -213,22 +219,22 @@ export const Navbar: React.FC = () => {
                           <div
                             key={product.id}
                             onClick={() => handleSuggestionClick(product.id)}
-                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer transition-colors"
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-700 cursor-pointer transition-colors"
                           >
                             <img
                               src={product.image}
                               alt={product.name}
-                              className="w-10 h-10 rounded-md object-cover border border-gray-200"
+                              className="w-10 h-10 rounded-md object-cover border border-gray-700"
                             />
                             <div>
-                              <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                              <p className="text-sm font-medium text-white line-clamp-1">
                                 {product.name}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-400">
                                 {product.category}
                               </p>
                             </div>
-                            <ArrowUpRight className="w-4 h-4 text-gray-300" />
+                            <ArrowUpRight className="w-4 h-4 text-gray-500" />
                           </div>
                         ))}
                       </div>
@@ -261,7 +267,7 @@ export const Navbar: React.FC = () => {
                     {searchQuery !== '' && (
                       <div
                         onClick={() => handleSearch({ key: 'Enter' } as React.KeyboardEvent<HTMLInputElement>)}
-                        className="bg-gray-50 px-4 py-3 text-center text-sm text-primary font-bold cursor-pointer hover:bg-gray-100 border-t border-gray-100"
+                        className="bg-gray-900 px-4 py-3 text-center text-sm text-accent font-bold cursor-pointer hover:bg-black border-t border-gray-700"
                       >
                         View all results for "{searchQuery}"
                       </div>
@@ -278,24 +284,25 @@ export const Navbar: React.FC = () => {
 
             <div className="flex items-center space-x-4 md:space-x-8">
               <div className="hidden md:flex items-center space-x-6">
-                <Link to="/" className="text-gray-700 hover:text-primary font-medium">Home</Link>
-                <Link to="/products" className="text-gray-700 hover:text-primary font-medium">Shop</Link>
-                <Link to="/corporate" className="text-gray-700 hover:text-primary font-medium">Corporate</Link>
-                {user?.isAdmin && <Link to="/admin" className="text-red-600 hover:text-red-800 font-medium">Admin</Link>}
+                <Link to="/" className="text-white hover:text-[#f5ebd0] font-medium transition-colors">Home</Link>
+                <Link to="/products" className="text-white hover:text-[#f5ebd0] font-medium transition-colors">Shop</Link>
+                <Link to="/corporate" className="text-white hover:text-[#f5ebd0] font-medium transition-colors">Corporate</Link>
+                {user?.isAdmin && <Link to="/admin" className="text-red-500 hover:text-red-400 font-medium transition-colors">Admin</Link>}
               </div>
               <div className="flex items-center space-x-3">
-                <button onClick={() => setIsGiftAdvisorOpen(true)} className="text-gray-600 hover:text-accent p-1 hidden md:block" title="Gift Genie"><Gift className="h-6 w-6" /></button>
-                <Link to="/wishlist" className="relative text-gray-600 hover:text-red-500 p-1 hidden md:block">
+                <button onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)} className="text-white hover:text-[#f5ebd0] p-1 md:hidden" title="Search"><Search className="h-6 w-6" /></button>
+                <button onClick={() => setIsGiftAdvisorOpen(true)} className="text-white hover:text-[#f5ebd0] p-1 hidden md:block" title="Gift Genie"><Gift className="h-6 w-6" /></button>
+                <Link to="/wishlist" className="relative text-white hover:text-[#f5ebd0] p-1 hidden md:block">
                   <Heart className="h-6 w-6" />
                   {wishlist.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">{wishlist.length}</span>}
                 </Link>
-                <button type="button" onClick={openLoginModal} className="text-gray-600 hover:text-primary flex items-center gap-2 transition-colors">
+                <button type="button" onClick={openLoginModal} className="text-white hover:text-[#f5ebd0] flex items-center gap-2 transition-colors">
                   {user ? (
                     <div className="flex items-center gap-1">
-                      <span className="text-xs md:text-sm font-bold text-primary max-w-[80px] truncate hidden md:block">
+                      <span className="text-xs md:text-sm font-bold text-[#f5ebd0] max-w-[80px] truncate hidden md:block">
                         {user.email.split('@')[0]}
                       </span>
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-primary font-bold">
+                      <div className="w-8 h-8 bg-purple-900 rounded-full flex items-center justify-center text-white font-bold border border-purple-700">
                         {user.email.charAt(0).toUpperCase()}
                       </div>
                     </div>
@@ -306,7 +313,7 @@ export const Navbar: React.FC = () => {
                     </div>
                   )}
                 </button>
-                <Link to="/cart" className="relative text-gray-600 hover:text-primary p-1">
+                <Link to="/cart" className="relative text-white hover:text-[#f5ebd0] p-1">
                   <ShoppingCart className="h-6 w-6" />
                   {cart.length > 0 && (
                     <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">
@@ -319,15 +326,95 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
+        {/* Mobile Search Overlay */}
+        {isMobileSearchOpen && (
+          <div className="fixed inset-0 z-[60] bg-gray-900 animate-fade-in flex flex-col">
+            <div className="flex items-center gap-3 p-4 border-b">
+              <button onClick={() => setIsMobileSearchOpen(false)} className="p-1" title="Back"><ArrowLeft className="w-6 h-6" /></button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Search for gifts..."
+                  className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch(e as any);
+                      setIsMobileSearchOpen(false);
+                    }
+                  }}
+                />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {suggestions.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Suggestions</p>
+                  {suggestions.map(product => (
+                    <div
+                      key={product.id}
+                      onClick={() => {
+                        handleSuggestionClick(product.id);
+                        setIsMobileSearchOpen(false);
+                      }}
+                      className="flex items-center gap-4 p-2 active:bg-gray-50 rounded-xl"
+                    >
+                      <img src={product.image} alt="" className="w-12 h-12 rounded-lg object-cover border" />
+                      <div>
+                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.category}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : searchQuery ? (
+                <div className="text-center py-10">
+                  <p className="text-gray-500">No results found for "{searchQuery}"</p>
+                </div>
+              ) : recentSearches.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recent Searches</p>
+                    <button onClick={clearRecentSearches} className="text-[10px] text-red-500 font-bold uppercase">Clear</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentSearches.map((term, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          handleRecentSearchClick(term);
+                          setIsMobileSearchOpen(false);
+                        }}
+                        className="px-4 py-2 bg-gray-100 rounded-full text-xs font-bold text-gray-700 active:bg-primary active:text-white transition-colors"
+                      >
+                        {term}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <Search className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                  <p className="text-gray-400 text-sm italic">What are you looking for today?</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="fixed inset-0 z-40 flex md:hidden">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setIsMenuOpen(false)}></div>
-            <div className="relative w-3/4 max-w-xs bg-white h-full shadow-xl flex flex-col animate-slide-in-left">
-              <div className="p-4 bg-primary text-white flex justify-between items-center">
+            <div className="fixed inset-0 bg-black/70" onClick={() => setIsMenuOpen(false)}></div>
+            <div className="relative w-3/4 max-w-xs bg-gray-900 h-full shadow-xl flex flex-col animate-slide-in-left">
+              <div className="p-4 bg-gray-800 text-white flex justify-between items-center">
                 <span className="font-bold text-lg">Menu</span>
                 <button onClick={() => setIsMenuOpen(false)} title="Close menu">
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6 text-white" />
                 </button>
               </div>
               <div className="p-4 border-b border-gray-100 relative" ref={mobileSearchRef}>
@@ -367,14 +454,14 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
               <div className="flex-1 overflow-y-auto py-4 space-y-2">
-                <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">Home</Link>
-                <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">Shop All</Link>
-                <Link to="/corporate" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">Corporate Orders</Link>
-                <Link to="/cart" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium">My Cart ({cart.length})</Link>
+                <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">Home</Link>
+                <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">Shop All</Link>
+                <Link to="/corporate" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">Corporate Orders</Link>
+                <Link to="/cart" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">My Cart ({cart.length})</Link>
                 <Link
                   to="/wishlist"
                   onClick={() => setIsMenuOpen(false)}
-                  className="block px-6 py-3 text-gray-700 hover:bg-gray-50 font-medium flex items-center gap-2"
+                  className="block px-6 py-3 text-white hover:bg-gray-800 font-medium flex items-center gap-2"
                 >
                   My Wishlist
                   {wishlist.length > 0 && (
@@ -390,13 +477,13 @@ export const Navbar: React.FC = () => {
                   <Gift className="w-5 h-5" />
                   Gift Genie
                 </button>
-                {user?.isAdmin && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-red-600 bg-red-50 font-medium">Admin Panel</Link>}
-                <div className="border-t border-gray-100 mt-4 pt-4 px-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase mb-2">Account</p>
+                {user?.isAdmin && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-red-400 bg-red-900/20 font-medium">Admin Panel</Link>}
+                <div className="border-t border-gray-800 mt-4 pt-4 px-6">
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-2">Account</p>
                   <button
                     type="button"
                     onClick={openLoginModal}
-                    className="w-full text-left py-2 text-primary font-bold"
+                    className="w-full text-left py-2 text-accent font-bold"
                   >
                     {user ? `Logout (${user.email.split('@')[0]})` : 'Login / Register'}
                   </button>

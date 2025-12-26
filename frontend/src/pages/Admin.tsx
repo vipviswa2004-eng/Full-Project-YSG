@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
 // import { products as initialProducts } from '../data/products';
-import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory } from '../types';
+import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion } from '../types';
 // import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini'; // Unused
 import {
     Plus, Minus, Edit, LayoutDashboard, Package,
@@ -35,8 +35,12 @@ export const Admin: React.FC = () => {
     // Shop Sections & Categories
     const [sections, setSections] = useState<Section[]>([]);
     const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
-    const [shopSectionTab, setShopSectionTab] = useState<'sections' | 'categories'>('sections');
+    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+    const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasion[]>([]);
+    const [shopSectionTab, setShopSectionTab] = useState<'sections' | 'categories' | 'sub-categories' | 'special-occasions'>('sections');
+    const [subCategoryListFilter, setSubCategoryListFilter] = useState<string>('');
     const [isEditingShopItem, setIsEditingShopItem] = useState<any>(null);
+    const [isConvertingCategory, setIsConvertingCategory] = useState<ShopCategory | null>(null);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive' | 'Draft'>('All');
@@ -115,12 +119,16 @@ export const Admin: React.FC = () => {
 
     const fetchShopData = async () => {
         try {
-            const [sectionsRes, categoriesRes] = await Promise.all([
+            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes] = await Promise.all([
                 fetch('http://localhost:5000/api/sections'),
-                fetch('http://localhost:5000/api/shop-categories')
+                fetch('http://localhost:5000/api/shop-categories'),
+                fetch('http://localhost:5000/api/sub-categories'),
+                fetch('http://localhost:5000/api/special-occasions')
             ]);
             setSections(await sectionsRes.json());
             setShopCategories(await categoriesRes.json());
+            setSubCategories(await subCategoriesRes.json());
+            setSpecialOccasions(await occasionsRes.json());
         } catch (error) {
             console.error("Failed to fetch shop data", error);
         }
@@ -144,31 +152,65 @@ export const Admin: React.FC = () => {
         fetchShopData();
     }, []);
 
-    const handleShopItemSave = async (type: 'sections' | 'categories', data: any) => {
+    const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions', data: any) => {
         try {
             const method = data._id ? 'PUT' : 'POST';
-            const apiPath = type === 'sections' ? 'sections' : 'shop-categories';
+            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : 'special-occasions';
             const url = `http://localhost:5000/api/${apiPath}${data._id ? `/${data._id}` : ''}`;
-            await fetch(url, {
+
+            const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || `Failed to save ${type}`);
+            }
+
             fetchShopData();
             setIsEditingShopItem(null);
-        } catch (error) {
+            alert(`${type === 'sections' ? 'Section' : type === 'categories' ? 'Category' : type === 'sub-categories' ? 'Sub-category' : 'Special Occasion'} saved successfully!`);
+        } catch (error: any) {
             console.error(`Failed to save ${type}`, error);
+            alert(`Error: ${error.message}`);
         }
     };
 
-    const handleShopItemDelete = async (type: 'sections' | 'categories', id: string) => {
+    const handleShopItemDelete = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions', id: string) => {
         if (!window.confirm("Are you sure?")) return;
         try {
-            const apiPath = type === 'sections' ? 'sections' : 'shop-categories';
-            await fetch(`http://localhost:5000/api/${apiPath}/${id}`, { method: 'DELETE' });
+            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : 'special-occasions';
+            const res = await fetch(`http://localhost:5000/api/${apiPath}/${id}`, { method: 'DELETE' });
+
+            if (!res.ok) throw new Error(`Failed to delete ${type}`);
+
             fetchShopData();
-        } catch (error) {
+            alert("Deleted successfully!");
+        } catch (error: any) {
             console.error(`Failed to delete ${type}`, error);
+            alert(`Error: ${error.message}`);
+        }
+    };
+
+    const handleCategoryConvert = async (categoryId: string, parentCategoryId: string) => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/shop-categories/${categoryId}/convert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parentCategoryId })
+            });
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Failed to convert category");
+            }
+            alert("Category converted successfully!");
+            setIsConvertingCategory(null);
+            fetchShopData();
+        } catch (error: any) {
+            console.error("Conversion failed:", error);
+            alert(`Error: ${error.message}`);
         }
     };
 
@@ -263,6 +305,26 @@ export const Admin: React.FC = () => {
             }
         }
     };
+    const handleActivateAllProducts = async () => {
+        if (window.confirm("Are you sure you want to set ALL products to Active status? This action cannot be undone.")) {
+            try {
+                const response = await fetch('http://localhost:5000/api/products/activate-all', {
+                    method: 'POST',
+                    cache: 'no-store'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Successfully activated ${data.modifiedCount} products.`);
+                    fetchProducts();
+                } else {
+                    alert("Failed to activate products: " + (data.error || "Unknown error"));
+                }
+            } catch (e) {
+                console.error("Failed to activate all products", e);
+                alert("An error occurred. Please try again.");
+            }
+        }
+    };
     const handleStockUpdate = async (id: string, newStock: number) => {
         const updatedList = productList.map(p => p.id === id ? { ...p, stock: Math.max(0, newStock) } : p);
         setProductList(updatedList);
@@ -331,6 +393,17 @@ export const Admin: React.FC = () => {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'main' | 'variant', varId?: string, optId?: string) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Validation
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                alert("Invalid file type. Please upload JPG, JPEG, PNG, or WEBP.");
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) { // 10MB
+                alert("File is too large. Maximum size is 10MB.");
+                return;
+            }
+
             const formData = new FormData();
             formData.append('image', file);
 
@@ -542,7 +615,253 @@ export const Admin: React.FC = () => {
             </div>
         );
     };
-    const renderProducts = () => (<div className="space-y-4"><div className="flex justify-between items-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex items-center gap-3"><h2 className="text-lg font-bold flex items-center gap-2"><Package className="w-5 h-5" /> Inventory</h2><span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-bold">{filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}</span></div><div className="flex gap-4 items-center"><div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input className="pl-9 pr-4 py-2 border rounded-md text-sm w-64 focus:ring-primary focus:border-primary" placeholder="Search Name, SKU, Category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><div className="relative"><Filter className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="pl-9 pr-4 py-2 border rounded-md text-sm focus:ring-primary focus:border-primary bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Draft">Draft</option></select></div><button onClick={() => setIsEditing({ id: `NEW-${Date.now()}`, code: '', name: 'New Product', category: 'Uncategorized', pdfPrice: 0, shape: Shape.RECTANGLE, image: 'https://via.placeholder.com/150', description: '', stock: 0, status: 'Draft', variations: [] })} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2"><Plus className="w-4 h-4" /> Add Product</button></div></div><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left font-medium text-gray-500">Product</th><th className="px-6 py-3 text-left font-medium text-gray-500">Category</th><th className="px-6 py-3 text-left font-medium text-gray-500">Stock</th><th className="px-6 py-3 text-left font-medium text-gray-500">Price</th><th className="px-6 py-3 text-left font-medium text-gray-500">Status</th><th className="px-6 py-3 text-right font-medium text-gray-500">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{filteredProducts.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 flex items-center gap-3"><img src={p.image} className="w-10 h-10 rounded border object-cover" alt="" /><div><div className="font-medium text-gray-900">{p.name}</div><div className="text-xs text-gray-500 font-mono">{p.code}</div></div></td><td className="px-6 py-4 text-gray-600">{p.category}</td><td className="px-6 py-4"><div className="flex items-center gap-2"><div className="flex items-center border rounded-md"><button onClick={() => handleStockUpdate(p.id, (p.stock || 0) - 1)} className="p-1 hover:bg-gray-100 border-r"><Minus className="w-3 h-3 text-gray-600" /></button><input type="number" value={p.stock || 0} onChange={(e) => handleStockUpdate(p.id, parseInt(e.target.value) || 0)} className="w-10 text-center text-sm focus:outline-none h-[24px]" /><button onClick={() => handleStockUpdate(p.id, (p.stock || 0) + 1)} className="p-1 hover:bg-gray-100 border-l"><Plus className="w-3 h-3 text-gray-600" /></button></div>{(p.stock || 0) < 10 && (<div className="flex items-center text-red-600" title="Low Stock"><AlertCircle className="w-4 h-4" /></div>)}</div></td><td className="px-6 py-4">{p.discount ? (<div><div className="text-gray-400 line-through text-xs">₹{p.pdfPrice}</div><div className="font-bold text-green-600">₹{Math.round(p.pdfPrice * (1 - p.discount / 100))}</div></div>) : (<div className="font-bold">₹{p.pdfPrice}</div>)}</td><td className="px-6 py-4"><span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{p.status}</span></td><td className="px-6 py-4 text-right space-x-2"><button onClick={() => setIsEditing(p)} className="text-blue-600 hover:underline">Edit</button><button onClick={() => handleDeleteProduct(p.id)} className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button></td></tr>))}</tbody></table></div></div>);
+
+    const renderProducts = () => {
+        const stats = {
+            total: productList.length,
+            active: productList.filter(p => p.status === 'Active').length,
+            outOfStock: productList.filter(p => (p.stock || 0) === 0).length,
+            lowStock: productList.filter(p => (p.stock || 0) > 0 && (p.stock || 0) < 10).length
+        };
+
+        return (
+            <div className="space-y-6">
+                {/* Header Section */}
+                <div className="flex justify-between items-end">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <Package className="w-7 h-7 text-primary" /> Inventory Management
+                        </h2>
+                        <p className="text-sm text-gray-500 mt-1">Track stock levels, update pricing, and manage product visibility</p>
+                    </div>
+                </div>
+
+                {/* Inventory Insight Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02] cursor-default">
+                        <div className="p-3 bg-purple-50 rounded-lg text-purple-600">
+                            <Package className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Products</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02] cursor-default">
+                        <div className="p-3 bg-green-50 rounded-lg text-green-600">
+                            <CheckCircle className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Active</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.active}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02] cursor-default">
+                        <div className="p-3 bg-red-50 rounded-lg text-red-600">
+                            <AlertCircle className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Out of Stock</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.outOfStock}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 transition-transform hover:scale-[1.02] cursor-default">
+                        <div className="p-3 bg-yellow-50 rounded-lg text-yellow-600">
+                            <Filter className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Low Stock</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.lowStock}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Search and Action Bar */}
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm sticky top-4 z-20 backdrop-blur-md bg-white/95">
+                    <div className="flex flex-col lg:flex-row justify-between gap-4">
+                        <div className="flex flex-1 gap-3">
+                            <div className="relative flex-1 group">
+                                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                <input
+                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all bg-gray-50/50 hover:bg-white"
+                                    placeholder="Search by name, SKU, or category..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <div className="relative">
+                                <Filter className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                                    className="pl-9 pr-10 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary bg-white appearance-none cursor-pointer hover:bg-gray-50 transition-colors font-medium text-gray-700 min-w-[140px]"
+                                >
+                                    <option value="All">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Draft">Draft</option>
+                                </select>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                    <LayoutDashboard className="w-3.5 h-3.5 rotate-90" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleActivateAllProducts}
+                                className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-green-700 hover:shadow-lg hover:shadow-green-200/50 transition-all active:scale-95 border border-green-700"
+                            >
+                                <CheckCircle className="w-4 h-4" /> Activate All
+                            </button>
+                            <button
+                                onClick={() => setIsEditing({
+                                    id: `NEW-${Date.now()}`,
+                                    code: '',
+                                    name: 'New Product',
+                                    category: 'Uncategorized',
+                                    pdfPrice: 0,
+                                    shape: Shape.RECTANGLE,
+                                    image: 'https://via.placeholder.com/150',
+                                    description: '',
+                                    stock: 0,
+                                    status: 'Draft',
+                                    variations: []
+                                })}
+                                className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-700 hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-95 shadow-sm shadow-primary/20"
+                            >
+                                <Plus className="w-5 h-5" /> Add Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Products Table */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden border-separate border-spacing-0">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-200">
+                                    <th className="px-6 py-4 text-left font-bold text-gray-600 uppercase tracking-wider text-[11px]">Product Details</th>
+                                    <th className="px-6 py-4 text-left font-bold text-gray-600 uppercase tracking-wider text-[11px]">Category</th>
+                                    <th className="px-6 py-4 text-left font-bold text-gray-600 uppercase tracking-wider text-[11px]">Stock Status</th>
+                                    <th className="px-6 py-4 text-left font-bold text-gray-600 uppercase tracking-wider text-[11px]">Pricing</th>
+                                    <th className="px-6 py-4 text-left font-bold text-gray-600 uppercase tracking-wider text-[11px]">Visibility</th>
+                                    <th className="px-6 py-4 text-right font-bold text-gray-600 uppercase tracking-wider text-[11px]">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filteredProducts.map(p => (
+                                    <tr key={p.id} className="hover:bg-blue-50/30 transition-all group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <img
+                                                        src={p.image}
+                                                        className="w-12 h-12 rounded-xl border border-gray-100 object-cover shadow-sm group-hover:scale-110 transition-transform duration-300"
+                                                        alt={p.name}
+                                                    />
+                                                    {(p.stock || 0) < 5 && (
+                                                        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white shadow-sm animate-pulse" />
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-gray-900 group-hover:text-primary transition-colors">{p.name}</span>
+                                                    <span className="text-[10px] text-gray-400 font-mono mt-0.5 tracking-tight uppercase flex items-center gap-1 group-hover:text-gray-600">
+                                                        #{p.code}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-3 py-1 bg-white border border-gray-200 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                                {p.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center bg-gray-100/50 hover:bg-white border border-transparent hover:border-gray-200 rounded-xl p-1 w-fit transition-all shadow-inner hover:shadow-sm">
+                                                    <button
+                                                        onClick={() => handleStockUpdate(p.id, (p.stock || 0) - 1)}
+                                                        className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                                                    >
+                                                        <Minus className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <input
+                                                        type="number"
+                                                        value={p.stock || 0}
+                                                        onChange={(e) => handleStockUpdate(p.id, parseInt(e.target.value) || 0)}
+                                                        className="w-10 text-center text-sm font-black bg-transparent focus:outline-none h-6"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleStockUpdate(p.id, (p.stock || 0) + 1)}
+                                                        className="p-1 rounded-lg text-gray-400 hover:text-green-500 hover:bg-green-50 transition-all"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    {(p.stock || 0) <= 0 ? (
+                                                        <span className="h-2 w-2 rounded-full bg-red-500 shadow-sm shadow-red-200" />
+                                                    ) : (p.stock || 0) < 10 ? (
+                                                        <span className="h-2 w-2 rounded-full bg-yellow-500 shadow-sm shadow-yellow-200" />
+                                                    ) : (
+                                                        <span className="h-2 w-2 rounded-full bg-green-500 shadow-sm shadow-green-200" />
+                                                    )}
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${(p.stock || 0) <= 0 ? 'text-red-500' : (p.stock || 0) < 10 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                                        {(p.stock || 0) <= 0 ? 'Out of Stock' : (p.stock || 0) < 10 ? 'Low Stock' : 'Available'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {p.discount ? (
+                                                <div className="flex flex-col">
+                                                    <div className="text-gray-400 line-through text-[10px] font-medium italic">₹{p.pdfPrice}</div>
+                                                    <div className="font-black text-gray-900 text-base flex items-center gap-1.5 leading-none">
+                                                        ₹{Math.round(p.pdfPrice * (1 - p.discount / 100))}
+                                                        <span className="text-[10px] text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full font-bold">-{p.discount}%</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="font-black text-gray-900 text-lg leading-none">₹{p.pdfPrice}</div>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest border transition-all shadow-sm ${p.status === 'Active' ? 'bg-green-600 text-white border-green-700 shadow-green-100' :
+                                                p.status === 'Draft' ? 'bg-amber-100 text-amber-700 border-amber-200 shadow-amber-50' :
+                                                    'bg-slate-100 text-slate-700 border-slate-200 shadow-slate-50'
+                                                }`}>
+                                                {p.status?.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 ease-out">
+                                                <button
+                                                    onClick={() => setIsEditing(p)}
+                                                    className="p-2.5 bg-white border border-gray-200 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm active:scale-95"
+                                                    title="Edit Product"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteProduct(p.id)}
+                                                    className="p-2.5 bg-white border border-gray-200 text-red-500 rounded-xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm active:scale-95"
+                                                    title="Delete Product"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
     const fetchProducts = async () => {
         try {
             const res = await fetch('http://localhost:5000/api/products');
@@ -845,18 +1164,30 @@ export const Admin: React.FC = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Shop Sections & Categories</h2>
-                <div className="flex gap-2 bg-white p-1 rounded border">
+                <div className="flex gap-4 border-b border-gray-200 mb-6">
                     <button
                         onClick={() => setShopSectionTab('sections')}
-                        className={`px-4 py-2 rounded text-sm font-medium ${shopSectionTab === 'sections' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                        className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'sections' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         Sections
                     </button>
                     <button
                         onClick={() => setShopSectionTab('categories')}
-                        className={`px-4 py-2 rounded text-sm font-medium ${shopSectionTab === 'categories' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                        className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'categories' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         Categories
+                    </button>
+                    <button
+                        onClick={() => setShopSectionTab('sub-categories')}
+                        className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'sub-categories' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Sub-categories
+                    </button>
+                    <button
+                        onClick={() => setShopSectionTab('special-occasions')}
+                        className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'special-occasions' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Special Occasions
                     </button>
                 </div>
             </div>
@@ -939,6 +1270,12 @@ export const Admin: React.FC = () => {
                                         <Edit className="w-4 h-4 inline mr-1" /> Edit
                                     </button>
                                     <button
+                                        onClick={() => setIsConvertingCategory(category)}
+                                        className="flex-1 text-purple-600 border border-purple-600 px-3 py-1 rounded text-sm hover:bg-purple-50"
+                                    >
+                                        <RotateCcw className="w-4 h-4 inline mr-1" /> Convert
+                                    </button>
+                                    <button
                                         onClick={() => handleShopItemDelete('categories', category._id || category.id)}
                                         className="flex-1 text-red-600 border border-red-600 px-3 py-1 rounded text-sm hover:bg-red-50"
                                     >
@@ -950,13 +1287,120 @@ export const Admin: React.FC = () => {
                     </div>
                 </div>
             )}
+            {/* Sub-categories Tab */}
+            {shopSectionTab === 'sub-categories' && (
+                <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                        <button
+                            onClick={() => setIsEditingShopItem({ type: 'sub-category', data: { id: `sub_${Date.now()}`, categoryId: subCategoryListFilter || '', name: '', image: '', order: subCategories.length + 1 } })}
+                            className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary-dark"
+                        >
+                            + Add New Sub-category
+                        </button>
 
-            {/* Edit Modal */}
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700">Filter by Category:</label>
+                            <select
+                                value={subCategoryListFilter}
+                                onChange={(e) => setSubCategoryListFilter(e.target.value)}
+                                className="border rounded px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+                            >
+                                <option value="">All Categories</option>
+                                {shopCategories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {subCategories
+                            .filter(sub => !subCategoryListFilter || sub.categoryId === subCategoryListFilter)
+                            .map(sub => (
+                                <div key={sub.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex gap-4">
+                                        <img
+                                            src={sub.image}
+                                            alt={sub.name}
+                                            className="w-20 h-20 rounded-lg object-cover border-2 border-gray-100"
+                                        />
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-900">{sub.name}</h3>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Category: {shopCategories.find(c => c.id === sub.categoryId)?.name || 'Unknown'}
+                                            </p>
+                                            <p className="text-xs text-gray-500">Order: {sub.order}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-4">
+                                        <button
+                                            onClick={() => setIsEditingShopItem({ type: 'sub-category', data: sub })}
+                                            className="flex-1 text-blue-600 border border-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-50"
+                                        >
+                                            <Edit className="w-4 h-4 inline mr-1" /> Edit
+                                        </button>
+                                        <button
+                                            onClick={() => handleShopItemDelete('sub-categories', sub._id || sub.id)}
+                                            className="flex-1 text-red-600 border border-red-600 px-3 py-1 rounded text-sm hover:bg-red-50"
+                                        >
+                                            <Trash2 className="w-4 h-4 inline mr-1" /> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                    </div>
+                </div>
+            )}
+            {/* Special Occasions Tab */}
+            {shopSectionTab === 'special-occasions' && (
+                <div className="space-y-4">
+                    <button
+                        onClick={() => setIsEditingShopItem({ type: 'special-occasion', data: { id: `occ_${Date.now()}`, name: '', description: '', image: '', link: '', order: specialOccasions.length + 1 } })}
+                        className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary-dark"
+                    >
+                        + Add New Special Occasion
+                    </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {specialOccasions.map(occ => (
+                            <div key={occ.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex gap-4">
+                                    <img
+                                        src={occ.image}
+                                        alt={occ.name}
+                                        className="w-20 h-20 rounded-lg object-cover border-2 border-gray-100"
+                                    />
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-gray-900">{occ.name}</h3>
+                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{occ.description}</p>
+                                        <p className="text-xs text-blue-600 truncate">{occ.link}</p>
+                                        <p className="text-xs text-gray-500">Order: {occ.order}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => setIsEditingShopItem({ type: 'special-occasion', data: occ })}
+                                        className="flex-1 text-blue-600 border border-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-50"
+                                    >
+                                        <Edit className="w-4 h-4 inline mr-1" /> Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleShopItemDelete('special-occasions', occ._id || occ.id)}
+                                        className="flex-1 text-red-600 border border-red-600 px-3 py-1 rounded text-sm hover:bg-red-50"
+                                    >
+                                        <Trash2 className="w-4 h-4 inline mr-1" /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             {isEditingShopItem && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg w-96 shadow-xl space-y-4">
                         <h3 className="text-lg font-bold">
-                            {isEditingShopItem.data._id ? 'Edit' : 'Add'} {isEditingShopItem.type === 'section' ? 'Section' : 'Category'}
+                            {isEditingShopItem.data._id ? 'Edit' : 'Add'} {isEditingShopItem.type === 'section' ? 'Section' : isEditingShopItem.type === 'category' ? 'Category' : isEditingShopItem.type === 'sub-category' ? 'Sub-category' : 'Special Occasion'}
                         </h3>
 
                         {isEditingShopItem.type === 'section' ? (
@@ -981,7 +1425,7 @@ export const Admin: React.FC = () => {
                                     />
                                 </div>
                             </>
-                        ) : (
+                        ) : isEditingShopItem.type === 'category' ? (
                             <>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
@@ -1027,11 +1471,64 @@ export const Admin: React.FC = () => {
                                             }}
                                             className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                                         />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                                    <input
+                                        type="number"
+                                        placeholder="1"
+                                        value={isEditingShopItem.data.order || 1}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, order: parseInt(e.target.value) } })}
+                                        className="w-full border p-2 rounded"
+                                    />
+                                </div>
+                            </>
+                        ) : isEditingShopItem.type === 'sub-category' ? (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                    <select
+                                        value={isEditingShopItem.data.categoryId || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, categoryId: e.target.value } })}
+                                        className="w-full border p-2 rounded"
+                                    >
+                                        <option value="">Select Category</option>
+                                        {shopCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Sub-category Name</label>
+                                    <input
+                                        placeholder="e.g., MDF Trophy"
+                                        value={isEditingShopItem.data.name || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, name: e.target.value } })}
+                                        className="w-full border p-2 rounded"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                                    <div className="space-y-2">
+                                        {isEditingShopItem.data.image && (
+                                            <img src={isEditingShopItem.data.image} alt="Preview" className="w-20 h-20 object-cover rounded border" />
+                                        )}
                                         <input
-                                            placeholder="Or enter Image URL..."
-                                            value={isEditingShopItem.data.image || ''}
-                                            onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, image: e.target.value } })}
-                                            className="w-full border p-2 rounded text-sm"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setIsEditingShopItem({
+                                                            ...isEditingShopItem,
+                                                            data: { ...isEditingShopItem.data, image: reader.result as string }
+                                                        });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                                         />
                                     </div>
                                 </div>
@@ -1046,7 +1543,73 @@ export const Admin: React.FC = () => {
                                     />
                                 </div>
                             </>
-                        )}
+                        ) : isEditingShopItem.type === 'special-occasion' ? (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Occasion Name</label>
+                                    <input
+                                        placeholder="e.g., Mother's Day"
+                                        value={isEditingShopItem.data.name || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, name: e.target.value } })}
+                                        className="w-full border p-2 rounded"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <textarea
+                                        placeholder="Add a catchy description..."
+                                        value={isEditingShopItem.data.description || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, description: e.target.value } })}
+                                        className="w-full border p-2 rounded"
+                                        rows={2}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Link (URL)</label>
+                                    <input
+                                        placeholder="/products?q=Mother"
+                                        value={isEditingShopItem.data.link || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, link: e.target.value } })}
+                                        className="w-full border p-2 rounded"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                                    <div className="space-y-2">
+                                        {isEditingShopItem.data.image && (
+                                            <img src={isEditingShopItem.data.image} alt="Preview" className="w-20 h-20 object-cover rounded border" />
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setIsEditingShopItem({
+                                                            ...isEditingShopItem,
+                                                            data: { ...isEditingShopItem.data, image: reader.result as string }
+                                                        });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                                    <input
+                                        type="number"
+                                        value={isEditingShopItem.data.order || 1}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, order: parseInt(e.target.value) } })}
+                                        className="w-full border p-2 rounded"
+                                    />
+                                </div>
+                            </>
+                        ) : null}
 
                         <div className="flex justify-end gap-2 pt-4">
                             <button
@@ -1056,10 +1619,54 @@ export const Admin: React.FC = () => {
                                 Cancel
                             </button>
                             <button
-                                onClick={() => handleShopItemSave(isEditingShopItem.type === 'section' ? 'sections' : 'categories', isEditingShopItem.data)}
+                                onClick={() => handleShopItemSave(isEditingShopItem.type === 'section' ? 'sections' : isEditingShopItem.type === 'category' ? 'categories' : isEditingShopItem.type === 'sub-category' ? 'sub-categories' : 'special-occasions', isEditingShopItem.data)}
                                 className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark font-bold"
                             >
                                 Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CONVERT CATEGORY MODAL */}
+            {isConvertingCategory && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-xl space-y-4">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            <RotateCcw className="w-5 h-5 text-purple-600" />
+                            Convert to Sub-category
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                            You are converting <strong>{isConvertingCategory.name}</strong> into a sub-category. All products in this category will be moved.
+                        </p>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Parent Category</label>
+                            <select
+                                className="w-full border p-2 rounded"
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        if (window.confirm(`Are you sure you want to make "${isConvertingCategory.name}" a sub-category of "${shopCategories.find(c => c.id === e.target.value)?.name}"?`)) {
+                                            handleCategoryConvert(isConvertingCategory._id || '', e.target.value);
+                                        }
+                                    }
+                                }}
+                            >
+                                <option value="">Select Category...</option>
+                                {shopCategories
+                                    .filter(c => c.id !== isConvertingCategory.id)
+                                    .map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                                }
+                            </select>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <button
+                                onClick={() => setIsConvertingCategory(null)}
+                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>
@@ -1071,14 +1678,14 @@ export const Admin: React.FC = () => {
     const renderContent = () => { switch (activeTab) { case 'products': return renderProducts(); case 'orders': return renderOrders(); case 'customers': return renderCustomers(); case 'sellers': return renderSellers(); case 'payments': return renderPayments(); case 'logistics': return renderLogistics(); case 'returns': return renderReturns(); case 'reviews': return renderReviews(); case 'analytics': return renderDashboard(); case 'coupons': return renderCoupons(); case 'security': return renderSecurity(); case 'settings': return renderSecurity(); case 'shop-sections': return renderShopSections(); default: return renderDashboard(); } };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex font-sans">
+        <div className="min-h-screen bg-app-bg flex font-sans">
             <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 hidden md:flex h-screen sticky top-0">
                 <div className="p-4 border-b border-slate-700"><h2 className="text-lg font-bold tracking-tight flex gap-2 items-center"><LayoutDashboard className="text-accent" /> Seller Central</h2></div>
                 <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-hide">{[{ id: 'dashboard', label: 'Dashboard', icon: BarChart3 }, { id: 'orders', label: 'Orders', icon: ShoppingBag }, { id: 'products', label: 'Inventory', icon: Package }, { id: 'shop-sections', label: 'Shop Sections', icon: LayoutDashboard }, { id: 'customers', label: 'Customers', icon: Users }, { id: 'sellers', label: 'Sellers', icon: Users }, { id: 'payments', label: 'Payments', icon: DollarSign }, { id: 'logistics', label: 'Logistics', icon: Truck }, { id: 'returns', label: 'Returns', icon: RotateCcw }, { id: 'reviews', label: 'Reviews', icon: Star }, { id: 'coupons', label: 'Coupons', icon: Ticket }, { id: 'security', label: 'Security', icon: ShieldCheck }].map(item => (<button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === item.id ? 'bg-slate-800 text-white border-l-4 border-accent' : 'text-slate-400 hover:bg-slate-800 hover:text-gray-200'}`}><item.icon className="w-4 h-4" /> {item.label}</button>))}</nav>
             </aside>
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-screen">
                 <header className="bg-white shadow-sm h-16 flex items-center justify-between px-8 border-b border-gray-200 z-10 shrink-0"><div className="flex items-center text-gray-800 font-semibold text-xl capitalize">{activeTab}</div><div className="flex items-center gap-4"><div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full"><div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">A</div><p className="text-sm font-bold text-gray-900 truncate max-w-[100px]">{user.email.split('@')[0]}</p></div></div></header>
-                <main className="flex-1 overflow-auto p-6 bg-gray-50">{renderContent()}</main>
+                <main className="flex-1 overflow-auto p-6 bg-app-bg">{renderContent()}</main>
             </div>
             {/* PRODUCT EDIT MODAL */}
             {editedProduct && (
@@ -1090,7 +1697,54 @@ export const Admin: React.FC = () => {
                             <div className="flex-1 p-8 overflow-y-auto">
                                 {editTab === 'vital' && (<div className="space-y-6">
                                     {/* Vital Info Fields */}
-                                    <div className="grid grid-cols-2 gap-6"><div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={e => setEditedProduct({ ...editedProduct, name: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Price</label><input type="number" value={editedProduct.pdfPrice} onChange={e => setEditedProduct({ ...editedProduct, pdfPrice: parseFloat(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Stock</label><input type="number" value={editedProduct.stock || 0} onChange={e => setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div><div><label className="block text-sm font-medium text-gray-700">Discount (%)</label><input type="number" min="0" max="100" value={editedProduct.discount || 0} onChange={e => setEditedProduct({ ...editedProduct, discount: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" /></div><div><label className="block text-sm font-medium text-gray-700">Final Price (Calculated)</label><input type="text" value={editedProduct.pdfPrice && editedProduct.discount ? Math.round(editedProduct.pdfPrice * (1 - editedProduct.discount / 100)) : editedProduct.pdfPrice} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 font-bold text-green-600" /></div><div><label className="block text-sm font-medium text-gray-700">Category</label><select value={editedProduct.category} onChange={e => setEditedProduct({ ...editedProduct, category: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="">-- Select Category --</option>{shopCategories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select></div><div><label className="block text-sm font-medium text-gray-700">Status</label><select value={editedProduct.status || 'Active'} onChange={e => setEditedProduct({ ...editedProduct, status: e.target.value as any })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Active">Active</option><option value="Draft">Draft</option><option value="Out of Stock">Out of Stock</option></select></div><div><label className="block text-sm font-medium text-gray-700">Rating (Auto-calculated)</label><input type="number" step="0.1" min="0" max="5" value={editedProduct.rating || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div><div><label className="block text-sm font-medium text-gray-700">Reviews Count (Auto-calculated)</label><input type="number" min="0" value={editedProduct.reviewsCount || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={e => setEditedProduct({ ...editedProduct, name: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Price</label><input type="number" value={editedProduct.pdfPrice} onChange={e => setEditedProduct({ ...editedProduct, pdfPrice: parseFloat(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Stock</label><input type="number" value={editedProduct.stock || 0} onChange={e => setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Discount (%)</label><input type="number" min="0" max="100" value={editedProduct.discount || 0} onChange={e => setEditedProduct({ ...editedProduct, discount: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Final Price (Calculated)</label><input type="text" value={editedProduct.pdfPrice && editedProduct.discount ? Math.round(editedProduct.pdfPrice * (1 - editedProduct.discount / 100)) : editedProduct.pdfPrice} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 font-bold text-green-600" /></div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Shop Category</label>
+                                            <select
+                                                value={editedProduct.shopCategoryId || ''}
+                                                onChange={e => {
+                                                    const cat = shopCategories.find(c => c.id === e.target.value);
+                                                    setEditedProduct({
+                                                        ...editedProduct,
+                                                        shopCategoryId: e.target.value,
+                                                        sectionId: cat?.sectionId || '',
+                                                        category: cat?.name || '',
+                                                        subCategoryId: '' // Reset sub-category when category changes
+                                                    });
+                                                }}
+                                                className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                            >
+                                                <option value="">-- Select Category --</option>
+                                                {shopCategories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Sub-category</label>
+                                            <select
+                                                value={editedProduct.subCategoryId || ''}
+                                                onChange={e => setEditedProduct({ ...editedProduct, subCategoryId: e.target.value })}
+                                                className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                                disabled={!editedProduct.shopCategoryId}
+                                            >
+                                                <option value="">-- Select Sub-category --</option>
+                                                {subCategories
+                                                    .filter(sub => sub.categoryId === editedProduct.shopCategoryId)
+                                                    .map(sub => (
+                                                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                                    ))
+                                                }
+                                            </select>
+                                        </div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Status</label><select value={editedProduct.status || 'Active'} onChange={e => setEditedProduct({ ...editedProduct, status: e.target.value as any })} className="mt-1 block w-full border border-gray-300 rounded-md p-2"><option value="Active">Active</option><option value="Draft">Draft</option><option value="Out of Stock">Out of Stock</option></select></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Rating (Auto-calculated)</label><input type="number" step="0.1" min="0" max="5" value={editedProduct.rating || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Reviews Count (Auto-calculated)</label><input type="number" min="0" value={editedProduct.reviewsCount || 0} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 cursor-not-allowed" title="Automatically calculated from reviews" /></div>
                                         <div className="flex items-center gap-2 pt-6">
                                             <input
                                                 type="checkbox"
@@ -1149,21 +1803,49 @@ export const Admin: React.FC = () => {
                                             <input
                                                 type="file"
                                                 multiple
-                                                onChange={(e) => {
+                                                onChange={async (e) => {
                                                     const files = Array.from(e.target.files || []);
-                                                    files.forEach(file => {
-                                                        const reader = new FileReader();
-                                                        reader.onloadend = () => {
-                                                            setEditedProduct(prev => {
-                                                                if (!prev) return null;
-                                                                return {
-                                                                    ...prev,
-                                                                    gallery: [...(prev.gallery || []), reader.result as string]
-                                                                };
+                                                    if (files.length === 0) return;
+
+                                                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                                                    const uploadPromises = files.map(async (file) => {
+                                                        // Validation
+                                                        if (!allowedTypes.includes(file.type)) {
+                                                            alert(`Skipping ${file.name}: Invalid file type.`);
+                                                            return null;
+                                                        }
+                                                        if (file.size > 10 * 1024 * 1024) { // 10MB
+                                                            alert(`Skipping ${file.name}: File too large (Max 10MB).`);
+                                                            return null;
+                                                        }
+
+                                                        const formData = new FormData();
+                                                        formData.append('image', file);
+                                                        try {
+                                                            const response = await fetch('http://localhost:5000/api/upload', {
+                                                                method: 'POST',
+                                                                body: formData
                                                             });
-                                                        };
-                                                        reader.readAsDataURL(file);
+                                                            const data = await response.json();
+                                                            return data.url;
+                                                        } catch (error) {
+                                                            console.error("Failed to upload gallery image", error);
+                                                            return null;
+                                                        }
                                                     });
+
+                                                    const urls = await Promise.all(uploadPromises);
+                                                    const validUrls = urls.filter(url => url !== null) as string[];
+
+                                                    if (validUrls.length > 0) {
+                                                        setEditedProduct(prev => {
+                                                            if (!prev) return null;
+                                                            return {
+                                                                ...prev,
+                                                                gallery: [...(prev.gallery || []), ...validUrls]
+                                                            };
+                                                        });
+                                                    }
                                                 }}
                                                 className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                                             />
@@ -1212,110 +1894,153 @@ export const Admin: React.FC = () => {
                                         </div>
 
                                         <div className="space-y-4">
-                                            {editedProduct.variations?.find(v => v.name === 'Size')?.options.map((option) => (
-                                                <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                    <div className="grid grid-cols-4 gap-4">
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-700 mb-1">Size Name</label>
-                                                            <input
-                                                                type="text"
-                                                                value={option.label}
-                                                                onChange={(e) => {
-                                                                    const updatedVariations = editedProduct.variations?.map(v => {
-                                                                        if (v.name === 'Size') {
-                                                                            return {
-                                                                                ...v,
-                                                                                options: v.options.map(o =>
-                                                                                    o.id === option.id ? { ...o, label: e.target.value } : o
-                                                                                )
-                                                                            };
-                                                                        }
-                                                                        return v;
-                                                                    });
-                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                }}
-                                                                placeholder="e.g., Small, Medium, Large"
-                                                                className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                            />
+                                            {(() => {
+                                                const sizeVar = editedProduct.variations?.find(v => v.name === 'Size');
+                                                if (!sizeVar || sizeVar.options.length === 0) {
+                                                    return (
+                                                        <div className="text-center py-8 text-gray-500">
+                                                            <p>No sizes added yet. Click "Add Size" to create one.</p>
                                                         </div>
+                                                    );
+                                                }
+                                                return sizeVar.options.map((option) => (
+                                                    <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                        <div className="grid grid-cols-5 gap-4">
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Size Name</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={option.label}
+                                                                    onChange={(e) => {
+                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                            if (v.name === 'Size') {
+                                                                                return {
+                                                                                    ...v,
+                                                                                    options: v.options.map(o =>
+                                                                                        o.id === option.id ? { ...o, label: e.target.value } : o
+                                                                                    )
+                                                                                };
+                                                                            }
+                                                                            return v;
+                                                                        });
+                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                    }}
+                                                                    placeholder="e.g., Small, Medium, Large"
+                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                />
+                                                            </div>
 
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
-                                                            <input
-                                                                type="text"
-                                                                value={option.description || ''}
-                                                                onChange={(e) => {
-                                                                    const updatedVariations = editedProduct.variations?.map(v => {
-                                                                        if (v.name === 'Size') {
-                                                                            return {
-                                                                                ...v,
-                                                                                options: v.options.map(o =>
-                                                                                    o.id === option.id ? { ...o, description: e.target.value } : o
-                                                                                )
-                                                                            };
-                                                                        }
-                                                                        return v;
-                                                                    });
-                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                }}
-                                                                placeholder="e.g., 10x10cm"
-                                                                className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                            />
-                                                        </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={option.description || ''}
+                                                                    onChange={(e) => {
+                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                            if (v.name === 'Size') {
+                                                                                return {
+                                                                                    ...v,
+                                                                                    options: v.options.map(o =>
+                                                                                        o.id === option.id ? { ...o, description: e.target.value } : o
+                                                                                    )
+                                                                                };
+                                                                            }
+                                                                            return v;
+                                                                        });
+                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                    }}
+                                                                    placeholder="e.g., 10x10cm"
+                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                />
+                                                            </div>
 
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-700 mb-1">Price Adjustment (₹)</label>
-                                                            <input
-                                                                type="number"
-                                                                value={option.priceAdjustment}
-                                                                onChange={(e) => {
-                                                                    const updatedVariations = editedProduct.variations?.map(v => {
-                                                                        if (v.name === 'Size') {
-                                                                            return {
-                                                                                ...v,
-                                                                                options: v.options.map(o =>
-                                                                                    o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
-                                                                                )
-                                                                            };
-                                                                        }
-                                                                        return v;
-                                                                    });
-                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                }}
-                                                                placeholder="0"
-                                                                className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                            />
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(2)}
-                                                            </p>
-                                                        </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Price Adj. (₹)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={option.priceAdjustment}
+                                                                    onChange={(e) => {
+                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                            if (v.name === 'Size') {
+                                                                                return {
+                                                                                    ...v,
+                                                                                    options: v.options.map(o =>
+                                                                                        o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                    )
+                                                                                };
+                                                                            }
+                                                                            return v;
+                                                                        });
+                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                    }}
+                                                                    placeholder="0"
+                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                />
+                                                            </div>
 
-                                                        <div className="flex items-end">
-                                                            <button
-                                                                onClick={() => {
-                                                                    const updatedVariations = editedProduct.variations?.map(v => {
-                                                                        if (v.name === 'Size') {
-                                                                            return {
-                                                                                ...v,
-                                                                                options: v.options.filter(o => o.id !== option.id)
-                                                                            };
-                                                                        }
-                                                                        return v;
-                                                                    }).filter(v => v.name !== 'Size' || v.options.length > 0);
-                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                }}
-                                                                className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" /> Delete
-                                                            </button>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Variant Image</label>
+                                                                <div className="flex items-center gap-2">
+                                                                    {option.image ? (
+                                                                        <div className="relative group/opt">
+                                                                            <img src={option.image} alt="" className="w-10 h-10 rounded border border-gray-200 object-cover" />
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.name === 'Size') {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.map(o => o.id === option.id ? { ...o, image: undefined } : o)
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    });
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <label className="w-10 h-10 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:text-primary transition-colors bg-white">
+                                                                            <ImagePlus className="w-5 h-5 text-gray-400" />
+                                                                            <input
+                                                                                type="file"
+                                                                                className="hidden"
+                                                                                onChange={(e) => handleImageUpload(e, 'variant', sizeVar.id, option.id)}
+                                                                            />
+                                                                        </label>
+                                                                    )}
+                                                                    <p className="text-[10px] text-gray-500 font-bold">
+                                                                        Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-end">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                            if (v.name === 'Size') {
+                                                                                return {
+                                                                                    ...v,
+                                                                                    options: v.options.filter(o => o.id !== option.id)
+                                                                                };
+                                                                            }
+                                                                            return v;
+                                                                        }).filter(v => v.name !== 'Size' || v.options.length > 0);
+                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                    }}
+                                                                    className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" /> Delete
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            )) || (
-                                                    <div className="text-center py-8 text-gray-500">
-                                                        <p>No sizes added yet. Click "Add Size" to create one.</p>
-                                                    </div>
-                                                )}
+                                                ));
+                                            })()}
                                         </div>
 
                                         <div className="border-t pt-6 mt-6">
@@ -1386,583 +2111,713 @@ export const Admin: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.options.map((option) => (
-                                                    <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                        <div className="grid grid-cols-4 gap-4">
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Option Name</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.label}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, label: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="e.g., With Light Base"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
+                                                {(() => {
+                                                    const lbVar = editedProduct.variations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base');
+                                                    if (!lbVar || lbVar.options.length === 0) {
+                                                        return (
+                                                            <div className="text-center py-8 text-gray-500">
+                                                                <p>No options added yet. Click "Add Option" to create one.</p>
                                                             </div>
+                                                        );
+                                                    }
+                                                    return lbVar.options.map((option) => (
+                                                        <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                            <div className="grid grid-cols-6 gap-3">
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={option.label}
+                                                                        onChange={(e) => {
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.map(o =>
+                                                                                            o.id === option.id ? { ...o, label: e.target.value } : o
+                                                                                        )
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            });
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
+                                                                        placeholder="e.g., With Light Base"
+                                                                        className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                    />
+                                                                </div>
 
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.description || ''}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, description: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="Optional details"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                            </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Desc</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={option.description || ''}
+                                                                        onChange={(e) => {
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.map(o =>
+                                                                                            o.id === option.id ? { ...o, description: e.target.value } : o
+                                                                                        )
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            });
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
+                                                                        placeholder="Optional"
+                                                                        className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                    />
+                                                                </div>
 
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.size || ''}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, size: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="e.g., 15cm"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                            </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={option.size || ''}
+                                                                        onChange={(e) => {
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.map(o =>
+                                                                                            o.id === option.id ? { ...o, size: e.target.value } : o
+                                                                                        )
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            });
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
+                                                                        placeholder="e.g., 15cm"
+                                                                        className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                    />
+                                                                </div>
 
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Price Adjustment (₹)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    value={option.priceAdjustment}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="0"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                                <p className="text-xs text-gray-500 mt-1">
-                                                                    Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(2)}
-                                                                </p>
-                                                            </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Price (+₹)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={option.priceAdjustment}
+                                                                        onChange={(e) => {
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.map(o =>
+                                                                                            o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                        )
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            });
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
+                                                                        placeholder="0"
+                                                                        className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                    />
+                                                                </div>
 
-                                                            <div className="flex items-end">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.filter(o => o.id !== option.id)
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        }).filter(v => (v.id !== 'lb_variation' && v.name !== 'Light Base') || v.options.length > 0);
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" /> Delete
-                                                                </button>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Image</label>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {option.image ? (
+                                                                            <div className="relative group/opt">
+                                                                                <img src={option.image} alt="" className="w-10 h-10 rounded border border-gray-200 object-cover" />
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                            if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                                return {
+                                                                                                    ...v,
+                                                                                                    options: v.options.map(o => o.id === option.id ? { ...o, image: undefined } : o)
+                                                                                                };
+                                                                                            }
+                                                                                            return v;
+                                                                                        });
+                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                    }}
+                                                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                                                                                >
+                                                                                    <X className="w-3 h-3" />
+                                                                                </button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <label className="w-10 h-10 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:text-primary transition-colors bg-white">
+                                                                                <ImagePlus className="w-5 h-5 text-gray-400" />
+                                                                                <input
+                                                                                    type="file"
+                                                                                    className="hidden"
+                                                                                    onChange={(e) => handleImageUpload(e, 'variant', lbVar.id, option.id)}
+                                                                                />
+                                                                            </label>
+                                                                        )}
+                                                                        <div className="text-[9px] text-gray-400 leading-tight">
+                                                                            Total<br />₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-end">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.filter(o => o.id !== option.id)
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            }).filter(v => (v.id !== 'lb_variation' && v.name !== 'Light Base') || v.options.length > 0);
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
+                                                                        className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )) || (
-                                                        <div className="text-center py-8 text-gray-500">
-                                                            <p>No options added yet. Click "Add Option" to create one.</p>
-                                                        </div>
-                                                    )}
+                                                    ));
+                                                })()}
                                             </div>
 
-                                        </div>
-
-
-                                        {/* Shape Variation */}
-                                        <div className="border-t pt-6 mt-6">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h4 className="font-bold text-lg">Product Shapes</h4>
-                                                <button
-                                                    onClick={() => {
-                                                        const shapeVariation = editedProduct.variations?.find(v => v.name === 'Shape');
-                                                        if (shapeVariation) {
-                                                            const newOption: VariationOption = {
-                                                                id: `shape_${Date.now()}`,
-                                                                label: 'New Shape',
-                                                                description: '',
-                                                                size: '',
-                                                                priceAdjustment: 0
-                                                            };
-                                                            const updatedVariations = editedProduct.variations?.map(v =>
-                                                                v.name === 'Shape' ? { ...v, options: [...v.options, newOption] } : v
-                                                            );
-                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                        } else {
-                                                            const newVariation: Variation = {
-                                                                id: 'shape_variation',
-                                                                name: 'Shape',
-                                                                options: [{
+                                            {/* Shape Variation */}
+                                            <div className="border-t pt-6 mt-6">
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <h4 className="font-bold text-lg">Product Shapes</h4>
+                                                    <button
+                                                        onClick={() => {
+                                                            const shapeVariation = editedProduct.variations?.find(v => v.name === 'Shape');
+                                                            if (shapeVariation) {
+                                                                const newOption: VariationOption = {
                                                                     id: `shape_${Date.now()}`,
-                                                                    label: 'Rectangle',
+                                                                    label: 'New Shape',
                                                                     description: '',
                                                                     size: '',
                                                                     priceAdjustment: 0
-                                                                }]
-                                                            };
-                                                            setEditedProduct({
-                                                                ...editedProduct,
-                                                                variations: [...(editedProduct.variations || []), newVariation]
-                                                            });
-                                                        }
-                                                    }}
-                                                    className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700"
-                                                >
-                                                    <Plus className="w-4 h-4" /> Add Shape
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.name === 'Shape')?.options.map((option) => (
-                                                    <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                        <div className="grid grid-cols-4 gap-4">
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Shape Name</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.label}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Shape') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, label: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="e.g., Rectangle, Heart, Round"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.size || ''}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Shape') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, size: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="e.g., 10x10cm, 15cm diameter"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Price (₹)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    value={option.priceAdjustment}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Shape') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="0"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                                <p className="text-xs text-gray-500 mt-1">
-                                                                    Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(2)}
-                                                                </p>
-                                                            </div>
-
-                                                            <div className="flex items-end">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Shape') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.filter(o => o.id !== option.id)
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        }).filter(v => v.name !== 'Shape' || v.options.length > 0);
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" /> Delete
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )) || (
-                                                        <div className="text-center py-8 text-gray-500">
-                                                            <p>No shapes added yet. Click "Add Shape" to create one.</p>
-                                                        </div>
-                                                    )}
-                                            </div>
-
-                                        </div>
-
-                                        {/* Color Variation */}
-                                        <div className="border-t pt-6 mt-6">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <div className="flex items-center gap-4">
-                                                    <h4 className="font-bold text-lg">Product Colors</h4>
-                                                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={editedProduct.variations?.find(v => v.name === 'Color')?.disableAutoSelect || false}
-                                                            onChange={(e) => {
-                                                                const colorVar = editedProduct.variations?.find(v => v.name === 'Color');
-                                                                if (colorVar) {
-                                                                    const updated = editedProduct.variations?.map(v => v.id === colorVar.id ? { ...v, disableAutoSelect: e.target.checked } : v);
-                                                                    setEditedProduct({ ...editedProduct, variations: updated });
-                                                                } else if (e.target.checked) {
-                                                                    const newVariation: Variation = {
-                                                                        id: 'color_variation',
-                                                                        name: 'Color',
-                                                                        disableAutoSelect: true,
-                                                                        options: []
-                                                                    };
-                                                                    setEditedProduct({
-                                                                        ...editedProduct,
-                                                                        variations: [...(editedProduct.variations || []), newVariation]
-                                                                    });
-                                                                }
-                                                            }}
-                                                            className="rounded border-gray-300 text-primary focus:ring-primary"
-                                                        />
-                                                        Disable Auto-Select
-                                                    </label>
+                                                                };
+                                                                const updatedVariations = editedProduct.variations?.map(v =>
+                                                                    v.name === 'Shape' ? { ...v, options: [...v.options, newOption] } : v
+                                                                );
+                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                            } else {
+                                                                const newVariation: Variation = {
+                                                                    id: 'shape_variation',
+                                                                    name: 'Shape',
+                                                                    options: [{
+                                                                        id: `shape_${Date.now()}`,
+                                                                        label: 'Rectangle',
+                                                                        description: '',
+                                                                        size: '',
+                                                                        priceAdjustment: 0
+                                                                    }]
+                                                                };
+                                                                setEditedProduct({
+                                                                    ...editedProduct,
+                                                                    variations: [...(editedProduct.variations || []), newVariation]
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700"
+                                                    >
+                                                        <Plus className="w-4 h-4" /> Add Shape
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => {
-                                                        const colorVariation = editedProduct.variations?.find(v => v.name === 'Color');
-                                                        if (colorVariation) {
-                                                            const newOption: VariationOption = {
-                                                                id: `color_${Date.now()}`,
-                                                                label: 'New Color',
-                                                                description: '',
-                                                                size: '',
-                                                                priceAdjustment: 0
-                                                            };
-                                                            const updatedVariations = editedProduct.variations?.map(v =>
-                                                                v.name === 'Color' ? { ...v, options: [...v.options, newOption] } : v
+
+                                                <div className="space-y-4">
+                                                    {(() => {
+                                                        const shapeVar = editedProduct.variations?.find(v => v.name === 'Shape');
+                                                        if (!shapeVar || shapeVar.options.length === 0) {
+                                                            return (
+                                                                <div className="text-center py-8 text-gray-500">
+                                                                    <p>No shapes added yet. Click "Add Shape" to create one.</p>
+                                                                </div>
                                                             );
-                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                        } else {
-                                                            const newVariation: Variation = {
-                                                                id: 'color_variation',
-                                                                name: 'Color',
-                                                                disableAutoSelect: false,
-                                                                options: [{
+                                                        }
+                                                        return shapeVar.options.map((option) => (
+                                                            <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                                <div className="grid grid-cols-5 gap-4">
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Shape Name</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={option.label}
+                                                                            onChange={(e) => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Shape') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, label: e.target.value } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="e.g., Rectangle, Heart, Round"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={option.size || ''}
+                                                                            onChange={(e) => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Shape') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, size: e.target.value } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="e.g., 10x10cm"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Price (+₹)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={option.priceAdjustment}
+                                                                            onChange={(e) => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Shape') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="0"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Image</label>
+                                                                        <div className="flex items-center gap-2">
+                                                                            {option.image ? (
+                                                                                <div className="relative group/opt">
+                                                                                    <img src={option.image} alt="" className="w-10 h-10 rounded border border-gray-200 object-cover" />
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                                if (v.name === 'Shape') {
+                                                                                                    return {
+                                                                                                        ...v,
+                                                                                                        options: v.options.map(o => o.id === option.id ? { ...o, image: undefined } : o)
+                                                                                                    };
+                                                                                                }
+                                                                                                return v;
+                                                                                            });
+                                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                        }}
+                                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                                                                                    >
+                                                                                        <X className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <label className="w-10 h-10 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:text-primary transition-colors bg-white">
+                                                                                    <ImagePlus className="w-5 h-5 text-gray-400" />
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        className="hidden"
+                                                                                        onChange={(e) => handleImageUpload(e, 'variant', shapeVar.id, option.id)}
+                                                                                    />
+                                                                                </label>
+                                                                            )}
+                                                                            <div className="text-[9px] text-gray-400 leading-tight">
+                                                                                Total<br />₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-end">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Shape') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.filter(o => o.id !== option.id)
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                }).filter(v => v.name !== 'Shape' || v.options.length > 0);
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" /> Delete
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ));
+                                                    })()}
+                                                </div>
+
+                                            </div>
+
+                                            {/* Color Variation */}
+                                            <div className="border-t pt-6 mt-6">
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <h4 className="font-bold text-lg">Product Colors</h4>
+                                                        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={editedProduct.variations?.find(v => v.name === 'Color')?.disableAutoSelect || false}
+                                                                onChange={(e) => {
+                                                                    const colorVar = editedProduct.variations?.find(v => v.name === 'Color');
+                                                                    if (colorVar) {
+                                                                        const updated = editedProduct.variations?.map(v => v.id === colorVar.id ? { ...v, disableAutoSelect: e.target.checked } : v);
+                                                                        setEditedProduct({ ...editedProduct, variations: updated });
+                                                                    } else if (e.target.checked) {
+                                                                        const newVariation: Variation = {
+                                                                            id: 'color_variation',
+                                                                            name: 'Color',
+                                                                            disableAutoSelect: true,
+                                                                            options: []
+                                                                        };
+                                                                        setEditedProduct({
+                                                                            ...editedProduct,
+                                                                            variations: [...(editedProduct.variations || []), newVariation]
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className="rounded border-gray-300 text-primary focus:ring-primary"
+                                                            />
+                                                            Disable Auto-Select
+                                                        </label>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            const colorVariation = editedProduct.variations?.find(v => v.name === 'Color');
+                                                            if (colorVariation) {
+                                                                const newOption: VariationOption = {
                                                                     id: `color_${Date.now()}`,
                                                                     label: 'New Color',
                                                                     description: '',
                                                                     size: '',
                                                                     priceAdjustment: 0
-                                                                }]
-                                                            };
-                                                            setEditedProduct({
-                                                                ...editedProduct,
-                                                                variations: [...(editedProduct.variations || []), newVariation]
-                                                            });
-                                                        }
-                                                    }}
-                                                    className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700"
-                                                >
-                                                    <Plus className="w-4 h-4" /> Add Color
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                {editedProduct.variations?.find(v => v.name === 'Color')?.options.map((option) => (
-                                                    <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                        <div className="grid grid-cols-4 gap-4">
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Color Name</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.label}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Color') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, label: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="e.g., Red, Blue"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={option.size || ''}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Color') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, size: e.target.value } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="e.g., XL, 10cm"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Price (₹)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    value={option.priceAdjustment}
-                                                                    onChange={(e) => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Color') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
-                                                                                    )
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    placeholder="0"
-                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                                                                />
-                                                                <p className="text-xs text-gray-500 mt-1">
-                                                                    Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(2)}
-                                                                </p>
-                                                            </div>
-
-                                                            <div className="flex items-end">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const updatedVariations = editedProduct.variations?.map(v => {
-                                                                            if (v.name === 'Color') {
-                                                                                return {
-                                                                                    ...v,
-                                                                                    options: v.options.filter(o => o.id !== option.id)
-                                                                                };
-                                                                            }
-                                                                            return v;
-                                                                        }).filter(v => v.name !== 'Color' || v.options.length > 0 || v.disableAutoSelect);
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                    }}
-                                                                    className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" /> Delete
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )) || (
-                                                        <div className="text-center py-8 text-gray-500">
-                                                            <p>No colors added yet. Click "Add Color" to create one.</p>
-                                                        </div>
-                                                    )}
-                                            </div>
-
-                                        </div>
-
-                                        {/* Additional Heads Configuration */}
-                                        <div className="border-t pt-6 mt-6">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h4 className="font-bold text-lg">Additional Heads</h4>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={editedProduct.additionalHeadsConfig?.enabled || false}
-                                                        onChange={(e) => {
-                                                            setEditedProduct({
-                                                                ...editedProduct,
-                                                                additionalHeadsConfig: {
-                                                                    enabled: e.target.checked,
-                                                                    pricePerHead: editedProduct.additionalHeadsConfig?.pricePerHead || 125,
-                                                                    maxLimit: editedProduct.additionalHeadsConfig?.maxLimit || 10
-                                                                }
-                                                            });
-                                                        }}
-                                                        className="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
-                                                    />
-                                                    <span className="text-sm font-medium text-gray-700">Enable Additional Heads</span>
-                                                </label>
-                                            </div>
-
-                                            {editedProduct.additionalHeadsConfig?.enabled && (
-                                                <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Price Per Head (₹)
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={editedProduct.additionalHeadsConfig.pricePerHead}
-                                                            onChange={(e) => {
-                                                                setEditedProduct({
-                                                                    ...editedProduct,
-                                                                    additionalHeadsConfig: {
-                                                                        ...editedProduct.additionalHeadsConfig!,
-                                                                        pricePerHead: parseInt(e.target.value) || 0
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="w-full border border-gray-300 rounded-md p-2"
-                                                            placeholder="125"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Maximum Limit
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            max="50"
-                                                            value={editedProduct.additionalHeadsConfig.maxLimit}
-                                                            onChange={(e) => {
-                                                                setEditedProduct({
-                                                                    ...editedProduct,
-                                                                    additionalHeadsConfig: {
-                                                                        ...editedProduct.additionalHeadsConfig!,
-                                                                        maxLimit: parseInt(e.target.value) || 10
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="w-full border border-gray-300 rounded-md p-2"
-                                                            placeholder="10"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <p className="text-xs text-gray-600 bg-white p-3 rounded border border-blue-200">
-                                                            <strong>Preview:</strong> Customers can add up to {editedProduct.additionalHeadsConfig.maxLimit} extra persons at ₹{editedProduct.additionalHeadsConfig.pricePerHead} per head.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="border-t pt-6 mt-6">
-                                            <h4 className="font-bold text-lg mb-4">Other Variations</h4>
-                                            {editedProduct.variations?.filter(v => !['Size', 'Shape', 'Light Base', 'Color'].includes(v.name)).map((variation) => (
-                                                <div key={variation.id} className="mb-6 p-4 bg-gray-50 rounded-lg">
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <h5 className="font-medium">{variation.name}</h5>
-                                                        <button
-                                                            onClick={() => {
-                                                                const updatedVariations = editedProduct.variations?.filter(v => v.id !== variation.id);
+                                                                };
+                                                                const updatedVariations = editedProduct.variations?.map(v =>
+                                                                    v.name === 'Color' ? { ...v, options: [...v.options, newOption] } : v
+                                                                );
                                                                 setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                            }}
-                                                            className="text-red-600 text-sm hover:underline"
-                                                        >
-                                                            Remove Variation
-                                                        </button>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        {variation.options.map((opt) => (
-                                                            <div key={opt.id} className="flex gap-2 items-center bg-white p-2 rounded">
-                                                                <span className="flex-1 text-sm">{opt.label}</span>
-                                                                <span className="text-xs text-gray-500">+₹{opt.priceAdjustment}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                                            } else {
+                                                                const newVariation: Variation = {
+                                                                    id: 'color_variation',
+                                                                    name: 'Color',
+                                                                    disableAutoSelect: false,
+                                                                    options: [{
+                                                                        id: `color_${Date.now()}`,
+                                                                        label: 'New Color',
+                                                                        description: '',
+                                                                        size: '',
+                                                                        priceAdjustment: 0
+                                                                    }]
+                                                                };
+                                                                setEditedProduct({
+                                                                    ...editedProduct,
+                                                                    variations: [...(editedProduct.variations || []), newVariation]
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="bg-primary text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700"
+                                                    >
+                                                        <Plus className="w-4 h-4" /> Add Color
+                                                    </button>
                                                 </div>
-                                            ))}
+
+                                                <div className="space-y-4">
+                                                    {(() => {
+                                                        const colorVar = editedProduct.variations?.find(v => v.name === 'Color');
+                                                        if (!colorVar || colorVar.options.length === 0) {
+                                                            return (
+                                                                <div className="text-center py-8 text-gray-500">
+                                                                    <p>No colors added yet. Click "Add Color" to create one.</p>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return colorVar.options.map((option) => (
+                                                            <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                                <div className="grid grid-cols-5 gap-4">
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Color Name</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={option.label}
+                                                                            onChange={(e) => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Color') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, label: e.target.value } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="e.g., Red, Blue"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Size</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={option.size || ''}
+                                                                            onChange={(e) => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Color') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, size: e.target.value } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="e.g., XL, 10cm"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Price (+₹)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={option.priceAdjustment}
+                                                                            onChange={(e) => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Color') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="0"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Image</label>
+                                                                        <div className="flex items-center gap-2">
+                                                                            {option.image ? (
+                                                                                <div className="relative group/opt">
+                                                                                    <img src={option.image} alt="" className="w-10 h-10 rounded border border-gray-200 object-cover" />
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                                if (v.name === 'Color') {
+                                                                                                    return {
+                                                                                                        ...v,
+                                                                                                        options: v.options.map(o => o.id === option.id ? { ...o, image: undefined } : o)
+                                                                                                    };
+                                                                                                }
+                                                                                                return v;
+                                                                                            });
+                                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                        }}
+                                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                                                                                    >
+                                                                                        <X className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <label className="w-10 h-10 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:text-primary transition-colors bg-white">
+                                                                                    <ImagePlus className="w-5 h-5 text-gray-400" />
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        className="hidden"
+                                                                                        onChange={(e) => handleImageUpload(e, 'variant', colorVar.id, option.id)}
+                                                                                    />
+                                                                                </label>
+                                                                            )}
+                                                                            <div className="text-[9px] text-gray-400 leading-tight">
+                                                                                Total<br />₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-end">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Color') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.filter(o => o.id !== option.id)
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                }).filter(v => v.name !== 'Color' || v.options.length > 0 || v.disableAutoSelect);
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" /> Delete
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ));
+                                                    })()}
+                                                </div>
+
+                                            </div>
+
+                                            {/* Additional Heads Configuration */}
+                                            <div className="border-t pt-6 mt-6">
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <h4 className="font-bold text-lg">Additional Heads</h4>
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={editedProduct.additionalHeadsConfig?.enabled || false}
+                                                            onChange={(e) => {
+                                                                setEditedProduct({
+                                                                    ...editedProduct,
+                                                                    additionalHeadsConfig: {
+                                                                        enabled: e.target.checked,
+                                                                        pricePerHead: editedProduct.additionalHeadsConfig?.pricePerHead || 125,
+                                                                        maxLimit: editedProduct.additionalHeadsConfig?.maxLimit || 10
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                                        />
+                                                        <span className="text-sm font-medium text-gray-700">Enable Additional Heads</span>
+                                                    </label>
+                                                </div>
+
+                                                {editedProduct.additionalHeadsConfig?.enabled && (
+                                                    <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                Price Per Head (₹)
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={editedProduct.additionalHeadsConfig.pricePerHead}
+                                                                onChange={(e) => {
+                                                                    setEditedProduct({
+                                                                        ...editedProduct,
+                                                                        additionalHeadsConfig: {
+                                                                            ...editedProduct.additionalHeadsConfig!,
+                                                                            pricePerHead: parseInt(e.target.value) || 0
+                                                                        }
+                                                                    });
+                                                                }}
+                                                                className="w-full border border-gray-300 rounded-md p-2"
+                                                                placeholder="125"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                Maximum Limit
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max="50"
+                                                                value={editedProduct.additionalHeadsConfig.maxLimit}
+                                                                onChange={(e) => {
+                                                                    setEditedProduct({
+                                                                        ...editedProduct,
+                                                                        additionalHeadsConfig: {
+                                                                            ...editedProduct.additionalHeadsConfig!,
+                                                                            maxLimit: parseInt(e.target.value) || 10
+                                                                        }
+                                                                    });
+                                                                }}
+                                                                className="w-full border border-gray-300 rounded-md p-2"
+                                                                placeholder="10"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <p className="text-xs text-gray-600 bg-white p-3 rounded border border-blue-200">
+                                                                <strong>Preview:</strong> Customers can add up to {editedProduct.additionalHeadsConfig.maxLimit} extra persons at ₹{editedProduct.additionalHeadsConfig.pricePerHead} per head.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="border-t pt-6 mt-6">
+                                                <h4 className="font-bold text-lg mb-4">Other Variations</h4>
+                                                {editedProduct.variations?.filter(v => !['Size', 'Shape', 'Light Base', 'Color'].includes(v.name)).map((variation) => (
+                                                    <div key={variation.id} className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <h5 className="font-medium">{variation.name}</h5>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const updatedVariations = editedProduct.variations?.filter(v => v.id !== variation.id);
+                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                }}
+                                                                className="text-red-600 text-sm hover:underline"
+                                                            >
+                                                                Remove Variation
+                                                            </button>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            {variation.options.map((opt) => (
+                                                                <div key={opt.id} className="flex gap-2 items-center bg-white p-2 rounded">
+                                                                    <span className="flex-1 text-sm">{opt.label}</span>
+                                                                    <span className="text-xs text-gray-500">+₹{opt.priceAdjustment}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                                 {editTab === 'desc' && (<div><textarea value={editedProduct.description} onChange={e => setEditedProduct({ ...editedProduct, description: e.target.value })} className="w-full h-64 border p-2" /></div>)}
                             </div>
                         </div>
-                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3"><button onClick={() => setIsEditing(null)} className="px-4 py-2 border rounded">Cancel</button><button onClick={saveProduct} className="px-6 py-2 bg-primary text-white rounded font-bold">Save Changes</button></div>
+                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                            <button onClick={() => setIsEditing(null)} className="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+                            <button onClick={saveProduct} className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-purple-700">Save Changes</button>
+                        </div>
                     </div>
                 </div>
             )}

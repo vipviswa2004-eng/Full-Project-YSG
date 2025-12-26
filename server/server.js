@@ -6,7 +6,7 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, Seller, Transaction, ReturnRequest, Coupon } = require('./models');
+const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion } = require('./models');
 
 const app = express();
 const PORT = 5000;
@@ -20,29 +20,22 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Add CORS headers to uploaded files to prevent canvas tainting
-app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
-
-app.use('/uploads', express.static('uploads')); // Serve uploaded files
+// Cloudinary is used for all image uploads. No local storage used.
 
 // ---------- MULTER UPLOAD ----------
 const multer = require('multer');
 const path = require('path');
-const { uploadImage } = require('./supabase');
+const { uploadImage } = require('./cloudinary');
 
-// Configure multer to use memory storage for Supabase
+// Configure multer to use memory storage
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit for Cloudinary
   }
 });
 
@@ -52,34 +45,20 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Check if Supabase is configured
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
-      // Upload to Supabase
+    // Check if Cloudinary is configured
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+      // Upload to Cloudinary
       const result = await uploadImage(
         req.file.buffer,
         req.file.originalname,
         'product-images'
       );
 
-      console.log('✅ Image uploaded to Supabase:', result.url);
-      res.json({ url: result.url, path: result.path });
+      console.log('✅ Image uploaded to Cloudinary:', result.url);
+      res.json({ url: result.url, public_id: result.public_id });
     } else {
-      // Fallback to local storage
-      const fs = require('fs');
-      const uploadDir = 'uploads';
-
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const fileName = Date.now() + path.extname(req.file.originalname);
-      const filePath = path.join(uploadDir, fileName);
-
-      fs.writeFileSync(filePath, req.file.buffer);
-
-      const fileUrl = `http://localhost:5000/uploads/${fileName}`;
-      console.log('⚠️ Image saved locally (Supabase not configured):', fileUrl);
-      res.json({ url: fileUrl });
+      console.error('❌ Cloudinary configuration missing');
+      res.status(500).json({ error: 'Cloudinary configuration missing on server.' });
     }
   } catch (error) {
     console.error('Error uploading image:', error);
@@ -163,6 +142,12 @@ mongoose
   .catch((err) => console.error("MongoDB Error:", err));
 
 // ---------- AUTH ROUTES ----------
+// Test endpoint to verify server is working
+app.get("/auth/test", (req, res) => {
+  console.log("✅ Test endpoint hit!");
+  res.send("Server is working! OAuth should work too.");
+});
+
 app.get(
   "/auth/google",
   passport.authenticate("google", {
@@ -175,30 +160,42 @@ app.get(
 app.get(
   "/auth/google/callback",
   (req, res, next) => {
+    console.log("🔵 Google callback received");
     passport.authenticate("google", (err, user, info) => {
       if (err) {
         console.error("❌ Google Auth Error:", err);
-        // Redirect to frontend with error query param
         return res.redirect("http://localhost:5173?error=auth_failed");
       }
       if (!user) {
         console.error("❌ Google Auth Failed: No user returned");
+        console.log("Info:", info);
         return res.redirect("http://localhost:5173?error=no_user");
       }
+
+      console.log("✅ User authenticated:", user.email);
+
       req.logIn(user, (err) => {
         if (err) {
           console.error("❌ Login Error:", err);
           return next(err);
         }
-        console.log("✅ Google Login Success:", user.email);
-        return res.redirect("http://localhost:5173");
+
+        console.log("✅ Session created for:", user.email);
+        console.log("📦 Session ID:", req.sessionID);
+        console.log("👤 User in session:", req.user ? req.user.email : 'No user');
+
+        // Redirect with success flag to trigger frontend refresh
+        return res.redirect("http://localhost:5173?login=success");
       });
     })(req, res, next);
   }
 );
 
 app.get("/api/current_user", (req, res) => {
-  res.send(req.user);
+  console.log("🔍 Checking current user...");
+  console.log("📦 Session ID:", req.sessionID);
+  console.log("👤 User in session:", req.user ? req.user.email : 'No user in session');
+  res.json(req.user || null);
 });
 
 app.get("/api/logout", (req, res) => {
@@ -296,6 +293,16 @@ app.delete("/api/products/:id", async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Activate All Products (Admin)
+app.post("/api/products/activate-all", async (req, res) => {
+  try {
+    const result = await Product.updateMany({}, { status: 'Active' });
+    res.json({ success: true, modifiedCount: result.modifiedCount });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -761,6 +768,139 @@ app.put("/api/shop-categories/:id", async (req, res) => {
 app.delete("/api/shop-categories/:id", async (req, res) => {
   try {
     await ShopCategory.findByIdAndDelete(req.params.id);
+    // Also delete all sub-categories in this category
+    await SubCategory.deleteMany({ categoryId: req.params.id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/shop-categories/:id/convert", async (req, res) => {
+  try {
+    const { parentCategoryId } = req.body;
+    const dbId = req.params.id;
+
+    if (!parentCategoryId) {
+      return res.status(400).json({ error: "parentCategoryId is required in request body" });
+    }
+
+    const categoryToConvert = await ShopCategory.findById(dbId);
+    if (!categoryToConvert) return res.status(404).json({ error: "Category to convert not found in database" });
+
+    if (categoryToConvert.id === parentCategoryId) {
+      return res.status(400).json({ error: "Cannot convert a category into itself" });
+    }
+
+    const parentCategory = await ShopCategory.findOne({ id: parentCategoryId });
+    if (!parentCategory) return res.status(404).json({ error: "Target parent category not found" });
+
+    // Create new SubCategory
+    const newSubCategory = new SubCategory({
+      id: categoryToConvert.id || `sub_${Date.now()}`,
+      categoryId: parentCategoryId,
+      name: categoryToConvert.name,
+      image: categoryToConvert.image,
+      order: categoryToConvert.order || 0
+    });
+    await newSubCategory.save();
+
+    // Update Products that were in this category
+    // We match by both ID and Name to be robust
+    await Product.updateMany(
+      {
+        $or: [
+          { shopCategoryId: categoryToConvert.id },
+          { category: categoryToConvert.name }
+        ]
+      },
+      {
+        shopCategoryId: parentCategory.id,
+        category: parentCategory.name,
+        subCategoryId: categoryToConvert.id
+      }
+    );
+
+    // Delete the old category from ShopCategory collection
+    await ShopCategory.findByIdAndDelete(dbId);
+
+    res.json({ success: true, message: "Converted successfully" });
+  } catch (e) {
+    console.error("Conversion API Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- SUB CATEGORIES ----------
+app.get("/api/sub-categories", async (req, res) => {
+  try {
+    const subCategories = await SubCategory.find().sort({ order: 1 });
+    res.json(subCategories);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/sub-categories", async (req, res) => {
+  try {
+    const subCategory = new SubCategory(req.body);
+    await subCategory.save();
+    res.json(subCategory);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/sub-categories/:id", async (req, res) => {
+  try {
+    const subCategory = await SubCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(subCategory);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/sub-categories/:id", async (req, res) => {
+  try {
+    await SubCategory.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- SPECIAL OCCASIONS ----------
+app.get("/api/special-occasions", async (req, res) => {
+  try {
+    const occasions = await SpecialOccasion.find().sort({ order: 1 });
+    res.json(occasions);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/special-occasions", async (req, res) => {
+  try {
+    const occasion = new SpecialOccasion(req.body);
+    await occasion.save();
+    res.json(occasion);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/special-occasions/:id", async (req, res) => {
+  try {
+    const occasion = await SpecialOccasion.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(occasion);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/special-occasions/:id", async (req, res) => {
+  try {
+    await SpecialOccasion.findByIdAndDelete(req.params.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -989,24 +1129,23 @@ app.post("/api/admin/generate-hd", async (req, res) => {
       });
     });
 
-    // Export to PNG
-    const out = fs.createWriteStream(path.join(__dirname, 'generated_prints', `HD_${Date.now()}.png`));
-    const stream = canvas.createPNGStream();
-    stream.pipe(out);
+    // Export to Cloudinary
+    const buffer = canvas.toBuffer('image/png');
+    const fileName = `HD_${Date.now()}.png`;
 
-    out.on('finish', () => {
-      const filename = path.basename(out.path);
-      res.json({ success: true, url: `http://localhost:5000/generated_prints/${filename}` });
-    });
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+      const result = await uploadImage(buffer, fileName, 'hd-designs');
+      console.log('✅ HD Image uploaded to Cloudinary:', result.url);
+      res.json({ success: true, url: result.url });
+    } else {
+      res.status(500).json({ error: "Cloudinary not configured" });
+    }
 
   } catch (e) {
     console.error("HD Generation Failed", e);
     res.status(500).json({ error: e.message });
   }
 });
-
-// Serve generated prints
-app.use('/generated_prints', express.static('generated_prints'));
 
 // HD Design Generation Endpoint (for Admin)
 app.post('/api/generate-hd-design', express.json({ limit: '50mb' }), async (req, res) => {
@@ -1065,39 +1204,21 @@ app.post('/api/generate-hd-design', express.json({ limit: '50mb' }), async (req,
     // Export as high-quality PNG
     const buffer = hdCanvas.toBuffer('image/png', { compressionLevel: 3, filters: hdCanvas.PNG_FILTER_NONE });
 
-    // Upload to Supabase
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    // Upload to Cloudinary
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
       const fileName = `hd-design-${Date.now()}.png`;
       const result = await uploadImage(buffer, fileName, 'hd-designs');
 
-      console.log('✅ HD Design uploaded to Supabase:', result.url);
+      console.log('✅ HD Design uploaded to Cloudinary:', result.url);
       res.json({
         success: true,
         url: result.url,
-        path: result.path,
+        public_id: result.public_id,
         message: 'HD design generated successfully'
       });
     } else {
-      // Fallback to local storage
-      const fs = require('fs');
-      const uploadDir = 'uploads/hd-designs';
-
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const fileName = `hd-design-${Date.now()}.png`;
-      const filePath = path.join(uploadDir, fileName);
-
-      fs.writeFileSync(filePath, buffer);
-
-      const fileUrl = `http://localhost:5000/uploads/hd-designs/${fileName}`;
-      console.log('⚠️ HD Design saved locally:', fileUrl);
-      res.json({
-        success: true,
-        url: fileUrl,
-        message: 'HD design generated successfully'
-      });
+      console.error('❌ Cloudinary configuration missing');
+      res.status(500).json({ error: 'Cloudinary configuration missing on server.' });
     }
 
   } catch (error) {

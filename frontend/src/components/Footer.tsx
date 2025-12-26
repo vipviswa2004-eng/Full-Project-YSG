@@ -27,23 +27,23 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li><Link to="/terms" className="hover:text-accent">Terms & Conditions</Link></li>
-              <li><Link to="/privacy" className="hover:text-accent">Privacy Policy</Link></li>
-              <li><Link to="/shipping" className="hover:text-accent">Shipping Info</Link></li>
-              <li><Link to="/returns" className="hover:text-accent">Return Policy</Link></li>
+              <li><Link to="/terms" className="hover:text-[#f5ebd0]">Terms & Conditions</Link></li>
+              <li><Link to="/privacy" className="hover:text-[#f5ebd0]">Privacy Policy</Link></li>
+              <li><Link to="/shipping" className="hover:text-[#f5ebd0]">Shipping Info</Link></li>
+              <li><Link to="/returns" className="hover:text-[#f5ebd0]">Return Policy</Link></li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Stay Connected</h3>
             <div className="flex space-x-4">
-              <a href="https://www.instagram.com/ucgroups_yathessigngalaxy" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-pink-600 transition-colors group">
-                <Instagram className="w-5 h-5 text-white" />
+              <a href="https://www.instagram.com/ucgroups_yathessigngalaxy" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-[#f5ebd0] transition-colors group">
+                <Instagram className="w-5 h-5 text-white group-hover:text-gray-900" />
               </a>
-              <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-blue-600 transition-colors group">
-                <Facebook className="w-5 h-5 text-white" />
+              <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-[#f5ebd0] transition-colors group">
+                <Facebook className="w-5 h-5 text-white group-hover:text-gray-900" />
               </a>
-              <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-red-600 transition-colors group">
-                <Youtube className="w-5 h-5 text-white" />
+              <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" className="bg-gray-800 p-2 rounded-full hover:bg-[#f5ebd0] transition-colors group">
+                <Youtube className="w-5 h-5 text-white group-hover:text-gray-900" />
               </a>
             </div>
             <p className="text-gray-400 text-sm mt-4">

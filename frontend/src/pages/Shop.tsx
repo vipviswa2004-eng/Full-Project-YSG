@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { Star, Heart, Filter, Zap, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Star, Heart, Filter, Zap, ArrowUpDown, ChevronDown, X } from 'lucide-react';
 import { useCart } from '../context';
 import { Product } from '../types';
 import { calculatePrice } from '../data/products';
@@ -10,9 +10,14 @@ export const Shop: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const categoryFilter = searchParams.get('category');
+    const subCategoryFilter = searchParams.get('subCategory');
     const searchQuery = searchParams.get('q');
+    const filterType = searchParams.get('filter');
+
 
     const [products, setProducts] = useState<Product[]>([]);
+    const [shopCategories, setShopCategories] = useState<any[]>([]);
+    const [subCategories, setSubCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filter & Sort State
@@ -21,19 +26,40 @@ export const Shop: React.FC = () => {
     const [maxPrice, setMaxPrice] = useState('');
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
+    // Handle legacy category links that are now sub-categories
     useEffect(() => {
-        const fetchProducts = async () => {
+        if (categoryFilter && !subCategoryFilter && shopCategories.length > 0 && subCategories.length > 0) {
+            const isCategory = shopCategories.find(c => c.name.toLowerCase() === categoryFilter.toLowerCase());
+            if (!isCategory) {
+                const asSubCategory = subCategories.find(s => s.name.toLowerCase() === categoryFilter.toLowerCase());
+                if (asSubCategory) {
+                    const parent = shopCategories.find(c => c.id === asSubCategory.categoryId);
+                    if (parent) {
+                        navigate(`/shop?category=${encodeURIComponent(parent.name)}&subCategory=${encodeURIComponent(asSubCategory.name)}`, { replace: true });
+                    }
+                }
+            }
+        }
+    }, [categoryFilter, subCategoryFilter, shopCategories, subCategories, navigate]);
+
+    useEffect(() => {
+        const fetchData = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/products');
-                const data = await res.json();
-                setProducts(data);
+                const [productsRes, categoriesRes, subCategoriesRes] = await Promise.all([
+                    fetch('http://localhost:5000/api/products'),
+                    fetch('http://localhost:5000/api/shop-categories'),
+                    fetch('http://localhost:5000/api/sub-categories')
+                ]);
+                setProducts(await productsRes.json());
+                setShopCategories(await categoriesRes.json());
+                setSubCategories(await subCategoriesRes.json());
             } catch (error) {
-                console.error('Failed to fetch products:', error);
+                console.error('Failed to fetch shop data:', error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchProducts();
+        fetchData();
     }, []);
 
     const formatPrice = (price: number) => {
@@ -50,23 +76,75 @@ export const Shop: React.FC = () => {
         toggleWishlist(product);
     };
 
+    // Current category and subcategories
+    const currentCategory = useMemo(() => {
+        if (!categoryFilter) return null;
+        return shopCategories.find(c => c.name.toLowerCase() === categoryFilter.toLowerCase());
+    }, [categoryFilter, shopCategories]);
+
+    const activeSubCategories = useMemo(() => {
+        if (!currentCategory) return [];
+        return subCategories.filter(s => s.categoryId === currentCategory.id);
+    }, [currentCategory, subCategories]);
+
+    const currentSubCategory = useMemo(() => {
+        if (!subCategoryFilter || !currentCategory) return null;
+        return subCategories.find(s =>
+            s.name.toLowerCase() === subCategoryFilter.toLowerCase() &&
+            s.categoryId === currentCategory.id
+        );
+    }, [subCategoryFilter, subCategories, currentCategory]);
+
     // Filter & Sort Logic
     const processedProducts = useMemo(() => {
         let result = [...products];
 
+        // 0. Recently Viewed Filter
+        if (filterType === 'recent') {
+            try {
+                const stored = localStorage.getItem('recentlyViewed');
+                if (stored) {
+                    const ids: string[] = JSON.parse(stored);
+                    result = result.filter(p => ids.includes(p.id) || ids.includes((p as any)._id));
+
+                    // Sort to match the order in localStorage (most recent first)
+                    result.sort((a, b) => {
+                        const idA = a.id || (a as any)._id;
+                        const idB = b.id || (b as any)._id;
+                        return ids.indexOf(idA) - ids.indexOf(idB);
+                    });
+                } else {
+                    result = [];
+                }
+            } catch (e) {
+                console.error(e);
+                result = [];
+            }
+        }
+
         // 1. Search Filter (Higher priority)
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
+            const terms = query.split(/ & | and /);
             result = result.filter(p =>
-                p.name.toLowerCase().includes(query) ||
-                (p.category && p.category.toLowerCase().includes(query)) ||
-                (p.description && p.description.toLowerCase().includes(query))
+                terms.some(term => {
+                    const trimmedTerm = term.trim();
+                    if (!trimmedTerm) return false;
+                    return p.name.toLowerCase().includes(trimmedTerm) ||
+                        (p.category && p.category.toLowerCase().includes(trimmedTerm)) ||
+                        (p.description && p.description.toLowerCase().includes(trimmedTerm));
+                })
             );
         }
 
         // 2. Category Filter
         if (categoryFilter) {
             result = result.filter(p => p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
+        }
+
+        // 3. Sub-category Filter
+        if (subCategoryFilter && currentSubCategory) {
+            result = result.filter(p => p.subCategoryId === currentSubCategory.id);
         }
 
         // 2. Price Filter
@@ -79,37 +157,39 @@ export const Shop: React.FC = () => {
             });
         }
 
-        // 3. Sorting
-        result.sort((a, b) => {
-            const priceA = calculatePrice(a).final;
-            const priceB = calculatePrice(b).final;
+        // 3. Sorting (only apply if NOT recently viewed, or if user explicitly chose a sort)
+        // If it's recently viewed and default sort, we want to keep the recent order (already sorted above)
+        if (filterType !== 'recent' || sortBy !== 'featured') {
+            result.sort((a, b) => {
+                const priceA = calculatePrice(a).final;
+                const priceB = calculatePrice(b).final;
 
-            switch (sortBy) {
-                case 'price-asc':
-                    return priceA - priceB;
-                case 'price-desc':
-                    return priceB - priceA;
-                case 'rating':
-                    return (b.rating || 0) - (a.rating || 0);
-                case 'newest':
-                    const idA = Number(a.id);
-                    const idB = Number(b.id);
-                    if (!isNaN(idA) && !isNaN(idB)) {
-                        return idB - idA;
-                    }
-                    return String(b.id).localeCompare(String(a.id));
-                default:
-                    // Featured/Default - randomize or keep original order
-                    return 0;
-            }
-        });
+                switch (sortBy) {
+                    case 'price-asc':
+                        return priceA - priceB;
+                    case 'price-desc':
+                        return priceB - priceA;
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'newest':
+                        const idA = Number(a.id);
+                        const idB = Number(b.id);
+                        if (!isNaN(idA) && !isNaN(idB)) {
+                            return idB - idA;
+                        }
+                        return String(b.id).localeCompare(String(a.id));
+                    default:
+                        return 0;
+                }
+            });
+        }
 
         return result;
-    }, [products, categoryFilter, minPrice, maxPrice, sortBy]);
+    }, [products, categoryFilter, subCategoryFilter, currentSubCategory, minPrice, maxPrice, sortBy, filterType, searchQuery]);
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+            <div className="min-h-screen bg-app-bg py-8 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading products...</p>
@@ -119,13 +199,31 @@ export const Shop: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
+        <div className="min-h-screen bg-app-bg py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header & Controls */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                            <Link to="/shop" className="hover:text-primary transition-colors">Shop</Link>
+                            {categoryFilter && (
+                                <>
+                                    <span className="text-gray-400">/</span>
+                                    <Link to={`/shop?category=${encodeURIComponent(categoryFilter)}`} className="hover:text-primary transition-colors">{categoryFilter}</Link>
+                                </>
+                            )}
+                            {subCategoryFilter && (
+                                <>
+                                    <span className="text-gray-400">/</span>
+                                    <span className="text-gray-900 font-medium">{subCategoryFilter}</span>
+                                </>
+                            )}
+                        </div>
                         <h1 className="text-3xl font-extrabold text-gray-900">
-                            {searchQuery ? `Results for "${searchQuery}"` : (categoryFilter ? categoryFilter : 'All Products')}
+                            {searchQuery ? `Results for "${searchQuery}"` :
+                                (subCategoryFilter ? subCategoryFilter :
+                                    (categoryFilter ? categoryFilter :
+                                        (filterType === 'recent' ? 'Recently Viewed' : 'All Products')))}
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
                             Showing {processedProducts.length} product{processedProducts.length !== 1 ? 's' : ''}
@@ -162,6 +260,67 @@ export const Shop: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Active Filter Chips */}
+                {(categoryFilter || subCategoryFilter || searchQuery || minPrice || maxPrice) && (
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        {categoryFilter && (
+                            <button
+                                onClick={() => navigate('/shop')}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-bold border border-primary/20 hover:bg-primary/20 transition-colors"
+                            >
+                                {categoryFilter} <X className="w-3 h-3" />
+                            </button>
+                        )}
+                        {subCategoryFilter && (
+                            <button
+                                onClick={() => navigate(`/shop?category=${encodeURIComponent(categoryFilter || '')}`)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 text-accent rounded-full text-xs font-bold border border-accent/20 hover:bg-accent/20 transition-colors"
+                            >
+                                {subCategoryFilter} <X className="w-3 h-3" />
+                            </button>
+                        )}
+                        {searchQuery && (
+                            <button
+                                onClick={() => navigate('/shop')}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-bold border border-gray-200 hover:bg-gray-200 transition-colors"
+                            >
+                                "{searchQuery}" <X className="w-3 h-3" />
+                            </button>
+                        )}
+                        {(minPrice || maxPrice) && (
+                            <button
+                                onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-bold border border-green-200 hover:bg-green-100 transition-colors"
+                            >
+                                {minPrice ? `₹${minPrice}` : '0'} - {maxPrice ? `₹${maxPrice}` : 'Any'} <X className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Sub-categories Grid */}
+                {categoryFilter && !subCategoryFilter && activeSubCategories.length > 0 && (
+                    <div className="mb-12 animate-fade-in">
+                        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            Explore {categoryFilter} Sub-categories
+                        </h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            {activeSubCategories.map((sub) => (
+                                <Link
+                                    key={sub.id}
+                                    to={`/shop?category=${encodeURIComponent(categoryFilter)}&subCategory=${encodeURIComponent(sub.name)}`}
+                                    className="group flex flex-col items-center bg-white p-4 rounded-2xl border border-gray-100 hover:border-primary/30 hover:shadow-xl transition-all duration-300"
+                                >
+                                    <div className="aspect-square w-full mb-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-50 group-hover:scale-105 transition-transform duration-500">
+                                        <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-700 group-hover:text-primary transition-colors text-center">{sub.name}</span>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Filters Section */}
                 <div className={`mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all duration-300 ${isFilterExpanded ? 'block' : 'hidden md:block'}`}>
                     <div className="flex flex-col md:flex-row items-center gap-6">
@@ -194,7 +353,7 @@ export const Shop: React.FC = () => {
                         </div>
 
                         {/* Active Filter Badges */}
-                        {(minPrice || maxPrice || categoryFilter || searchQuery) && (
+                        {(minPrice || maxPrice || categoryFilter || subCategoryFilter || searchQuery) && (
                             <div className="flex items-center gap-2 flex-wrap">
                                 <div className="h-6 w-px bg-gray-200 mx-2 hidden md:block"></div>
                                 {categoryFilter && (
@@ -203,8 +362,19 @@ export const Shop: React.FC = () => {
                                         <button onClick={() => {
                                             const newParams = new URLSearchParams(searchParams);
                                             newParams.delete('category');
+                                            newParams.delete('subCategory');
                                             navigate({ search: newParams.toString() });
-                                        }} className="hover:text-primary-dark ml-1"><span className="sr-only">Remove</span>×</button>
+                                        }} className="hover:text-primary-dark ml-1">×</button>
+                                    </div>
+                                )}
+                                {subCategoryFilter && (
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full border border-blue-200">
+                                        Sub: {subCategoryFilter}
+                                        <button onClick={() => {
+                                            const newParams = new URLSearchParams(searchParams);
+                                            newParams.delete('subCategory');
+                                            navigate({ search: newParams.toString() });
+                                        }} className="hover:text-blue-900 ml-1">×</button>
                                     </div>
                                 )}
                                 {searchQuery && (
@@ -329,6 +499,6 @@ export const Shop: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };

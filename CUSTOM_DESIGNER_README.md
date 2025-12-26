@@ -133,7 +133,7 @@ const watermark = new fabric.Text('YOUR TEXT HERE', {
 - The `@ts-ignore` comment suppresses it
 
 ### Images not loading
-- Check if Supabase credentials are set in `.env`
+- Check if Cloudinary credentials are set in `.env`
 - Verify image URLs are accessible
 - Check browser console for errors
 
@@ -143,7 +143,7 @@ const watermark = new fabric.Text('YOUR TEXT HERE', {
 2. **User clicks "Remove BG"** → Sent to rembg service → Returns transparent PNG
 3. **User adds text** → Rendered on canvas
 4. **User saves design** → JSON + low-res preview sent to backend
-5. **Admin generates HD** → Backend recreates from JSON at 3000x3000 → Uploads to Supabase
+5. **Admin generates HD** → Backend recreates from JSON at 3000x3000 → Uploads to Cloudinary
 
 ## 🔐 Security Features
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { VariationOption, Review } from '../types';
-import { Type, Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, ThumbsUp, ThumbsDown, X } from 'lucide-react';
+import { Type, Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, ThumbsUp, ThumbsDown, X, Truck, RefreshCcw, Award, ArrowRight } from 'lucide-react';
 import { CustomDesigner } from '../components/CustomDesigner';
 
 export const ProductDetails: React.FC = () => {
@@ -352,7 +352,7 @@ export const ProductDetails: React.FC = () => {
     const allImages = [product.image, ...(product.gallery || [])];
 
     return (
-        <div className="bg-white min-h-screen pb-24 md:pb-12 overflow-x-hidden">
+        <div className="bg-app-bg min-h-screen pb-24 md:pb-12 overflow-x-hidden">
             {/* Mobile Header */}
             <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-40 px-4 h-14 flex items-center justify-between border-b shadow-sm">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600" title="Go Back"><ArrowLeft className="w-6 h-6" /></button>
@@ -402,7 +402,7 @@ export const ProductDetails: React.FC = () => {
                                         <div
                                             className="absolute inset-0 bg-no-repeat pointer-events-none"
                                             style={{
-                                                backgroundImage: `url(${activeImage})`,
+                                                backgroundImage: `url("${activeImage}")`,
                                                 backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
                                                 backgroundSize: '200%'
                                             }}
@@ -416,18 +416,13 @@ export const ProductDetails: React.FC = () => {
                                         <Heart className={`w-6 h-6 ${isInWishlist ? 'fill-current' : ''}`} />
                                     </button>
 
-                                    {/* Screenshot Protection Watermark */}
-                                    <div className="absolute inset-0 pointer-events-none select-none z-5 flex items-center justify-center">
-                                        <div className="text-6xl font-bold text-white/10 transform -rotate-45 whitespace-nowrap">
-                                            YATHES SIGN GALAXY
-                                        </div>
-                                    </div>
+                                    {/* Screenshot Protection Watermark Removed */}
                                 </div>
                             </div>
                         </div>
 
                         {/* Mobile Thumbnails (Horizontal) */}
-                        <div className="flex md:hidden gap-3 overflow-x-auto pb-2 px-4 scrollbar-hide">
+                        <div className="flex md:hidden gap-3 overflow-x-auto pb-2 px-4 scrollbar-hide mb-6">
                             {allImages.map((img, idx) => (
                                 <button
                                     key={idx}
@@ -440,14 +435,20 @@ export const ProductDetails: React.FC = () => {
                         </div>
 
                         {/* Action Buttons (Desktop & Mobile) */}
-                        <div className="flex gap-4 px-4 md:px-0 relative z-10">
-                            <button onClick={() => handleAddToCart(false)} className="flex-1 bg-white border-2 border-primary text-primary py-4 rounded-xl font-bold hover:bg-purple-50 transition-colors">Add to Cart</button>
-                            <button onClick={() => handleAddToCart(true)} className="flex-1 bg-primary text-white py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg transition-all">Buy Now</button>
+                        {/* Action Buttons */}
+                        <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-100 z-50 md:static md:p-0 md:bg-transparent md:border-none md:z-auto flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-none">
+                            <button onClick={() => handleAddToCart(false)} className="flex-1 bg-white border-2 border-primary text-primary py-3 md:py-4 rounded-xl font-bold hover:bg-purple-50 transition-colors text-sm md:text-base">Add to Cart</button>
+                            <button onClick={() => handleAddToCart(true)} className="flex-1 bg-primary text-white py-3 md:py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg transition-all text-sm md:text-base">Buy Now</button>
                         </div>
+
+
                     </div>
 
+                    {/* Mobile Spacer */}
+                    <div className="h-12 md:hidden w-full bg-transparent shrink-0"></div>
+
                     {/* Right Column: Details & Reviews */}
-                    <div className="lg:col-span-7 p-4 md:p-0 md:mt-0 space-y-8 max-h-[calc(100vh-100px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pr-2">
+                    <div className="lg:col-span-7 p-4 md:p-0 md:mt-0 space-y-8 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pr-2">
                         {/* Product Info */}
                         <div className="border-b border-gray-100 pb-6">
                             <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{product.category}</p>
@@ -475,8 +476,8 @@ export const ProductDetails: React.FC = () => {
 
                         {/* Customization Options */}
                         <div className="space-y-6">
-                            {/* Other Variations (excluding Size and Light Base) */}
-                            {product.variations?.filter(v => v.name !== 'Size' && !v.name.toLowerCase().includes('light base')).map((v) => (
+                            {/* Other Variations (excluding Size, Light Base, Shape, and Color) */}
+                            {product.variations?.filter(v => v.name !== 'Size' && !v.name.toLowerCase().includes('light base') && v.name !== 'Shape' && v.name !== 'Color').map((v) => (
                                 <div key={v.id}>
                                     <h3 className="text-sm font-medium text-gray-900 mb-2">{v.name}</h3>
                                     <div className="flex flex-wrap gap-2">
@@ -520,15 +521,91 @@ export const ProductDetails: React.FC = () => {
                                                     onClick={() => handleVariationChange(sizeVariation.id, opt, sizeVariation.name)}
                                                     className={`px-4 py-3 text-sm rounded-lg border-2 transition-all ${selectedVariations[sizeVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
                                                 >
-                                                    <div className="flex flex-col items-center">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover mb-1" alt="" />}
                                                         <span className="font-bold">{opt.label}</span>
-                                                        {opt.description && <span className="text-[10px] text-gray-500 mt-0.5">{opt.description}</span>}
+                                                        {opt.description && <span className="text-[10px] text-gray-500">{opt.description}</span>}
                                                         {opt.priceAdjustment > 0 && (
                                                             <span className="text-xs font-bold text-green-600 mt-1">
                                                                 +₹{opt.priceAdjustment}
                                                             </span>
                                                         )}
                                                     </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Shape Variation */}
+                            {(() => {
+                                const shapeVariation = product.variations?.find(v => v.name === 'Shape');
+                                if (!shapeVariation) return null;
+
+                                return (
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-900 mb-2">Select Shape</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {shapeVariation.options.map((opt) => (
+                                                <button
+                                                    key={opt.id}
+                                                    onClick={() => handleVariationChange(shapeVariation.id, opt, shapeVariation.name)}
+                                                    className={`px-4 py-3 text-sm rounded-lg border-2 transition-all ${selectedVariations[shapeVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
+                                                >
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover mb-1" alt="" />}
+                                                        <span className="font-bold">{opt.label}</span>
+                                                        {opt.priceAdjustment > 0 && (
+                                                            <span className="text-xs font-bold text-green-600 mt-1">
+                                                                +₹{opt.priceAdjustment}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Color Variation */}
+                            {(() => {
+                                const colorVariation = product.variations?.find(v => v.name === 'Color');
+                                if (!colorVariation) return null;
+
+                                return (
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-900 mb-2">Select Color</h3>
+                                        <div className="flex flex-wrap gap-3">
+                                            {colorVariation.options.map((opt) => (
+                                                <button
+                                                    key={opt.id}
+                                                    onClick={() => handleVariationChange(colorVariation.id, opt, colorVariation.name)}
+                                                    className={`relative group p-1.5 rounded-xl border-2 transition-all ${selectedVariations[colorVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 ring-2 ring-primary ring-offset-1' : 'border-gray-200 hover:border-primary bg-white'}`}
+                                                >
+                                                    <div className="flex flex-col items-center gap-2 min-w-[60px]">
+                                                        {opt.image ? (
+                                                            <img src={opt.image} className="w-12 h-12 rounded-lg object-cover shadow-sm" alt={opt.label} />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                                <span className="text-[10px] text-gray-400">No Image</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="text-center leading-tight">
+                                                            <span className="text-xs font-bold text-gray-800 block">{opt.label}</span>
+                                                            {opt.priceAdjustment > 0 && (
+                                                                <span className="text-[10px] font-bold text-green-600">
+                                                                    +₹{opt.priceAdjustment}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {selectedVariations[colorVariation.id]?.id === opt.id && (
+                                                        <div className="absolute -top-2 -right-2 bg-primary text-white p-0.5 rounded-full shadow-md">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </div>
+                                                    )}
                                                 </button>
                                             ))}
                                         </div>
@@ -652,7 +729,34 @@ export const ProductDetails: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-4 text-sm text-gray-500 leading-relaxed border-t border-gray-100"><h4 className="font-bold text-gray-900 mb-1">Description</h4>{product.description}</div>
+                            {/* Trust Badges */}
+                            <div className="grid grid-cols-3 gap-4 py-6 border-t border-b border-gray-100 bg-gray-50/50 rounded-xl px-4">
+                                <div className="flex flex-col items-center text-center gap-2">
+                                    <div className="bg-green-100 p-2 rounded-full text-green-600"><Truck className="w-5 h-5" /></div>
+                                    <span className="text-xs font-bold text-gray-700">Free Shipping</span>
+                                </div>
+                                <div className="flex flex-col items-center text-center gap-2">
+                                    <div className="bg-purple-100 p-2 rounded-full text-purple-600"><Award className="w-5 h-5" /></div>
+                                    <span className="text-xs font-bold text-gray-700">Premium Quality</span>
+                                </div>
+                                <button
+                                    onClick={() => navigate('/returns')}
+                                    className="flex flex-col items-center text-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+                                >
+                                    <div className="bg-orange-100 p-2 rounded-full text-orange-600"><RefreshCcw className="w-5 h-5" /></div>
+                                    <span className="text-xs font-bold text-gray-700">Replacement</span>
+                                    <span className="text-[10px] text-blue-600 underline">Click here to know more</span>
+                                </button>
+                            </div>
+
+                            <div className="pt-6 border-t border-gray-100">
+                                <h4 className="font-bold text-gray-900 mb-3 text-lg">Product Description</h4>
+                                <div className="text-gray-600 leading-relaxed space-y-4 text-sm md:text-base">
+                                    {product.description.split('\n').map((paragraph, idx) => (
+                                        <p key={idx}>{paragraph}</p>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Reviews Section (Scrollable) */}
@@ -757,56 +861,117 @@ export const ProductDetails: React.FC = () => {
                 </div>
             </div>
 
+            {/* Related Products Section */}
+            <div className="bg-white py-12 border-t border-gray-100 mt-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-end mb-6">
+                        <div>
+                            <span className="text-secondary font-bold text-xs uppercase tracking-wider mb-1 block">You May Also Like</span>
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Related Products</h2>
+                        </div>
+                        <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="hidden md:flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all">
+                            View All <ArrowRight className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
+                        {products
+                            .filter(p => p.category === product.category && p.id !== product.id)
+                            .slice(0, 6)
+                            .map(related => {
+                                const relatedPrices = calculatePrice(related);
+                                return (
+                                    <div key={related.id} className="min-w-[160px] md:min-w-[220px] snap-start group cursor-pointer" onClick={() => { navigate(`/product/${related.id}`); window.scrollTo(0, 0); }}>
+                                        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
+                                            <div className="relative aspect-square overflow-hidden bg-gray-50">
+                                                <img
+                                                    src={related.image}
+                                                    alt={related.name}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                    loading="lazy"
+                                                />
+                                                {related.discount && (
+                                                    <div className="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                                        {related.discount}% OFF
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-3 flex flex-col flex-1">
+                                                <h3 className="font-bold text-gray-900 text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">{related.name}</h3>
+                                                <div className="mt-auto">
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className="font-bold text-gray-900">{formatPrice(relatedPrices.final)}</span>
+                                                        {related.discount && <span className="text-xs text-gray-400 line-through">{formatPrice(relatedPrices.original)}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        }
+                    </div>
+
+                    <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="w-full md:hidden flex justify-center items-center gap-2 text-primary font-bold py-3 bg-gray-50 rounded-lg mt-2">
+                        View All Products <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+
             {/* Toast Notification */}
-            {showToast && (
-                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-slide-down">
-                    <div className={`
+            {
+                showToast && (
+                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-slide-down">
+                        <div className={`
                         px-6 py-4 rounded-xl shadow-2xl border-2 flex items-center gap-3 min-w-[280px] max-w-md
                         ${toastType === 'success' ? 'bg-green-50 border-green-200 text-green-800' : ''}
                         ${toastType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : ''}
                         ${toastType === 'info' ? 'bg-blue-50 border-blue-200 text-blue-800' : ''}
                     `}>
-                        {toastType === 'success' && <div className="bg-green-500 rounded-full p-1"><CheckCircle className="w-5 h-5 text-white" /></div>}
-                        {toastType === 'error' && <div className="bg-red-500 rounded-full p-1"><X className="w-5 h-5 text-white" /></div>}
-                        {toastType === 'info' && <div className="bg-blue-500 rounded-full p-1"><Sparkles className="w-5 h-5 text-white" /></div>}
-                        <span className="font-bold text-sm flex-1">{toastMessage}</span>
-                        <button onClick={() => setShowToast(false)} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-4 h-4" /></button>
+                            {toastType === 'success' && <div className="bg-green-500 rounded-full p-1"><CheckCircle className="w-5 h-5 text-white" /></div>}
+                            {toastType === 'error' && <div className="bg-red-500 rounded-full p-1"><X className="w-5 h-5 text-white" /></div>}
+                            {toastType === 'info' && <div className="bg-blue-500 rounded-full p-1"><Sparkles className="w-5 h-5 text-white" /></div>}
+                            <span className="font-bold text-sm flex-1">{toastMessage}</span>
+                            <button onClick={() => setShowToast(false)} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-4 h-4" /></button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Review Modal */}
-            {isReviewModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-                        <h3 className="text-lg font-bold mb-4">Rate {product.name}</h3>
-                        <div className="flex gap-2 mb-4">
-                            {[1, 2, 3, 4, 5].map(star => (
-                                <button key={star} onClick={() => setReviewRating(star)} className="focus:outline-none">
-                                    <Star className={`w-8 h-8 ${star <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
-                                </button>
-                            ))}
-                        </div>
-                        <input
-                            type="text"
-                            className="w-full border rounded-md p-2 mb-4"
-                            placeholder="Your City (e.g. Bangalore)"
-                            value={reviewLocation}
-                            onChange={(e) => setReviewLocation(e.target.value)}
-                        />
-                        <textarea
-                            className="w-full border rounded-md p-2 mb-4 h-32"
-                            placeholder="Write your review..."
-                            value={reviewComment}
-                            onChange={e => setReviewComment(e.target.value)}
-                        />
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setIsReviewModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-                            <button onClick={handleReviewSubmit} className="px-4 py-2 bg-primary text-white rounded font-bold">Submit Review</button>
+            {
+                isReviewModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+                            <h3 className="text-lg font-bold mb-4">Rate {product.name}</h3>
+                            <div className="flex gap-2 mb-4">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <button key={star} onClick={() => setReviewRating(star)} className="focus:outline-none">
+                                        <Star className={`w-8 h-8 ${star <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                    </button>
+                                ))}
+                            </div>
+                            <input
+                                type="text"
+                                className="w-full border rounded-md p-2 mb-4"
+                                placeholder="Your City (e.g. Bangalore)"
+                                value={reviewLocation}
+                                onChange={(e) => setReviewLocation(e.target.value)}
+                            />
+                            <textarea
+                                className="w-full border rounded-md p-2 mb-4 h-32"
+                                placeholder="Write your review..."
+                                value={reviewComment}
+                                onChange={e => setReviewComment(e.target.value)}
+                            />
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setIsReviewModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+                                <button onClick={handleReviewSubmit} className="px-4 py-2 bg-primary text-white rounded font-bold">Submit Review</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };

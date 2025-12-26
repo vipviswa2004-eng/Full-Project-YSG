@@ -54,6 +54,7 @@ export interface Product {
   reviewsCount?: number;
   sectionId?: string; // Link to shop section
   shopCategoryId?: string; // Link to shop category
+  subCategoryId?: string; // Link to shop sub-category
   isTrending?: boolean;
   isBestseller?: boolean;
 }
@@ -215,4 +216,23 @@ export interface ShopCategory {
   name: string; // e.g., "3D Crystals", "Wooden Plaques"
   image: string; // WebP thumbnail
   order?: number;
+}
+
+export interface SubCategory {
+  _id?: string;
+  id: string;
+  categoryId: string; // Link to ShopCategory
+  name: string;
+  image: string;
+  order?: number;
+}
+
+export interface SpecialOccasion {
+  _id?: string;
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  link: string;
+  order: number;
 }

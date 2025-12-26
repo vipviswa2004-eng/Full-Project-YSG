@@ -38,6 +38,15 @@ export const ReturnPolicy: React.FC = () => {
                         <li>Once your complaint is verified, we will dispatch a brand new replacement product at no extra cost.</li>
                         <li>The replacement will process within 2-4 business days.</li>
                     </ul>
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mt-4">
+                        <p className="font-medium text-blue-800">
+                            <strong>Note:</strong> Delivery Estimates after the replacement process:
+                            <br />
+                            <span className="ml-4">• <strong>Domestic:</strong> 2-7 business days</span>
+                            <br />
+                            <span className="ml-4">• <strong>International:</strong> 5-14 business days</span>
+                        </p>
+                    </div>
                 </section>
             </div>
         </div>

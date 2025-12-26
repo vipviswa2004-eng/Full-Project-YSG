@@ -23,6 +23,7 @@ const ProductSchema = new mongoose.Schema({
   },
   sectionId: String,
   shopCategoryId: String,
+  subCategoryId: String,
   isTrending: { type: Boolean, default: false },
   isBestseller: { type: Boolean, default: false }
 }, { id: false });
@@ -97,6 +98,14 @@ const SectionSchema = new mongoose.Schema({
   order: Number
 }, { id: false });
 
+const SubCategorySchema = new mongoose.Schema({
+  id: String,
+  categoryId: String,
+  name: String,
+  image: String,
+  order: Number
+}, { id: false });
+
 const ShopCategorySchema = new mongoose.Schema({
   id: String,
   sectionId: String,
@@ -157,6 +166,15 @@ const CouponSchema = new mongoose.Schema({
   status: { type: String, default: 'Active' }
 });
 
+const SpecialOccasionSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  image: String,
+  description: String,
+  link: String,
+  order: Number
+}, { id: false });
+
 module.exports = {
   Product: mongoose.model('Product', ProductSchema),
   User: mongoose.model('User', UserSchema),
@@ -167,9 +185,11 @@ module.exports = {
   Size: mongoose.model('Size', SizeSchema),
   Section: mongoose.model('Section', SectionSchema),
   ShopCategory: mongoose.model('ShopCategory', ShopCategorySchema),
+  SubCategory: mongoose.model('SubCategory', SubCategorySchema),
   WhatsAppLead: mongoose.model('WhatsAppLead', WhatsAppLeadSchema),
   Seller: mongoose.model('Seller', SellerSchema),
   Transaction: mongoose.model('Transaction', TransactionSchema),
   ReturnRequest: mongoose.model('ReturnRequest', ReturnRequestSchema),
-  Coupon: mongoose.model('Coupon', CouponSchema)
+  Coupon: mongoose.model('Coupon', CouponSchema),
+  SpecialOccasion: mongoose.model('SpecialOccasion', SpecialOccasionSchema)
 };

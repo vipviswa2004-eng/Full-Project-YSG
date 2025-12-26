@@ -29,8 +29,8 @@ export const ShippingInfo: React.FC = () => {
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">Delivery Estimates</h2>
                     <p>Once shipped, delivery times are as follows:</p>
                     <ul className="list-disc ml-5 space-y-1">
-                        <li><strong>Metro Cities:</strong> 2-7 business days</li>
-                        <li><strong>Rest of India:</strong> 5-14 business days</li>
+                        <li><strong>Domestic:</strong> 2-7 business days</li>
+                        <li><strong>International:</strong> 5-14 business days</li>
                     </ul>
                 </section>
 

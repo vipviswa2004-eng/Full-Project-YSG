@@ -25,7 +25,7 @@ export const CorporateGifting: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-app-bg">
             {/* Hero Section */}
             <div className="relative bg-gray-900 text-white py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
                 <div className="absolute inset-0">

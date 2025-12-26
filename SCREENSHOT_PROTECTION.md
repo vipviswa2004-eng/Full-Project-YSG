@@ -125,7 +125,7 @@ HD Quality: Only admin gets 3000x3000 without watermark
 2. ✅ Use low-quality previews for users
 3. ✅ Generate HD only for confirmed orders
 4. ✅ Add order ID to HD images (traceability)
-5. ✅ Store HD images securely in Supabase
+5. ✅ Store HD images securely in Cloudinary
 
 ### For Admin:
 - HD images have NO watermark

@@ -50,7 +50,7 @@ export const ShopSection: React.FC<ShopSectionProps> = ({ section, categories })
     if (sectionCategories.length === 0) return null;
 
     return (
-        <div className="py-12 bg-white">
+        <div className="py-12 bg-transparent">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Section Title */}
                 <div className="text-center mb-8">

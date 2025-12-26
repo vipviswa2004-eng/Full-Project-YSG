@@ -12,12 +12,13 @@ export const Cart: React.FC = () => {
   const total = cart.reduce((acc, item) => acc + (item.calculatedPrice * item.quantity), 0);
 
   // UPI Configuration
-  const UPI_ID = "vipviswa2004@okicici";
+  // UPI Configuration
+  const UPI_ID = "Pos.11391465@indus";
   const PAYEE_NAME = "YATHES SIGN GALAXY";
 
   const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`;
   // Use static QR code image instead of dynamically generated one
-  const qrCodeUrl = "/upi-qr-code.png";
+  const qrCodeUrl = "/upi-qr-code-only.jpg";
 
   const formatPrice = (price: number) => {
     return currency === 'INR'
@@ -49,6 +50,14 @@ export const Cart: React.FC = () => {
         message += `   Extra Heads: ${item.extraHeads}\n`;
       }
       message += `   AI Swap Requested: Yes\n`;
+
+      // Include Product Image URL
+      const imgUrl = item.customImage || item.image;
+      if (imgUrl && !imgUrl.startsWith('data:')) {
+        const fullImgUrl = imgUrl.startsWith('http') ? imgUrl : `${window.location.origin}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
+        message += `   Product Image: ${fullImgUrl}\n`;
+      }
+
       message += `   Price: ${formatPrice(item.calculatedPrice)}\n\n`;
     });
     message += `TOTAL: ${formatPrice(total)}\n\n`;
@@ -189,9 +198,68 @@ export const Cart: React.FC = () => {
                   <span className="font-mono select-all truncate">{UPI_ID}</span>
                 </div>
 
-                <a href={upiLink} className="mt-4 md:hidden w-full flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-gray-800 transition-colors">
-                  Pay on this device <ArrowRight className="w-4 h-4 ml-1" />
-                </a>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <a
+                    href={`tez://upi/pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        alert('This feature works on mobile devices with the Google Pay app installed. On desktop, please scan the QR code.');
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="font-bold text-blue-600">GPay</span>
+                  </a>
+                  <a
+                    href={`phonepe://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        alert('This feature works on mobile devices with the PhonePe app installed. On desktop, please scan the QR code.');
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="font-bold text-[#5f259f]">PhonePe</span>
+                  </a>
+                  <a
+                    href={`paytmmp://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        alert('This feature works on mobile devices with the Paytm app installed. On desktop, please scan the QR code.');
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="font-bold text-[#00b9f1]">Paytm</span>
+                  </a>
+                  <a
+                    href={`upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="font-bold text-[#FF9900]">Amazon Pay</span>
+                  </a>
+                  <a
+                    href={upiLink}
+                    onClick={(e) => {
+                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        e.preventDefault();
+                        alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
+                      }
+                    }}
+                    className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Other UPI Apps <ArrowRight className="w-4 h-4 ml-1" />
+                  </a>
+                </div>
               </div>
 
               <div className="relative">
