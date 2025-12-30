@@ -237,7 +237,7 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-16">
       {/* Moveable Hero Slider */}
-      <div className="relative h-[350px] md:h-[400px] overflow-hidden group bg-gray-900 mt-3 md:mt-6 rounded-xl mx-4 shadow-lg border border-gray-800">
+      <div className="relative h-[250px] md:h-[300px] overflow-hidden group bg-gray-900">
         {HERO_SLIDES.map((slide, index) => (
           <div key={slide.id} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40 z-10" />
@@ -311,12 +311,49 @@ export const Home: React.FC = () => {
 
       {/* Trust Strip */}
       <FadeInSection>
-        <div className="bg-gray-50 border-b border-gray-100 py-8 pt-12">
-          <div className="max-w-7xl mx-auto px-4 flex justify-between md:justify-center md:gap-16 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-2 min-w-max"><Truck className="w-5 h-5 text-primary" /><span className="text-xs md:text-sm font-medium text-gray-700">Free Delivery</span></div>
-            <div className="flex items-center gap-2 min-w-max"><ShieldCheck className="w-5 h-5 text-primary" /><span className="text-xs md:text-sm font-medium text-gray-700">100% Quality</span></div>
-            <div className="flex items-center gap-2 min-w-max"><Gift className="w-5 h-5 text-primary" /><span className="text-xs md:text-sm font-medium text-gray-700">Premium Packaging</span></div>
-            <div className="flex items-center gap-2 min-w-max"><User className="w-5 h-5 text-primary" /><span className="text-xs md:text-sm font-medium text-gray-700">24/7 Support</span></div>
+        <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border-y border-purple-100 py-10">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <Truck className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center md:text-left">
+                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">Free Delivery</span>
+                  <span className="text-xs text-gray-500 hidden md:block">On all orders</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <ShieldCheck className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center md:text-left">
+                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">100% Quality</span>
+                  <span className="text-xs text-gray-500 hidden md:block">Guaranteed</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <Gift className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center md:text-left">
+                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">Premium Packaging</span>
+                  <span className="text-xs text-gray-500 hidden md:block">Luxury boxes</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <User className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center md:text-left">
+                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">24/7 Support</span>
+                  <span className="text-xs text-gray-500 hidden md:block">Always here</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </FadeInSection>

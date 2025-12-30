@@ -192,7 +192,7 @@ export const Navbar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-primary md:hidden p-1" title="Open menu">
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white hover:text-[#f5ebd0] md:hidden p-1" title="Open menu">
                 <Menu className="h-6 w-6" />
               </button>
               <Link to="/" className="flex-shrink-0 flex items-center gap-1.5 focus:outline-none">
