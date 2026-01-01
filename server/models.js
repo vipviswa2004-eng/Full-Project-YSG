@@ -25,7 +25,12 @@ const ProductSchema = new mongoose.Schema({
   shopCategoryId: String,
   subCategoryId: String,
   isTrending: { type: Boolean, default: false },
-  isBestseller: { type: Boolean, default: false }
+  isBestseller: { type: Boolean, default: false },
+  symbolNumberConfig: {
+    enabled: { type: Boolean, default: false },
+    title: { type: String, default: 'Symbol Number' },
+    image: String
+  }
 }, { id: false });
 
 const UserSchema = new mongoose.Schema({
@@ -46,6 +51,7 @@ const UserSchema = new mongoose.Schema({
     calculatedPrice: Number,
     originalPrice: Number,
     extraHeads: Number,
+    symbolNumber: String,
     selectedVariations: Object
   }],
   createdAt: { type: Date, default: Date.now }
@@ -109,6 +115,7 @@ const SubCategorySchema = new mongoose.Schema({
 const ShopCategorySchema = new mongoose.Schema({
   id: String,
   sectionId: String,
+  sectionIds: [String],
   name: String,
   image: String,
   order: Number

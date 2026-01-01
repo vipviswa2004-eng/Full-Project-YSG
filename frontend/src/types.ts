@@ -15,6 +15,7 @@ export interface VariationOption {
   priceAdjustment: number; // Added to the base PDF price
   image?: string; // Specific image for this variation option
   size?: string;
+  isDefault?: boolean; // If true, this variation's image is used as the main product image
 }
 
 export interface Variation {
@@ -57,6 +58,11 @@ export interface Product {
   subCategoryId?: string; // Link to shop sub-category
   isTrending?: boolean;
   isBestseller?: boolean;
+  symbolNumberConfig?: {
+    enabled: boolean;
+    title: string;
+    image?: string;
+  };
 }
 
 export interface CartItem extends Product {
@@ -68,6 +74,7 @@ export interface CartItem extends Product {
   originalPrice: number;
   quantity: number;
   extraHeads?: number; // Number of additional heads added
+  symbolNumber?: string;
   selectedVariations?: Record<string, VariationOption>; // variationId -> selectedOption
 }
 
@@ -212,7 +219,8 @@ export interface Section {
 export interface ShopCategory {
   _id?: string;
   id: string;
-  sectionId: string;
+  sectionId?: string;
+  sectionIds?: string[];
   name: string; // e.g., "3D Crystals", "Wooden Plaques"
   image: string; // WebP thumbnail
   order?: number;

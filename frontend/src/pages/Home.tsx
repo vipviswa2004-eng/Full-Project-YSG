@@ -237,7 +237,7 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-16">
       {/* Moveable Hero Slider */}
-      <div className="relative h-[250px] md:h-[300px] overflow-hidden group bg-gray-900">
+      <div className="relative h-[250px] md:h-[400px] overflow-hidden group bg-gray-900 mt-6 mx-4 rounded-3xl shadow-2xl">
         {HERO_SLIDES.map((slide, index) => (
           <div key={slide.id} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/40 z-10" />
@@ -271,15 +271,15 @@ export const Home: React.FC = () => {
             to={`/shop?category=${encodeURIComponent(cat.name)}`}
             className="flex-shrink-0 flex flex-col items-center gap-2 group w-16"
           >
-            <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center p-0.5 border-2 border-primary/10 group-active:scale-90 transition-transform overflow-hidden shadow-inner">
-              <img src={cat.image} alt="" className="w-full h-full object-cover rounded-full" />
+            <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center p-0.5 border-2 border-primary/10 group-active:scale-90 transition-transform overflow-hidden shadow-inner">
+              <img src={cat.image} alt="" className="w-full h-full object-cover rounded-xl" />
             </div>
             <span className="text-[10px] font-bold text-gray-800 text-center leading-tight truncate w-full">{cat.name.split(' & ')[0]}</span>
           </Link>
         )) : (
           [...Array(6)].map((_, i) => (
             <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-gray-100 animate-pulse" />
+              <div className="w-14 h-14 rounded-xl bg-gray-100 animate-pulse" />
               <div className="w-10 h-2 bg-gray-100 animate-pulse rounded" />
             </div>
           ))
@@ -296,7 +296,7 @@ export const Home: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-xl md:text-2xl font-bold text-white">Confused what to buy?</h3>
-                <p className="text-purple-200 text-sm md:text-base">Ask our AI Gift Genie for perfect recommendations!</p>
+                <p className="text-purple-200 text-sm md:text-base">Ask our Gift Genie for perfect recommendations!</p>
               </div>
             </div>
             <button

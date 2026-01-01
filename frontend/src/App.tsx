@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { CategoryNav } from './components/CategoryNav';
 import { Footer } from './components/Footer';
 import { GiftAdvisor } from './components/GiftAdvisor';
 import { WhatsAppChat } from './components/WhatsAppChat';
@@ -24,6 +25,27 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   const { setUser } = useCart();
+  const navType = useNavigationType();
+
+  // Disable browser scroll restoration to avoid conflicts
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  // Scroll to top on route change
+  useEffect(() => {
+    // Skip scroll to top if it's a 'POP' action (back/forward) AND we are going to the shop
+    // This allows Shop.tsx to restore its own scroll position
+    const isShop = location.pathname === '/shop' || location.pathname === '/products';
+    if (isShop && navType === 'POP') {
+      return;
+    }
+
+    // Default behavior: scroll to top
+    window.scrollTo(0, 0);
+  }, [location.pathname, location.search, navType]);
 
   // Handle OAuth callback
   useEffect(() => {
@@ -48,6 +70,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       <Navbar />
+      {!isAdminRoute && <CategoryNav />}
       <main className="flex-grow pb-20 md:pb-0">
         <Routes>
           <Route path="/" element={<Home />} />

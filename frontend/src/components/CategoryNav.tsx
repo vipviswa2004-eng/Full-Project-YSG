@@ -1,271 +1,475 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Gift, Briefcase, Star, Zap, User, Heart, Layers, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, Star, Zap, Layers, Sparkles } from 'lucide-react';
 
-interface SubCategoryLink {
+interface SubCategory {
+    id: string;
     name: string;
-    link: string;
+    categoryId: string;
 }
 
-interface CategoryGroup {
+interface ShopCategory {
     id: string;
-    title: string;
-    items: SubCategoryLink[];
-}
-
-interface NavItem {
-    id: string;
-    label: string;
-    icon: any;
-    color: string;
-    bgColor: string;
-    groups: CategoryGroup[];
+    name: string;
+    sectionIds?: string[];
+    sectionId?: string;
     image?: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-    {
-        id: 'personalized',
-        label: 'Personalized Gifts',
-        icon: Gift,
-        color: 'text-pink-500',
-        bgColor: 'bg-pink-50',
-        image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=400&auto=format&fit=crop',
-        groups: [
-            {
-                id: 'recipient',
-                title: 'By Recipient',
-                items: [
-                    { name: 'For Him', link: '/products?q=him' },
-                    { name: 'For Her', link: '/products?q=her' },
-                    { name: 'Couples', link: '/products?q=couple' },
-                    { name: 'Kids', link: '/products?q=kids' },
-                ]
-            },
-            {
-                id: 'material',
-                title: 'By Material',
-                items: [
-                    { name: 'Wooden Engraving', link: '/products?q=wood' },
-                    { name: '3D Crystals', link: '/products?q=crystal' },
-                    { name: 'Acrylic Art', link: '/products?q=acrylic' },
-                    { name: 'Metal & Steel', link: '/products?q=metal' },
-                ]
-            },
-            {
-                id: 'type',
-                title: 'Popular Types',
-                items: [
-                    { name: 'Photo Frames', link: '/products?q=frame' },
-                    { name: 'LED Lamps', link: '/products?q=lamp' },
-                    { name: 'Caricatures', link: '/products?q=caricature' },
-                    { name: 'Name Plates', link: '/products?q=name' },
-                ]
-            }
-        ]
-    },
-    {
-        id: 'corporate',
-        label: 'Corporate Buying',
-        icon: Briefcase,
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-50',
-        image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=400&auto=format&fit=crop',
-        groups: [
-            {
-                id: 'branding',
-                title: 'Office Branding',
-                items: [
-                    { name: 'Desktop Organizers', link: '/products?q=desktop' },
-                    { name: 'Custom Pens', link: '/products?q=pen' },
-                    { name: 'Diaries & Planners', link: '/products?q=diary' },
-                    { name: 'ID Card Holders', link: '/products?q=card' },
-                ]
-            },
-            {
-                id: 'awards',
-                title: 'Awards & Recognition',
-                items: [
-                    { name: 'Crystal Trophies', link: '/products?q=trophy' },
-                    { name: 'Wooden Plaques', link: '/products?q=plaque' },
-                    { name: 'Service Awards', link: '/products?q=award' },
-                    { name: 'Medals', link: '/products?q=medal' },
-                ]
-            },
-            {
-                id: 'bulk',
-                title: 'Bulk Gifting',
-                items: [
-                    { name: 'Welcome Kits', link: '/products?q=welcome' },
-                    { name: 'Festive Hampers', link: '/products?q=hamper' },
-                    { name: 'Clients Gifts', link: '/products?q=client' },
-                    { name: 'Event Giveaways', link: '/products?q=event' },
-                ]
-            }
-        ]
-    },
-    {
-        id: 'neon',
-        label: 'Neon & Decor',
-        icon: Zap,
-        color: 'text-yellow-500',
-        bgColor: 'bg-yellow-50',
-        image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=400&auto=format&fit=crop',
-        groups: [
-            {
-                id: 'signs',
-                title: 'Neon Signs',
-                items: [
-                    { name: 'Custom Text', link: '/products?q=neon%20text' },
-                    { name: 'Wall Art', link: '/products?q=neon%20art' },
-                    { name: 'Business Logos', link: '/products?q=neon%20logo' },
-                ]
-            },
-            {
-                id: 'home',
-                title: 'Home Decor',
-                items: [
-                    { name: 'Wall Clocks', link: '/products?q=clock' },
-                    { name: 'Name Plates', link: '/products?q=nameplate' },
-                    { name: 'Canvas Prints', link: '/products?q=canvas' },
-                ]
-            }
-        ]
-    },
-    {
-        id: 'occasions',
-        label: 'Shop By Occasion',
-        icon: Star,
-        color: 'text-purple-500',
-        bgColor: 'bg-purple-50',
-        image: 'https://images.unsplash.com/photo-1530103862676-de3c9fa59588?q=80&w=400&auto=format&fit=crop',
-        groups: [
-            {
-                id: 'milestones',
-                title: 'Life Events',
-                items: [
-                    { name: 'Birthday', link: '/products?q=birthday' },
-                    { name: 'Anniversary', link: '/products?q=anniversary' },
-                    { name: 'Wedding', link: '/products?q=wedding' },
-                    { name: 'Housewarming', link: '/products?q=housewarming' },
-                ]
-            },
-            {
-                id: 'special',
-                title: 'Special Days',
-                items: [
-                    { name: 'Valentine\'s Day', link: '/products?q=love' },
-                    { name: 'Mother\'s Day', link: '/products?q=mom' },
-                    { name: 'Father\'s Day', link: '/products?q=dad' },
-                    { name: 'Friendship Day', link: '/products?q=friend' },
-                ]
-            }
-        ]
-    }
+interface Section {
+    id: string;
+    title: string;
+    image?: string;
+}
+
+interface SpecialOccasion {
+    id: string;
+    name: string;
+    image?: string;
+    description?: string;
+    link?: string;
+}
+
+const STATIC_OCCASIONS = [
+    { id: 'birthday', name: 'Birthday', image: 'https://images.unsplash.com/photo-1530103862676-de3c9fa59588?q=80&w=400&auto=format&fit=crop', description: 'Celebrate another year of greatness with a gift that shines as bright as they do.' },
+    { id: 'love', name: 'Love & Romance', image: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?q=80&w=400&auto=format&fit=crop', description: 'Express your deepest feelings with keepsakes that say what words cannot.' },
+    { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', description: 'Magical moments and playful wonders for the little ones in your life.' },
+    { id: 'wedding', name: 'Wedding & Anniversary', image: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=400&auto=format&fit=crop', description: 'Honor a lifetime of love with elegant, timeless custom masterpieces.' }
 ];
 
 export const CategoryNav: React.FC = () => {
-    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [sections, setSections] = useState<Section[]>([]);
+    const [allSections, setAllSections] = useState<Section[]>([]); // Full list including ones not in main nav shortcuts
+    const [occasions, setOccasions] = useState<SpecialOccasion[]>([]);
+    const [categories, setCategories] = useState<ShopCategory[]>([]);
+    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null); // Unified state for sec_*, occ_*, or special_items
+    const [hoveredCategoryId, setHoveredCategoryId] = useState<string | null>(null);
+    const [hoveredOccasionId, setHoveredOccasionId] = useState<string | null>(null);
+    const timeoutRef = useRef<any>(null);
+
+    const handleNavMouseEnter = (id: string) => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        setActiveDropdown(id);
+    };
+
+    const handleNavMouseLeave = () => {
+        timeoutRef.current = setTimeout(() => {
+            setActiveDropdown(null);
+            timeoutRef.current = null;
+        }, 150); // Small grace period to move mouse to dropdown
+    };
+
+    const handleMenuMouseEnter = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+    };
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [secRes, catRes, subRes, occRes] = await Promise.all([
+                    fetch('http://localhost:5000/api/sections'),
+                    fetch('http://localhost:5000/api/shop-categories'),
+                    fetch('http://localhost:5000/api/sub-categories'),
+                    fetch('http://localhost:5000/api/special-occasions')
+                ]);
+
+                const secData = await secRes.json();
+                const catData = await catRes.json();
+                const subData = await subRes.json();
+                const occData = await occRes.json();
+
+                // Standardize sections
+                const processedSections = secData.map((s: any) => {
+                    const title = s.title || s.name;
+                    let fallbackImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=150&auto=format&fit=crop';
+                    if (title.toLowerCase().includes('personal')) {
+                        fallbackImage = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=150&auto=format&fit=crop';
+                    } else if (title.toLowerCase().includes('corporate')) {
+                        fallbackImage = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=150&auto=format&fit=crop';
+                    }
+
+                    return {
+                        id: s.id || s._id,
+                        title: title,
+                        image: s.image || fallbackImage
+                    };
+                });
+
+                setAllSections(processedSections);
+                setSections(processedSections.filter((s: any) =>
+                    s.title.toLowerCase().includes('personal') ||
+                    s.title.toLowerCase().includes('corporate')
+                ));
+                setOccasions(occData.map((o: any) => ({
+                    id: o.id || o._id,
+                    name: o.name,
+                    image: o.image || 'https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=150&auto=format&fit=crop',
+                    description: o.description,
+                    link: o.link
+                })));
+                setCategories(catData.map((c: any) => ({
+                    id: c.id || c._id,
+                    name: c.name,
+                    sectionIds: c.sectionIds || (c.sectionId ? [c.sectionId] : []),
+                    image: c.image
+                })));
+                setSubCategories(subData.map((s: any) => ({
+                    id: s.id || s._id,
+                    name: s.name,
+                    categoryId: s.categoryId
+                })));
+            } catch (error) {
+                console.error('Failed to fetch navigation data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const closeMenu = () => {
+        setActiveDropdown(null);
+        setHoveredCategoryId(null);
+        setHoveredOccasionId(null);
+    };
+
+    // Helper to get categories for a section
+    const getCategoriesForSection = (sectionId: string) => {
+        let sectionCats = categories.filter(cat => cat.sectionIds?.includes(sectionId));
+
+        if (sectionId === 'sec_personalised' && sectionCats.length < 29) {
+            const diaries = categories.find(c => c.name === 'Diaries');
+            if (diaries && !sectionCats.find(c => c.id === diaries.id)) {
+                sectionCats.push(diaries);
+            }
+        }
+
+        return sectionCats.sort((a, b) => a.name.localeCompare(b.name));
+    };
+
+    // Set initial hovered state when selection changes
+    useEffect(() => {
+        if (activeDropdown) {
+            if (activeDropdown.startsWith('sec_')) {
+                const sectionCats = getCategoriesForSection(activeDropdown);
+                if (sectionCats.length > 0) setHoveredCategoryId(sectionCats[0].id);
+            } else if (activeDropdown === 'occasions_all') {
+                if (STATIC_OCCASIONS.length > 0) setHoveredOccasionId(STATIC_OCCASIONS[0].id);
+            }
+        } else {
+            setHoveredCategoryId(null);
+            setHoveredOccasionId(null);
+        }
+    }, [activeDropdown, allSections, occasions]); // Added dependencies
+
+    if (loading || sections.length === 0) return null;
+
+    const NAV_ITEMS = [
+        ...sections.map(s => ({ ...s, type: 'section' })),
+        {
+            id: 'occasions_all',
+            name: 'Shop by Occasion',
+            type: 'occasions',
+            image: 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?q=80&w=200&auto=format&fit=crop'
+        },
+        {
+            id: 'special_items',
+            name: 'Special Occasions',
+            type: 'special_occasions',
+            image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?q=80&w=200&auto=format&fit=crop'
+        }
+    ];
 
     return (
-        <div className="bg-white shadow-sm border-b border-gray-100 hidden md:block sticky top-16 z-40">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-14">
-                    <ul className="flex items-center gap-8 h-full">
-                        {NAV_ITEMS.map((item) => (
-                            <li
-                                key={item.id}
-                                className="group h-full flex items-center"
-                                onMouseEnter={() => setActiveCategory(item.id)}
-                                onMouseLeave={() => setActiveCategory(null)}
-                            >
-                                <Link
-                                    to={item.groups[0]?.items[0]?.link || '#'}
-                                    className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-primary transition-colors py-4 relative"
-                                >
-                                    <span className={`w-8 h-8 rounded-full ${item.bgColor} flex items-center justify-center transition-transform group-hover:scale-110`}>
-                                        <item.icon className={`w-4 h-4 ${item.color}`} />
-                                    </span>
-                                    {item.label}
-                                    <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-300 ${activeCategory === item.id ? 'rotate-180' : ''}`} />
-
-                                    {/* Current Active Indicator */}
-                                    <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-primary transform origin-left transition-transform duration-300 ${activeCategory === item.id ? 'scale-x-100' : 'scale-x-0'}`} />
-                                </Link>
-
-                                {/* Mega Menu Dropdown */}
+        <div className="bg-white/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] border-b border-gray-100 hidden md:block sticky top-16 z-40 h-[84px] transition-all duration-300">
+            <div className="max-w-7xl mx-auto px-4 lg:px-6 h-full relative"> {/* Added relative for mega-menu anchoring */}
+                <div className="flex items-center justify-between h-full">
+                    {/* Main Sections */}
+                    <div className="flex items-center gap-6 lg:gap-10">
+                        {NAV_ITEMS.map((item) => {
+                            const title = (item as any).title || (item as any).name;
+                            return (
                                 <div
-                                    className={`absolute top-full left-0 w-full bg-white shadow-xl border-t border-gray-100 transform transition-all duration-300 origin-top z-50
-                    ${activeCategory === item.id ? 'opacity-100 translate-y-0 visible' : 'opacity-0 -translate-y-2 invisible pointer-events-none'}
-                  `}
+                                    key={item.id}
+                                    className="relative group/nav-item h-full flex items-center"
+                                    onMouseEnter={() => handleNavMouseEnter(item.id)}
+                                    onMouseLeave={handleNavMouseLeave}
                                 >
-                                    <div className="max-w-7xl mx-auto flex">
-                                        {/* Content Columns */}
-                                        <div className="flex-1 flex p-8 gap-12">
-                                            {item.groups.map((group) => (
-                                                <div key={group.id} className="min-w-[160px]">
-                                                    <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider flex items-center gap-2">
-                                                        {/* Optional: Add icons for groups specific to context if needed, for now just text */}
-                                                        {group.id === 'recipient' && <User className="w-3.5 h-3.5 text-gray-400" />}
-                                                        {group.id === 'material' && <Layers className="w-3.5 h-3.5 text-gray-400" />}
-                                                        {group.id === 'branding' && <Briefcase className="w-3.5 h-3.5 text-gray-400" />}
-                                                        {group.title}
-                                                    </h4>
-                                                    <ul className="space-y-2.5">
-                                                        {group.items.map((sub, idx) => (
-                                                            <li key={idx}>
-                                                                <Link
-                                                                    to={sub.link}
-                                                                    className="text-sm text-gray-500 hover:text-primary hover:font-medium transition-all flex items-center gap-1.5 group/link"
-                                                                >
-                                                                    <ChevronRight className="w-3 h-3 opacity-0 -ml-3 group-hover/link:opacity-100 group-hover/link:ml-0 transition-all text-primary" />
-                                                                    {sub.name}
-                                                                </Link>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            ))}
+                                    <Link
+                                        to={item.type === 'section' ? `/products?section=${item.id}` : '/products'}
+                                        onClick={closeMenu}
+                                        className={`flex items-center gap-3 px-3 lg:px-4 py-2 rounded-2xl transition-all duration-500 relative
+                                            ${activeDropdown === item.id ? 'bg-primary/5 shadow-inner' : 'hover:bg-gray-50/80'}
+                                        `}
+                                    >
+                                        <div className="relative">
+                                            <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-1.5xl overflow-hidden bg-white flex items-center justify-center shadow-[0_8px_20px_rgba(0,0,0,0.1)] border-2 border-white ring-1 ring-gray-100 group-hover/nav-item:shadow-[0_12px_25px_rgba(0,0,0,0.15)] group-hover/nav-item:-translate-y-1 transition-all duration-500">
+                                                <img src={item.image} alt={title} className="w-full h-full object-cover scale-100 group-hover/nav-item:scale-110 transition-transform duration-700" />
+                                            </div>
+                                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-white scale-0 transition-transform duration-500 ${activeDropdown === item.id ? 'scale-100' : ''}`}></div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className={`text-[12px] lg:text-[13px] font-black tracking-tight transition-colors duration-300 flex items-center gap-1.5
+                                                ${activeDropdown === item.id ? 'text-primary' : 'text-gray-900'}
+                                            `}>
+                                                {title}
+                                                <ChevronDown className={`w-3.5 h-3.5 transition-all duration-500 opacity-50 ${activeDropdown === item.id ? 'rotate-180 opacity-100' : ''}`} />
+                                            </span>
+                                            <span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-[0.1em] leading-none mt-0.5 group-hover/nav-item:text-primary/70 transition-colors">Explore</span>
                                         </div>
 
-                                        {/* Featured Image Section */}
-                                        {item.image && (
-                                            <div className="w-1/4 bg-gray-50 p-6 flex flex-col justify-center items-center text-center relative overflow-hidden group/image">
-                                                <div className="absolute inset-0">
-                                                    <img src={item.image} alt={item.label} className="w-full h-full object-cover opacity-80 group-hover/image:scale-105 transition-transform duration-700" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
-                                                </div>
-                                                <div className="relative z-10 p-4">
-                                                    <h3 className="text-white font-bold text-xl mb-2">{item.label}</h3>
-                                                    <p className="text-gray-200 text-xs mb-4 opacity-90">Explore our premium collection customized just for you.</p>
+                                        <div className={`absolute bottom-0 left-6 right-6 h-1 bg-primary rounded-full transition-all duration-500 transform origin-left
+                                            ${activeDropdown === item.id ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'}
+                                        `}></div>
+                                    </Link>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Shared Mega Menu - Now anchored to the container to fit screen perfectly */}
+                    <div
+                        className={`absolute top-full left-1/2 -translate-x-1/2 w-full max-w-[1024px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.15)] transition-all duration-500 origin-top z-50 flex overflow-hidden rounded-b-2xl border-x border-b border-gray-100 backdrop-blur-sm
+                            ${activeDropdown ? 'opacity-100 scale-y-100 translate-y-0' : 'opacity-0 scale-y-95 -translate-y-2 invisible pointer-events-none'}`}
+                        style={{ height: '480px' }}
+                        onMouseEnter={handleMenuMouseEnter}
+                        onMouseLeave={handleNavMouseLeave}
+                    >
+                        {activeDropdown && (
+                            <>
+                                {/* Handle Sections (Personalized, Corporate) */}
+                                {NAV_ITEMS.find(i => i.id === activeDropdown)?.type === 'section' && (
+                                    <>
+                                        <div className="w-[280px] bg-gray-50/80 border-r border-gray-100/50 overflow-y-auto no-scrollbar py-5 px-3">
+                                            <div className="px-3 mb-5">
+                                                <h5 className="text-[10.5px] font-black text-gray-400 uppercase tracking-[0.18em] mb-1">Categories</h5>
+                                                <div className="h-0.5 w-6 bg-primary/20 rounded-full"></div>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                {getCategoriesForSection(activeDropdown).map((cat) => (
                                                     <Link
-                                                        to="/products"
-                                                        className="inline-block px-4 py-2 bg-white text-gray-900 text-xs font-bold rounded-full hover:bg-primary hover:text-white transition-colors"
+                                                        key={cat.id}
+                                                        to={`/products?category=${encodeURIComponent(cat.name)}`}
+                                                        onClick={closeMenu}
+                                                        onMouseEnter={() => setHoveredCategoryId(cat.id)}
+                                                        className={`px-4 py-3 text-[14px] cursor-pointer rounded-xl transition-all duration-300 flex items-center justify-between group/cat-link
+                                                            ${hoveredCategoryId === cat.id ? 'bg-white text-primary font-bold shadow-md shadow-black/5 -translate-x-1' : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'}
+                                                        `}
                                                     >
-                                                        View All Collection
+                                                        <span className="truncate pr-2">{cat.name}</span>
+                                                        <ChevronRight className={`w-4 h-4 transition-all duration-500 ${hoveredCategoryId === cat.id ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform -translate-x-2'}`} />
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 bg-white p-10 overflow-y-auto no-scrollbar bg-gradient-to-br from-white to-gray-50/30">
+                                            {hoveredCategoryId && (
+                                                <CategoryDetails
+                                                    category={categories.find(c => c.id === hoveredCategoryId)!}
+                                                    subCategories={subCategories}
+                                                    closeMenu={closeMenu}
+                                                />
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Handle Occasions Dropdown */}
+                                {NAV_ITEMS.find(i => i.id === activeDropdown)?.type === 'occasions' && (
+                                    <>
+                                        <div className="w-[280px] bg-gray-50/80 border-r border-gray-100/50 overflow-y-auto no-scrollbar py-5 px-3">
+                                            <div className="px-3 mb-5">
+                                                <h5 className="text-[10.5px] font-black text-gray-400 uppercase tracking-[0.18em] mb-1">Occasions</h5>
+                                                <div className="h-0.5 w-6 bg-primary/20 rounded-full"></div>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                {STATIC_OCCASIONS.map((occ) => (
+                                                    <Link
+                                                        key={occ.id}
+                                                        to={`/products?occasion=${encodeURIComponent(occ.name)}`}
+                                                        onClick={closeMenu}
+                                                        onMouseEnter={() => setHoveredOccasionId(occ.id)}
+                                                        className={`px-4 py-3 text-[14px] cursor-pointer rounded-xl transition-all duration-300 flex items-center justify-between group/occ-link
+                                                            ${hoveredOccasionId === occ.id ? 'bg-white text-primary font-bold shadow-md shadow-black/5 -translate-x-1' : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'}
+                                                        `}
+                                                    >
+                                                        <span className="truncate pr-2">{occ.name}</span>
+                                                        <ChevronRight className={`w-4 h-4 transition-all duration-500 ${hoveredOccasionId === occ.id ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform -translate-x-2'}`} />
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 bg-white p-10 overflow-y-auto no-scrollbar flex items-center justify-center bg-gradient-to-br from-white to-gray-50/50">
+                                            {hoveredOccasionId && (
+                                                <div className="text-center animate-in fade-in zoom-in duration-500 max-w-md">
+                                                    <div className="relative group/occ-img mb-8">
+                                                        <div className="absolute inset-0 bg-primary/10 rounded-[3rem] blur-3xl group-hover/occ-img:bg-primary/20 transition-all duration-700"></div>
+                                                        <div className="relative w-48 h-48 rounded-[2.5rem] overflow-hidden shadow-2xl mx-auto border-8 border-white group-hover/occ-img:scale-105 transition-transform duration-500">
+                                                            <img
+                                                                src={STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.image || ''}
+                                                                alt="Occasion"
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <h4 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">{STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.name}</h4>
+                                                    <p className="text-gray-400 text-base leading-relaxed mb-10">{STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.description}</p>
+                                                    <Link
+                                                        to={`/products?occasion=${encodeURIComponent(STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.name || '')}`}
+                                                        onClick={closeMenu}
+                                                        className="px-12 py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-2xl shadow-primary/30 hover:shadow-black/30 hover:-translate-y-1"
+                                                    >
+                                                        Shop Collection
                                                     </Link>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
 
-                    {/* Special Links */}
-                    <div className="flex items-center gap-6 ml-auto">
-                        <Link to="/products?filter=trending" className="flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-orange-500 transition-colors">
-                            <Zap className="w-3.5 h-3.5 text-orange-500" />
-                            Trending
-                        </Link>
-                        <Link to="/products?filter=new" className="flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-green-500 transition-colors">
-                            <Star className="w-3.5 h-3.5 text-green-500" />
-                            New Arrivals
-                        </Link>
+                                {/* Dedicated Special Occasions Mega Menu - Global backend dynamic list */}
+                                {NAV_ITEMS.find(i => i.id === activeDropdown)?.type === 'special_occasions' && (
+                                    <div className="w-full p-12 overflow-y-auto no-scrollbar bg-gradient-to-br from-white to-orange-50/20">
+                                        <div className="max-w-4xl mx-auto">
+                                            <div className="mb-12 text-center">
+                                                <h4 className="text-3xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-3">
+                                                    <Sparkles className="w-8 h-8 text-orange-400" />
+                                                    Special Occasions
+                                                </h4>
+                                                <p className="text-gray-400 text-lg mt-3">Curated collections for life's most beautiful milestones</p>
+                                                <div className="h-1 w-16 bg-primary/20 rounded-full mx-auto mt-6"></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+                                                {occasions.map(occ => (
+                                                    <Link
+                                                        key={occ.id}
+                                                        to={`/products?occasion=${encodeURIComponent(occ.name)}`}
+                                                        onClick={closeMenu}
+                                                        className="group/occ-card relative aspect-[4/3] rounded-[2rem] overflow-hidden shadow-xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-500 hover:-translate-y-2 border-4 border-white"
+                                                    >
+                                                        <img src={occ.image} alt={occ.name} className="w-full h-full object-cover group-hover/occ-card:scale-110 transition-transform duration-1000" />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
+                                                        <div className="absolute bottom-6 left-6 right-6">
+                                                            <p className="text-white font-black text-xl tracking-tight leading-tight mb-2">{occ.name}</p>
+                                                            <div className="flex items-center gap-2 text-white/70 text-[10px] uppercase font-bold tracking-[0.2em] opacity-0 group-hover/occ-card:opacity-100 transform translate-y-4 group-hover/occ-card:translate-y-0 transition-all duration-500">
+                                                                Explore Collection <ChevronRight className="w-3 h-3" />
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Trending & New Secondary Nav */}
+                    <div className="flex items-center h-full">
+                        <div className="w-[1px] h-8 bg-gray-100 mx-4"></div>
+                        <div className="flex items-center gap-2 lg:gap-3">
+                            <Link to="/products?filter=trending" onClick={closeMenu} className="group flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-orange-50/50 transition-all duration-500 border border-transparent hover:border-orange-100">
+                                <div className="relative">
+                                    <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-1.5xl bg-orange-50 flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-500 shadow-sm border border-orange-100/50">
+                                        <Zap className="w-4.5 h-4.5 text-orange-500 fill-orange-500" />
+                                    </div>
+                                    <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] lg:text-[11px] font-black text-gray-900 tracking-tight leading-none mb-0.5">TRENDING</span>
+                                    <span className="text-[8.5px] lg:text-[9.5px] text-gray-400 font-bold tracking-wider">Hot Now</span>
+                                </div>
+                            </Link>
+
+                            <Link to="/products?filter=new" onClick={closeMenu} className="group flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-blue-50/50 transition-all duration-500 border border-transparent hover:border-blue-100">
+                                <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-1.5xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-500 shadow-sm border border-blue-100/50">
+                                    <Star className="w-4.5 h-4.5 text-blue-500 fill-blue-500" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] lg:text-[11px] font-black text-gray-900 tracking-tight leading-none mb-0.5">NEW</span>
+                                    <span className="text-[8.5px] lg:text-[9.5px] text-gray-400 font-bold tracking-wider">Just In</span>
+                                </div>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+};
+
+// Sub-component for Category Details to keep main code clean
+const CategoryDetails: React.FC<{ category: ShopCategory, subCategories: SubCategory[], closeMenu: () => void }> = ({ category, subCategories, closeMenu }) => {
+    return (
+        <div className="animate-in fade-in slide-in-from-left-6 duration-500">
+            <div className="mb-8">
+                <div className="flex items-center gap-2.5 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shadow-sm">
+                        <Layers className="w-4 h-4 text-primary" />
+                    </div>
+                    <h4 className="text-gray-900 font-black text-2xl tracking-tight leading-none">{category.name}</h4>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="h-1 w-12 bg-primary rounded-full shadow-[0_1px_6px_rgba(var(--primary-rgb),0.3)]"></div>
+                    <span className="text-[11px] font-black text-gray-300 uppercase tracking-[0.15em]">Curated Collections</span>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                <Link
+                    to={`/products?category=${encodeURIComponent(category.name)}`}
+                    onClick={closeMenu}
+                    className="col-span-2 text-[14px] font-black text-gray-900 hover:text-white transition-all py-3 px-5 rounded-xl border-2 border-gray-50 bg-gray-50/50 hover:bg-primary hover:border-primary flex items-center justify-between group/all shadow-sm hover:shadow-[0_8px_20px_rgba(var(--primary-rgb),0.3)] hover:-translate-y-0.5"
+                >
+                    <span>View Full Collection</span>
+                    <div className="w-7 h-7 rounded-full bg-white group-hover/all:bg-white/20 flex items-center justify-center transition-colors">
+                        <ChevronRight className="w-3.5 h-3.5 text-primary group-hover/all:text-white" />
+                    </div>
+                </Link>
+
+                {subCategories
+                    .filter(sub => sub.categoryId === category.id)
+                    .map((sub) => (
+                        <Link
+                            key={sub.id}
+                            to={`/products?category=${encodeURIComponent(category.name)}&subCategory=${encodeURIComponent(sub.name)}`}
+                            onClick={closeMenu}
+                            className="text-[13px] font-bold text-gray-600 hover:text-primary transition-all py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary/5 group/sub border border-transparent hover:border-primary/10"
+                        >
+                            <div className="w-2 h-2 rounded-full border-2 border-gray-200 group-hover/sub:scale-110 group-hover/sub:border-primary group-hover/sub:bg-primary transition-all duration-300 shadow-sm"></div>
+                            <span className="group-hover/sub:translate-x-0.5 transition-transform duration-300">{sub.name}</span>
+                        </Link>
+                    ))
+                }
+            </div>
+
+            {subCategories.filter(sub => sub.categoryId === category.id).length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-center bg-gray-50/50 rounded-[1.5rem] mt-4 border-2 border-dashed border-gray-100">
+                    <div className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center mb-4">
+                        <Star className="w-5 h-5 text-primary shadow-sm" />
+                    </div>
+                    <h5 className="text-gray-900 font-black text-[15px] mb-1">Exclusive Series</h5>
+                    <p className="text-gray-400 text-[11px] mb-6 max-w-[200px]">Hand-crafted masterpieces waiting for you</p>
+                    <Link
+                        to={`/products?category=${encodeURIComponent(category.name)}`}
+                        onClick={closeMenu}
+                        className="px-8 py-2.5 bg-primary text-white text-[11px] font-black uppercase tracking-[0.1em] rounded-lg hover:bg-black transition-all shadow-[0_8px_20px_rgba(var(--primary-rgb),0.2)] hover:shadow-black/20 hover:-translate-y-0.5"
+                    >
+                        Explore Now
+                    </Link>
+                </div>
+            )}
         </div>
     );
 };

@@ -40,6 +40,9 @@ export const Cart: React.FC = () => {
     cart.forEach((item, idx) => {
       message += `${idx + 1}. ${item.name} (Qty: ${item.quantity})\n`;
       message += `   Custom Text: ${item.customName || 'None'}\n`;
+      if (item.symbolNumber) {
+        message += `   Symbol Number: ${item.symbolNumber}\n`;
+      }
       if (item.selectedVariations) {
         Object.entries(item.selectedVariations).forEach(([_key, opt]) => {
           const v = opt as VariationOption;
@@ -123,6 +126,11 @@ export const Cart: React.FC = () => {
                         {item.customName && (
                           <div className="inline-block bg-yellow-50 px-3 py-1 rounded-md border border-yellow-200">
                             <p className="text-xs text-yellow-800 font-medium">Text: "{item.customName}"</p>
+                          </div>
+                        )}
+                        {item.symbolNumber && (
+                          <div className="inline-block bg-purple-50 px-3 py-1 rounded-md border border-purple-200">
+                            <p className="text-xs text-purple-800 font-medium">Symbol: #{item.symbolNumber}</p>
                           </div>
                         )}
                         {item.extraHeads && item.extraHeads > 0 && <p className="text-xs text-blue-600 font-medium">+ {item.extraHeads} Extra Persons</p>}

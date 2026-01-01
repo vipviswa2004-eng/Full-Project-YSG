@@ -441,6 +441,33 @@ export const Admin: React.FC = () => {
         }
     };
 
+    const handleSetDefaultImage = (type: 'variation' | 'gallery', varId?: string, optId?: string, galleryIdx?: number) => {
+        if (!editedProduct) return;
+
+        let newImage = editedProduct.image;
+        let updatedVariations = editedProduct.variations?.map(v => ({
+            ...v,
+            options: v.options.map(o => ({ ...o, isDefault: false }))
+        }));
+
+        if (type === 'variation' && varId && optId) {
+            updatedVariations = updatedVariations?.map(v => ({
+                ...v,
+                options: v.options.map(o => {
+                    const isMatch = v.id === varId && o.id === optId;
+                    if (isMatch && o.image) {
+                        newImage = o.image;
+                    }
+                    return { ...o, isDefault: isMatch };
+                })
+            }));
+        } else if (type === 'gallery' && galleryIdx !== undefined && editedProduct.gallery?.[galleryIdx]) {
+            newImage = editedProduct.gallery[galleryIdx];
+        }
+
+        setEditedProduct(prev => prev ? { ...prev, image: newImage, variations: updatedVariations } : null);
+    };
+
     // Removed unused helper functions (handleAddVariation, etc.)
     const saveProduct = async () => {
         if (!editedProduct) return;
@@ -1257,7 +1284,11 @@ export const Admin: React.FC = () => {
                                     <div className="flex-1">
                                         <h3 className="font-bold text-gray-900">{category.name}</h3>
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Section: {sections.find(s => s.id === category.sectionId)?.title || 'Unknown'}
+                                            Sections: {
+                                                category.sectionIds && category.sectionIds.length > 0
+                                                    ? category.sectionIds.map(sid => sections.find(s => s.id === sid)?.title).filter(Boolean).join(', ')
+                                                    : sections.find(s => s.id === category.sectionId)?.title || 'Unknown'
+                                            }
                                         </p>
                                         <p className="text-xs text-gray-500">Order: {category.order}</p>
                                     </div>
@@ -1428,15 +1459,37 @@ export const Admin: React.FC = () => {
                         ) : isEditingShopItem.type === 'category' ? (
                             <>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                                    <select
-                                        value={isEditingShopItem.data.sectionId || ''}
-                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, sectionId: e.target.value } })}
-                                        className="w-full border p-2 rounded"
-                                    >
-                                        <option value="">Select Section</option>
-                                        {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-                                    </select>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Sections (Select Multiple)</label>
+                                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border rounded bg-gray-50">
+                                        {sections.map(s => (
+                                            <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1 rounded group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={(isEditingShopItem.data.sectionIds || []).includes(s.id) || isEditingShopItem.data.sectionId === s.id}
+                                                    onChange={e => {
+                                                        const currentIds = isEditingShopItem.data.sectionIds || (isEditingShopItem.data.sectionId ? [isEditingShopItem.data.sectionId] : []);
+                                                        let newIds;
+                                                        if (e.target.checked) {
+                                                            newIds = [...currentIds, s.id];
+                                                        } else {
+                                                            newIds = currentIds.filter((id: string) => id !== s.id);
+                                                        }
+                                                        setIsEditingShopItem({
+                                                            ...isEditingShopItem,
+                                                            data: {
+                                                                ...isEditingShopItem.data,
+                                                                sectionIds: newIds,
+                                                                sectionId: newIds[0] || '' // Fallback for components that still use sectionId
+                                                            }
+                                                        });
+                                                    }}
+                                                    className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                                                />
+                                                <span className="text-xs group-hover:text-primary transition-colors">{s.title}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 mt-1 italic">Category will appear in all selected sections.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
@@ -1787,6 +1840,16 @@ export const Admin: React.FC = () => {
                                                 {editedProduct.gallery?.map((img, idx) => (
                                                     <div key={idx} className="relative group">
                                                         <img src={img} className="w-full h-24 object-contain border rounded bg-white" />
+                                                        <div className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white/80 px-1 rounded backdrop-blur-sm">
+                                                            <input
+                                                                type="radio"
+                                                                name="defaultImage"
+                                                                checked={editedProduct.image === img}
+                                                                onChange={() => handleSetDefaultImage('gallery', undefined, undefined, idx)}
+                                                                className="w-3 h-3 text-primary"
+                                                            />
+                                                            <span className="text-[9px] font-bold text-gray-700">Main</span>
+                                                        </div>
                                                         <button
                                                             onClick={() => {
                                                                 const newGallery = [...(editedProduct.gallery || [])];
@@ -2012,9 +2075,22 @@ export const Admin: React.FC = () => {
                                                                             />
                                                                         </label>
                                                                     )}
-                                                                    <p className="text-[10px] text-gray-500 font-bold">
-                                                                        Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
-                                                                    </p>
+                                                                    <div className="flex flex-col gap-1 items-start">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <input
+                                                                                type="radio"
+                                                                                name="defaultImage"
+                                                                                id={`default_${option.id}`}
+                                                                                checked={option.isDefault || false}
+                                                                                onChange={() => handleSetDefaultImage('variation', sizeVar.id, option.id)}
+                                                                                className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
+                                                                            />
+                                                                            <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
+                                                                        </div>
+                                                                        <p className="text-[10px] text-gray-500 font-bold leading-tight">
+                                                                            Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
@@ -2253,8 +2329,21 @@ export const Admin: React.FC = () => {
                                                                                 />
                                                                             </label>
                                                                         )}
-                                                                        <div className="text-[9px] text-gray-400 leading-tight">
-                                                                            Total<br />₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                        <div className="flex flex-col gap-1 items-start">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <input
+                                                                                    type="radio"
+                                                                                    name="defaultImage"
+                                                                                    id={`default_${option.id}`}
+                                                                                    checked={option.isDefault || false}
+                                                                                    onChange={() => handleSetDefaultImage('variation', lbVar.id, option.id)}
+                                                                                    className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
+                                                                                />
+                                                                                <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
+                                                                            </div>
+                                                                            <div className="text-[10px] text-gray-500 font-bold leading-tight">
+                                                                                Total: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2446,8 +2535,21 @@ export const Admin: React.FC = () => {
                                                                                     />
                                                                                 </label>
                                                                             )}
-                                                                            <div className="text-[9px] text-gray-400 leading-tight">
-                                                                                Total<br />₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                            <div className="flex flex-col gap-1 items-start">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <input
+                                                                                        type="radio"
+                                                                                        name="defaultImage"
+                                                                                        id={`default_${option.id}`}
+                                                                                        checked={option.isDefault || false}
+                                                                                        onChange={() => handleSetDefaultImage('variation', shapeVar.id, option.id)}
+                                                                                        className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
+                                                                                    />
+                                                                                    <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
+                                                                                </div>
+                                                                                <div className="text-[10px] text-gray-500 font-bold leading-tight">
+                                                                                    Total: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -2670,8 +2772,21 @@ export const Admin: React.FC = () => {
                                                                                     />
                                                                                 </label>
                                                                             )}
-                                                                            <div className="text-[9px] text-gray-400 leading-tight">
-                                                                                Total<br />₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                            <div className="flex flex-col gap-1 items-start">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <input
+                                                                                        type="radio"
+                                                                                        name="defaultImage"
+                                                                                        id={`default_${option.id}`}
+                                                                                        checked={option.isDefault || false}
+                                                                                        onChange={() => handleSetDefaultImage('variation', colorVar.id, option.id)}
+                                                                                        className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
+                                                                                    />
+                                                                                    <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
+                                                                                </div>
+                                                                                <div className="text-[10px] text-gray-500 font-bold leading-tight">
+                                                                                    Total: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -2779,6 +2894,102 @@ export const Admin: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 )}
+                                            </div>
+
+                                            {/* Symbol Customization Configuration */}
+                                            <div className="border-t pt-6 mt-6">
+                                                <div className="bg-purple-50 p-6 rounded-2xl border-2 border-dashed border-purple-200">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                                <Star className="w-5 h-5 text-primary" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-bold text-gray-900">Symbol Customization (Charter/Charm)</h4>
+                                                                <p className="text-xs text-gray-500">Enable a textbox for customers to enter a symbol or charm number</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="symbolNumberEnabled"
+                                                                checked={editedProduct.symbolNumberConfig?.enabled || false}
+                                                                onChange={e => setEditedProduct({
+                                                                    ...editedProduct,
+                                                                    symbolNumberConfig: {
+                                                                        enabled: e.target.checked,
+                                                                        title: editedProduct.symbolNumberConfig?.title || 'Symbol Number',
+                                                                        image: editedProduct.symbolNumberConfig?.image
+                                                                    }
+                                                                })}
+                                                                className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
+                                                            />
+                                                            <label htmlFor="symbolNumberEnabled" className="text-sm font-bold text-gray-700 cursor-pointer">Enabled</label>
+                                                        </div>
+                                                    </div>
+
+                                                    {editedProduct.symbolNumberConfig?.enabled && (
+                                                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wider">Textbox Title</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={editedProduct.symbolNumberConfig.title}
+                                                                    onChange={e => setEditedProduct({
+                                                                        ...editedProduct,
+                                                                        symbolNumberConfig: {
+                                                                            ...editedProduct.symbolNumberConfig!,
+                                                                            title: e.target.value
+                                                                        }
+                                                                    })}
+                                                                    placeholder="e.g., Enter Symbol Number"
+                                                                    className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wider">Charm Chart Image (Optional)</label>
+                                                                <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-gray-200">
+                                                                    {editedProduct.symbolNumberConfig.image ? (
+                                                                        <div className="relative group/sym">
+                                                                            <img src={editedProduct.symbolNumberConfig.image} alt="Preview" className="w-12 h-12 object-contain rounded border bg-gray-50" />
+                                                                            <button
+                                                                                onClick={() => setEditedProduct({ ...editedProduct, symbolNumberConfig: { ...editedProduct.symbolNumberConfig!, image: undefined } })}
+                                                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/sym:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="w-12 h-12 rounded border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                                                                            <ImagePlus className="w-5 h-5 text-gray-300" />
+                                                                        </div>
+                                                                    )}
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) {
+                                                                                const reader = new FileReader();
+                                                                                reader.onloadend = () => {
+                                                                                    setEditedProduct({
+                                                                                        ...editedProduct,
+                                                                                        symbolNumberConfig: {
+                                                                                            ...editedProduct.symbolNumberConfig!,
+                                                                                            image: reader.result as string
+                                                                                        }
+                                                                                    });
+                                                                                };
+                                                                                reader.readAsDataURL(file);
+                                                                            }
+                                                                        }}
+                                                                        className="flex-1 text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="border-t pt-6 mt-6">

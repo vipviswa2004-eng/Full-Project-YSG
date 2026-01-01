@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "692e4948d43eba05c0e2f246",
+    "id": "sec_personalised",
+    "title": "Personalised",
+    "order": 1,
+    "__v": 0
+  },
+  {
+    "_id": "692e4948d43eba05c0e2f248",
+    "id": "sec_home_decor",
+    "title": "Corporate",
+    "order": 3,
+    "__v": 0
+  }
+]

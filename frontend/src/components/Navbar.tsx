@@ -23,6 +23,43 @@ export const Navbar: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
+  // Moving Placeholder Logic
+  const [placeholderText, setPlaceholderText] = useState('Search for gifts...');
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [typingSpeed, setTypingSpeed] = useState(150);
+
+  const phrases = React.useMemo(() => {
+    const staticPhrases = ["Search for Wallets...", "Search for Keychains...", "Search for Neon Signs...", "Search for Photo Gifts...", "Search for Water Bottles...", "Search for Gifts..."];
+    if (!products || products.length === 0) return staticPhrases;
+    const categories = Array.from(new Set(products.map(p => p.category))).filter((c): c is string => !!c);
+    return categories.length > 0 ? categories.map(c => `Search for ${c}...`) : staticPhrases;
+  }, [products]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const currentPhrase = phrases[placeholderIndex % phrases.length];
+
+      if (!isDeleting) {
+        setPlaceholderText(currentPhrase.substring(0, placeholderText.length + 1));
+        setTypingSpeed(150);
+        if (placeholderText === currentPhrase) {
+          setIsDeleting(true);
+          setTypingSpeed(2000); // Pause at end
+        }
+      } else {
+        setPlaceholderText(currentPhrase.substring(0, placeholderText.length - 1));
+        setTypingSpeed(50);
+        if (placeholderText === '') {
+          setIsDeleting(false);
+          setPlaceholderIndex(prev => prev + 1);
+        }
+      }
+    }, typingSpeed);
+
+    return () => clearTimeout(timer);
+  }, [placeholderText, isDeleting, placeholderIndex, typingSpeed, phrases]);
+
 
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
@@ -206,7 +243,7 @@ export const Navbar: React.FC = () => {
 
             <div className="hidden md:flex flex-1 mx-8 items-center justify-center" ref={desktopSearchRef}>
               <div className="relative w-full max-w-lg">
-                <input type="text" placeholder="Search for gifts..." className="w-full pl-10 pr-4 py-2 border border-gray-700 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:bg-gray-700 focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={handleSearch} onFocus={() => setShowSuggestions(true)} />
+                <input type="text" placeholder={placeholderText} className="w-full pl-10 pr-4 py-2 border border-gray-700 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:bg-gray-700 focus:ring-2 focus:ring-accent focus:border-transparent transition-all outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={handleSearch} onFocus={() => setShowSuggestions(true)} />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 {showSuggestions && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-xl shadow-xl border border-gray-700 overflow-hidden z-50 animate-fade-in-down">
@@ -335,7 +372,7 @@ export const Navbar: React.FC = () => {
                 <input
                   type="text"
                   autoFocus
-                  placeholder="Search for gifts..."
+                  placeholder={placeholderText}
                   className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -419,7 +456,7 @@ export const Navbar: React.FC = () => {
               </div>
               <div className="p-4 border-b border-gray-100 relative" ref={mobileSearchRef}>
                 <div className="relative">
-                  <input type="text" placeholder="Search gifts..." className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={handleSearch} onFocus={() => setShowSuggestions(true)} />
+                  <input type="text" placeholder={placeholderText} className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={handleSearch} onFocus={() => setShowSuggestions(true)} />
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 </div>
                 {showSuggestions && (suggestions.length > 0 || recentSearches.length > 0) && (
