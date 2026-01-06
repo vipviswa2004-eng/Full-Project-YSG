@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Star, Zap, Layers, Sparkles } from 'lucide-react';
+import birthdayImg from '../assets/birthday.png';
+
 
 interface SubCategory {
     id: string;
@@ -31,7 +33,8 @@ interface SpecialOccasion {
 }
 
 const STATIC_OCCASIONS = [
-    { id: 'birthday', name: 'Birthday', image: 'https://images.unsplash.com/photo-1530103862676-de3c9fa59588?q=80&w=400&auto=format&fit=crop', description: 'Celebrate another year of greatness with a gift that shines as bright as they do.' },
+    { id: 'birthday', name: 'Birthday', image: birthdayImg, description: 'Celebrate another year of greatness with a gift that shines as bright as they do.' },
+
     { id: 'love', name: 'Love & Romance', image: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?q=80&w=400&auto=format&fit=crop', description: 'Express your deepest feelings with keepsakes that say what words cannot.' },
     { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', description: 'Magical moments and playful wonders for the little ones in your life.' },
     { id: 'wedding', name: 'Wedding & Anniversary', image: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=400&auto=format&fit=crop', description: 'Honor a lifetime of love with elegant, timeless custom masterpieces.' }

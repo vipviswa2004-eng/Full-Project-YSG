@@ -55,8 +55,8 @@ export const ProductDetails: React.FC = () => {
                 // Add to front
                 viewedIds.unshift(product.id);
 
-                // Keep max 10
-                viewedIds = viewedIds.slice(0, 10);
+                // Keep max 25
+                viewedIds = viewedIds.slice(0, 25);
 
                 localStorage.setItem('recentlyViewed', JSON.stringify(viewedIds));
             } catch (e) {
@@ -808,55 +808,7 @@ export const ProductDetails: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Consolidated Image Gallery with Selection */}
-                                <div className="border-t border-gray-100 pt-10">
-                                    <h3 className="text-sm font-bold text-gray-900 mb-6 uppercase tracking-widest flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-primary" /> Product Image Gallery
-                                    </h3>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                        {[
-                                            { url: product.image, label: 'Main', price: Math.round(product.pdfPrice * (1 - (product.discount || 0) / 100)), isVariant: false },
-                                            ...(product.variations?.flatMap(v => v.options.map(o => ({
-                                                url: o.image,
-                                                label: o.label,
-                                                price: Math.round(product.pdfPrice * (1 - (product.discount || 0) / 100)) + (o.priceAdjustment || 0),
-                                                isVariant: true
-                                            }))) || []),
-                                            ...(product.gallery?.map(url => ({
-                                                url,
-                                                label: 'Gallery',
-                                                price: Math.round(product.pdfPrice * (1 - (product.discount || 0) / 100)),
-                                                isVariant: false
-                                            })) || [])
-                                        ].filter((img, idx, self) => img.url && self.findIndex(t => t.url === img.url) === idx).map((img, idx) => (
-                                            <div key={idx} className="space-y-2 group">
-                                                <div
-                                                    onClick={() => setActiveImage(img.url!)}
-                                                    className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shadow-sm hover:shadow-md ${activeImage === img.url ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-gray-100 hover:border-gray-300'}`}
-                                                >
-                                                    <img src={img.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="" />
-                                                    {img.isVariant && (
-                                                        <div className="absolute top-1 right-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-black text-primary border border-primary/20 uppercase">Variant</div>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <span className="text-xs font-black text-gray-900">₹{img.price}</span>
-                                                    <label className="flex items-center gap-1.5 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="gallery_selection"
-                                                            checked={activeImage === img.url}
-                                                            onChange={() => setActiveImage(img.url!)}
-                                                            className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300 transition-all cursor-pointer"
-                                                        />
-                                                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">Default</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-[10px] text-gray-400 mt-4 italic">* Click any image or use the radio button to set as main view.</p>
-                                </div>
+
 
                                 {/* Reviews Section (Scrollable) */}
                                 <div ref={reviewsRef} className="border-t border-gray-200 pt-6">

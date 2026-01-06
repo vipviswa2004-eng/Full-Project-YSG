@@ -6,7 +6,7 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion } = require('./models');
+const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion } = require('./models');
 
 const app = express();
 const PORT = 5000;
@@ -907,6 +907,45 @@ app.delete("/api/special-occasions/:id", async (req, res) => {
   }
 });
 
+
+// ---------- SHOP BY OCCASION ----------
+app.get("/api/shop-occasions", async (req, res) => {
+  try {
+    const occasions = await ShopOccasion.find().sort({ order: 1 });
+    res.json(occasions);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/shop-occasions", async (req, res) => {
+  try {
+    const occasion = new ShopOccasion(req.body);
+    await occasion.save();
+    res.json(occasion);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/shop-occasions/:id", async (req, res) => {
+  try {
+    const occasion = await ShopOccasion.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(occasion);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/shop-occasions/:id", async (req, res) => {
+  try {
+    await ShopOccasion.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- CUSTOMERS (USERS) ----------
 app.get("/api/customers", async (req, res) => {
   try {
@@ -1224,6 +1263,110 @@ app.post('/api/generate-hd-design', express.json({ limit: '50mb' }), async (req,
   } catch (error) {
     console.error('Error generating HD design:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ---------- SELLERS ----------
+app.get("/api/sellers", async (req, res) => {
+  try {
+    const sellers = await Seller.find();
+    res.json(sellers);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Email Transporter
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+app.post("/api/sellers", async (req, res) => {
+  try {
+    const seller = new Seller(req.body);
+    await seller.save();
+
+    // Send Onboarding Email
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: seller.email,
+        subject: 'Welcome to Yathes Sign Galaxy - Seller Onboarding',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #4F46E5; margin: 0;">Yathes Sign Galaxy</h2>
+              <p style="color: #666; margin-top: 5px;">Seller Portal</p>
+            </div>
+            
+            <p style="font-size: 16px;">Dear <strong>${seller.contactPerson}</strong>,</p>
+            
+            <p>We are thrilled to have <strong>${seller.companyName}</strong> onboard with us!</p>
+            
+            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+              <p style="margin: 0; font-weight: bold;">Current Status: <span style="color: #D97706;">Pending Approval</span></p>
+            </div>
+
+            <p>Your application has been received and is currently under review by our administration team. We want to ensure the best quality for our customers, so this process typically takes <strong>24-48 hours</strong>.</p>
+            
+            <p>You will receive another email once your account has been fully activated and you can start listing your products.</p>
+
+            <br/>
+            <div style="border-top: 1px solid #eee; padding-top: 20px; color: #888; font-size: 12px; text-align: center;">
+              <p>Best regards,<br/><strong>Yathes Sign Galaxy Team</strong></p>
+              <p>Need help? Contact us at support@yathessigngalaxy.com</p>
+            </div>
+          </div>
+        `
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('❌ Error sending onboarding email:', error);
+        } else {
+          console.log('✅ Onboarding email sent:', info.response);
+        }
+      });
+    } else {
+      console.warn('⚠️ Email credentials (EMAIL_USER, EMAIL_PASS) not found in .env. Skipping email.');
+    }
+
+    res.json(seller);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/sellers/:id", async (req, res) => {
+  try {
+    // If ID is custom string id
+    const seller = await Seller.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
+    // If ID wasn't found by custom ID, try _id just in case
+    if (!seller && req.params.id.length === 24) {
+      const sellerById = await Seller.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      return res.json(sellerById);
+    }
+    res.json(seller);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/sellers/:id", async (req, res) => {
+  try {
+    await Seller.findOneAndDelete({ id: req.params.id });
+    // Fallback for _id if needed
+    if (req.params.id.length === 24) {
+      await Seller.findByIdAndDelete(req.params.id);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

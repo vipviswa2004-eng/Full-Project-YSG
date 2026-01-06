@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// Product Schema
 const ProductSchema = new mongoose.Schema({
   id: String,
   code: String,
@@ -26,6 +27,7 @@ const ProductSchema = new mongoose.Schema({
   subCategoryId: String,
   isTrending: { type: Boolean, default: false },
   isBestseller: { type: Boolean, default: false },
+  occasions: [String],
   symbolNumberConfig: {
     enabled: { type: Boolean, default: false },
     title: { type: String, default: 'Symbol Number' },
@@ -33,170 +35,202 @@ const ProductSchema = new mongoose.Schema({
   }
 }, { id: false });
 
+// User Schema
 const UserSchema = new mongoose.Schema({
   googleId: String,
   displayName: String,
+  email: String,
   image: String,
-  email: { type: String, unique: true, required: true },
-  phone: { type: String, sparse: true }, // Phone number (optional, unique if provided)
-  password: { type: String }, // Hashed password
   isAdmin: { type: Boolean, default: false },
-  wishlist: [String], // Array of Product IDs
+  phone: String,
+  password: { type: String, select: false },
   cart: [{
     productId: String,
-    quantity: Number,
-    customName: String,
-    customImage: String,
-    customDesign: Object, // Fabric.js design JSON + preview
-    calculatedPrice: Number,
-    originalPrice: Number,
-    extraHeads: Number,
-    symbolNumber: String,
-    selectedVariations: Object
+    quantity: { type: Number, default: 1 },
+    selectedStr: String,
+    price: Number,
+    customization: Object, // For custom images/text
+    fullProduct: Object // Store full product snapshot for safety
   }],
-  createdAt: { type: Date, default: Date.now }
-});
+  wishlist: [String] // Array of product IDs
+}, { timestamps: true });
 
+// Order Schema
 const OrderSchema = new mongoose.Schema({
-  customerId: String,
-  customerName: String,
+  user: Object,
   items: Array,
   total: Number,
   status: { type: String, default: 'Pending' },
-  date: { type: Date, default: Date.now }
+  paymentMethod: String,
+  shippingAddress: Object,
+  date: { type: Date, default: Date.now },
+  orderId: String,
+  paymentId: String
 });
 
+// Review Schema
 const ReviewSchema = new mongoose.Schema({
   productId: String,
-  productName: String,
-  userId: String,
   userName: String,
+  userAvatar: String,
   rating: Number,
   comment: String,
+  date: { type: Date, default: Date.now },
   status: { type: String, default: 'Pending' }, // Pending, Approved, Rejected
-  location: String,
-  date: { type: Date, default: Date.now }
+  images: [String]
 });
 
+// Category Schema (Legacy - keep for now)
 const CategorySchema = new mongoose.Schema({
   id: String,
   name: String,
-  thumbnailImage: String
-}, { id: false });
+  image: String,
+  subCategories: [String]
+});
 
+// Shape Schema
 const ShapeSchema = new mongoose.Schema({
   id: String,
-  categoryId: String,
-  shapeName: String,
-  productImage: String
-}, { id: false });
+  name: String,
+  image: String,
+  priceMultiplier: { type: Number, default: 1 }
+});
 
+// Size Schema
 const SizeSchema = new mongoose.Schema({
   id: String,
-  shapeId: String,
-  sizeLabel: String,
-  price: Number
-}, { id: false });
+  name: String,
+  dimensions: String,
+  priceMultiplier: { type: Number, default: 1 }
+});
 
+// Shop Sections Hierarchy
 const SectionSchema = new mongoose.Schema({
   id: String,
   title: String,
-  order: Number
-}, { id: false });
-
-const SubCategorySchema = new mongoose.Schema({
-  id: String,
-  categoryId: String,
-  name: String,
   image: String,
-  order: Number
-}, { id: false });
+  order: { type: Number, default: 0 }
+});
 
 const ShopCategorySchema = new mongoose.Schema({
   id: String,
-  sectionId: String,
-  sectionIds: [String],
   name: String,
   image: String,
-  order: Number
-}, { id: false });
-
-const WhatsAppLeadSchema = new mongoose.Schema({
-  phoneNumber: String,
-  message: String,
-  date: { type: Date, default: Date.now },
-  status: { type: String, default: 'New' } // New, Contacted, Converted
+  sectionId: String, // References Section.id (single parent)
+  sectionIds: [String], // References Section.id (multiple parents support)
+  order: { type: Number, default: 0 },
+  isFeatured: { type: Boolean, default: false }
 });
 
-const SellerSchema = new mongoose.Schema({
+const SubCategorySchema = new mongoose.Schema({
   id: String,
-  companyName: String,
-  contactPerson: String,
-  email: String,
-  phone: String,
-  status: { type: String, default: 'Pending' },
-  rating: { type: Number, default: 0 },
-  balance: { type: Number, default: 0 },
-  returnRate: { type: Number, default: 0 },
-  joinedDate: { type: Date, default: Date.now }
+  name: String,
+  categoryId: String // References ShopCategory.id
 });
 
-const TransactionSchema = new mongoose.Schema({
-  id: String,
-  orderId: String,
-  amount: Number,
-  type: String,
-  status: String,
-  date: { type: Date, default: Date.now },
-  method: String
-});
-
-const ReturnRequestSchema = new mongoose.Schema({
-  id: String,
-  orderId: String,
-  customerName: String,
-  productName: String,
-  reason: String,
-  status: { type: String, default: 'Pending' },
-  amount: Number,
-  date: { type: Date, default: Date.now }
-});
-
-const CouponSchema = new mongoose.Schema({
-  id: String,
-  code: { type: String, unique: true },
-  discountType: String,
-  value: Number,
-  expiryDate: Date,
-  usageLimit: Number,
-  usedCount: { type: Number, default: 0 },
-  status: { type: String, default: 'Active' }
-});
-
+// Special Occasions (Seasonal/Events like Mother's Day)
 const SpecialOccasionSchema = new mongoose.Schema({
   id: String,
   name: String,
   image: String,
   description: String,
   link: String,
-  order: Number
-}, { id: false });
+  order: { type: Number, default: 0 }
+});
+
+// Shop By Occasion (Standard like Birthday, Wedding)
+const ShopOccasionSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  image: String,
+  description: String,
+  link: String,
+  order: { type: Number, default: 0 },
+  color: { type: String, default: 'from-gray-500 to-gray-700' }
+});
+
+// Seller Schema
+const SellerSchema = new mongoose.Schema({
+  id: String,
+  companyName: { type: String, required: true },
+  contactPerson: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  status: { type: String, default: 'Pending' },
+  joinedDate: { type: Date, default: Date.now },
+  productsCount: { type: Number, default: 0 },
+  rating: { type: Number, default: 0 },
+  balance: { type: Number, default: 0 },
+  returnRate: { type: Number, default: 0 }
+});
+
+// Transaction Schema
+const TransactionSchema = new mongoose.Schema({
+  id: String,
+  orderId: String,
+  amount: Number,
+  status: { type: String, default: 'Completed' },
+  date: { type: Date, default: Date.now },
+  method: String,
+  customerName: String
+});
+
+// Return Request Schema
+const ReturnRequestSchema = new mongoose.Schema({
+  id: String,
+  orderId: String,
+  customerName: String,
+  amount: Number,
+  reason: String,
+  status: { type: String, default: 'Pending' },
+  date: { type: Date, default: Date.now }
+});
+
+// Coupon Schema
+const CouponSchema = new mongoose.Schema({
+  code: String,
+  type: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+  value: Number,
+  minPurchase: Number,
+  expiryDate: Date,
+  usageLimit: Number,
+  usedCount: { type: Number, default: 0 },
+  status: { type: String, default: 'Active' }
+});
+
+// Export Models
+const Product = mongoose.model('Product', ProductSchema);
+const User = mongoose.model('User', UserSchema);
+const Order = mongoose.model('Order', OrderSchema);
+const Review = mongoose.model('Review', ReviewSchema);
+const Category = mongoose.model('Category', CategorySchema);
+const Shape = mongoose.model('Shape', ShapeSchema);
+const Size = mongoose.model('Size', SizeSchema);
+const Section = mongoose.model('Section', SectionSchema);
+const ShopCategory = mongoose.model('ShopCategory', ShopCategorySchema);
+const SubCategory = mongoose.model('SubCategory', SubCategorySchema);
+const SpecialOccasion = mongoose.model('SpecialOccasion', SpecialOccasionSchema);
+const ShopOccasion = mongoose.model('ShopOccasion', ShopOccasionSchema);
+const Seller = mongoose.model('Seller', SellerSchema);
+const Transaction = mongoose.model('Transaction', TransactionSchema);
+const ReturnRequest = mongoose.model('ReturnRequest', ReturnRequestSchema);
+const Coupon = mongoose.model('Coupon', CouponSchema);
 
 module.exports = {
-  Product: mongoose.model('Product', ProductSchema),
-  User: mongoose.model('User', UserSchema),
-  Order: mongoose.model('Order', OrderSchema),
-  Review: mongoose.model('Review', ReviewSchema),
-  Category: mongoose.model('Category', CategorySchema),
-  Shape: mongoose.model('Shape', ShapeSchema),
-  Size: mongoose.model('Size', SizeSchema),
-  Section: mongoose.model('Section', SectionSchema),
-  ShopCategory: mongoose.model('ShopCategory', ShopCategorySchema),
-  SubCategory: mongoose.model('SubCategory', SubCategorySchema),
-  WhatsAppLead: mongoose.model('WhatsAppLead', WhatsAppLeadSchema),
-  Seller: mongoose.model('Seller', SellerSchema),
-  Transaction: mongoose.model('Transaction', TransactionSchema),
-  ReturnRequest: mongoose.model('ReturnRequest', ReturnRequestSchema),
-  Coupon: mongoose.model('Coupon', CouponSchema),
-  SpecialOccasion: mongoose.model('SpecialOccasion', SpecialOccasionSchema)
+  Product,
+  User,
+  Order,
+  Review,
+  Category,
+  Shape,
+  Size,
+  Section,
+  ShopCategory,
+  SubCategory,
+  SpecialOccasion,
+  ShopOccasion,
+  Seller,
+  Transaction,
+  ReturnRequest,
+  Coupon
 };

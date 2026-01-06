@@ -27,3 +27,16 @@ dist-ssr
 # Ignore secret environment files
 server/.env
 .env
+
+
+# debug & temp files
+debug_*.js
+check_*.js
+find_*.js
+seed_*.js
+debug_output.txt
+
+# local test assets
+frontend/public/assets/
+
+

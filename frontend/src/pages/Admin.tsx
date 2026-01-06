@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
 // import { products as initialProducts } from '../data/products';
-import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion } from '../types';
+import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion, ShopOccasion } from '../types';
 // import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini'; // Unused
 import {
     Plus, Minus, Edit, LayoutDashboard, Package,
@@ -37,7 +37,8 @@ export const Admin: React.FC = () => {
     const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
     const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasion[]>([]);
-    const [shopSectionTab, setShopSectionTab] = useState<'sections' | 'categories' | 'sub-categories' | 'special-occasions'>('sections');
+    const [shopOccasions, setShopOccasions] = useState<ShopOccasion[]>([]);
+    const [shopSectionTab, setShopSectionTab] = useState<'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions'>('sections');
     const [subCategoryListFilter, setSubCategoryListFilter] = useState<string>('');
     const [isEditingShopItem, setIsEditingShopItem] = useState<any>(null);
     const [isConvertingCategory, setIsConvertingCategory] = useState<ShopCategory | null>(null);
@@ -119,22 +120,88 @@ export const Admin: React.FC = () => {
 
     const fetchShopData = async () => {
         try {
-            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes] = await Promise.all([
+            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes] = await Promise.all([
                 fetch('http://localhost:5000/api/sections'),
                 fetch('http://localhost:5000/api/shop-categories'),
                 fetch('http://localhost:5000/api/sub-categories'),
-                fetch('http://localhost:5000/api/special-occasions')
+                fetch('http://localhost:5000/api/special-occasions'),
+                fetch('http://localhost:5000/api/shop-occasions')
             ]);
             setSections(await sectionsRes.json());
             setShopCategories(await categoriesRes.json());
             setSubCategories(await subCategoriesRes.json());
             setSpecialOccasions(await occasionsRes.json());
+            setShopOccasions(await shopOccasionsRes.json());
         } catch (error) {
             console.error("Failed to fetch shop data", error);
         }
     };
 
-    // Load products and initial data
+
+
+    const handleSaveSeller = async () => {
+        if (!newSellerData.companyName || !newSellerData.contactPerson || !newSellerData.email || !newSellerData.phone) {
+            alert("All 4 fields (Company Name, Contact Person, Email, Phone) are mandatory.");
+            return;
+        }
+
+        try {
+            const method = isEditingSeller ? 'PUT' : 'POST';
+            const url = isEditingSeller
+                ? `http://localhost:5000/api/sellers/${isEditingSeller.id}`
+                : 'http://localhost:5000/api/sellers';
+
+            const payload = {
+                ...newSellerData,
+                id: isEditingSeller ? isEditingSeller.id : `sell_${Date.now()}`,
+                status: isEditingSeller ? isEditingSeller.status : 'Pending',
+                joinedDate: isEditingSeller ? isEditingSeller.joinedDate : new Date(),
+                productsCount: isEditingSeller ? isEditingSeller.productsCount : 0,
+                rating: isEditingSeller ? isEditingSeller.rating : 0,
+                balance: isEditingSeller ? isEditingSeller.balance : 0,
+                returnRate: isEditingSeller ? isEditingSeller.returnRate : 0
+            };
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                setShowSellerModal(false);
+                setIsEditingSeller(null);
+                setNewSellerData({});
+                fetchSellerList();
+            } else {
+                alert('Failed to save seller');
+            }
+        } catch (error) {
+            console.error('Error saving seller:', error);
+            alert('Error saving seller');
+        }
+    };
+
+    const handleSellerAction = async (id: string, action: 'Approve' | 'Suspend' | 'Activate' | 'Delete') => {
+        try {
+            if (action === 'Delete') {
+                if (confirm('Are you sure you want to delete this seller?')) {
+                    await fetch(`http://localhost:5000/api/sellers/${id}`, { method: 'DELETE' });
+                }
+            } else {
+                const statusMap = { 'Approve': 'Active', 'Suspend': 'Suspended', 'Activate': 'Active' };
+                await fetch(`http://localhost:5000/api/sellers/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: statusMap[action] })
+                });
+            }
+            fetchSellerList();
+        } catch (error) {
+            console.error("Failed to update seller", error);
+        }
+    };
+
     useEffect(() => {
         console.log('🔄 Loading products from database...');
         fetch(`http://localhost:5000/api/products?t=${Date.now()}`, {
@@ -152,10 +219,10 @@ export const Admin: React.FC = () => {
         fetchShopData();
     }, []);
 
-    const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions', data: any) => {
+    const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions', data: any) => {
         try {
             const method = data._id ? 'PUT' : 'POST';
-            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : 'special-occasions';
+            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : 'shop-occasions';
             const url = `http://localhost:5000/api/${apiPath}${data._id ? `/${data._id}` : ''}`;
 
             const res = await fetch(url, {
@@ -171,17 +238,17 @@ export const Admin: React.FC = () => {
 
             fetchShopData();
             setIsEditingShopItem(null);
-            alert(`${type === 'sections' ? 'Section' : type === 'categories' ? 'Category' : type === 'sub-categories' ? 'Sub-category' : 'Special Occasion'} saved successfully!`);
+            alert(`${type === 'sections' ? 'Section' : type === 'categories' ? 'Category' : type === 'sub-categories' ? 'Sub-category' : type === 'special-occasions' ? 'Special Occasion' : 'Shop Occasion'} saved successfully!`);
         } catch (error: any) {
             console.error(`Failed to save ${type}`, error);
             alert(`Error: ${error.message}`);
         }
     };
 
-    const handleShopItemDelete = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions', id: string) => {
+    const handleShopItemDelete = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions', id: string) => {
         if (!window.confirm("Are you sure?")) return;
         try {
-            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : 'special-occasions';
+            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : 'shop-occasions';
             const res = await fetch(`http://localhost:5000/api/${apiPath}/${id}`, { method: 'DELETE' });
 
             if (!res.ok) throw new Error(`Failed to delete ${type}`);
@@ -214,67 +281,6 @@ export const Admin: React.FC = () => {
         }
     };
 
-    // Seller Management Functions
-    const handleSaveSeller = async () => {
-        try {
-            const method = isEditingSeller ? 'PUT' : 'POST';
-            const url = isEditingSeller
-                ? `http://localhost:5000/api/sellers/${isEditingSeller.id}`
-                : 'http://localhost:5000/api/sellers';
-
-            const body = isEditingSeller ? { ...isEditingSeller, ...newSellerData } : {
-                id: `S${Date.now()}`,
-                companyName: newSellerData.companyName || 'New Company',
-                contactPerson: newSellerData.contactPerson || '',
-                email: newSellerData.email || '',
-                phone: newSellerData.phone || '',
-                status: 'Pending',
-                rating: 0,
-                balance: 0,
-                returnRate: 0
-            };
-
-            await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-
-            fetchSellers();
-            setShowSellerModal(false);
-            setIsEditingSeller(null);
-            setNewSellerData({});
-        } catch (error) {
-            console.error("Failed to save seller", error);
-            alert("Failed to save seller");
-        }
-    };
-
-    const handleSellerAction = async (id: string, action: 'Approve' | 'Suspend' | 'Activate' | 'Delete') => {
-        try {
-            if (action === 'Delete') {
-                if (window.confirm("Delete this seller?")) {
-                    await fetch(`http://localhost:5000/api/sellers/${id}`, { method: 'DELETE' });
-                    fetchSellers();
-                }
-            } else {
-                const statusMap: Record<string, 'Active' | 'Suspended' | 'Pending'> = {
-                    'Approve': 'Active',
-                    'Activate': 'Active',
-                    'Suspend': 'Suspended'
-                };
-
-                await fetch(`http://localhost:5000/api/sellers/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: statusMap[action] })
-                });
-                fetchSellers();
-            }
-        } catch (error) {
-            console.error(`Failed to ${action} seller`, error);
-        }
-    };
 
     const filteredProducts = productList.filter(product => {
         const matchesSearch = !searchQuery ||
@@ -925,7 +931,7 @@ export const Admin: React.FC = () => {
         }
     };
 
-    const fetchSellers = async () => {
+    const fetchSellerList = async () => {
         try {
             const res = await fetch('http://localhost:5000/api/sellers');
             const data = await res.json();
@@ -977,7 +983,7 @@ export const Admin: React.FC = () => {
         fetchProducts(); // Assuming this exists or will be added/checked
         fetchOrders();
         fetchCustomers();
-        fetchSellers();
+        fetchSellerList();
         fetchTransactions();
         fetchReturns();
         fetchReviews();
@@ -1105,10 +1111,10 @@ export const Admin: React.FC = () => {
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
                                         <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-primary font-bold">
-                                            {seller.companyName.charAt(0)}
+                                            {(seller.companyName || '?').charAt(0)}
                                         </div>
                                         <div className="ml-4">
-                                            <div className="text-sm font-medium text-gray-900">{seller.companyName}</div>
+                                            <div className="text-sm font-medium text-gray-900">{seller.companyName || 'Unknown Company'}</div>
                                             <div className="text-xs text-gray-500">ID: {seller.id}</div>
                                         </div>
                                     </div>
@@ -1130,10 +1136,10 @@ export const Admin: React.FC = () => {
                                     <div className="text-sm text-gray-900 flex items-center gap-1">
                                         <Star className="w-3 h-3 text-yellow-400 fill-current" /> {seller.rating}
                                     </div>
-                                    <div className="text-xs text-gray-500">Return Rate: {seller.returnRate}%</div>
+                                    <div className="text-xs text-gray-500">Return Rate: {seller.returnRate || 0}%</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    <div className="text-sm font-bold text-gray-900">₹{seller.balance.toLocaleString()}</div>
+                                    <div className="text-sm font-bold text-gray-900">₹{(seller.balance || 0).toLocaleString()}</div>
                                     {seller.balance > 0 && (
                                         <button className="text-xs text-blue-600 hover:text-blue-900 font-medium">Process Payout</button>
                                     )}
@@ -1215,6 +1221,12 @@ export const Admin: React.FC = () => {
                         className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'special-occasions' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         Special Occasions
+                    </button>
+                    <button
+                        onClick={() => setShopSectionTab('shop-occasions')}
+                        className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'shop-occasions' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Shop By Occasion
                     </button>
                 </div>
             </div>
@@ -1389,7 +1401,7 @@ export const Admin: React.FC = () => {
                         onClick={() => setIsEditingShopItem({ type: 'special-occasion', data: { id: `occ_${Date.now()}`, name: '', description: '', image: '', link: '', order: specialOccasions.length + 1 } })}
                         className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary-dark"
                     >
-                        + Add New Special Occasion
+                        + Add Special Occasion
                     </button>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1427,11 +1439,57 @@ export const Admin: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Shop By Occasion Tab (Standard Occasions) */}
+            {shopSectionTab === 'shop-occasions' && (
+                <div className="space-y-4">
+                    <button
+                        onClick={() => setIsEditingShopItem({ type: 'shop-occasion', data: { id: `shop_occ_${Date.now()}`, name: '', description: '', image: '', link: '', order: shopOccasions.length + 1 } })}
+                        className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary-dark"
+                    >
+                        + Add Shop Occasion
+                    </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {shopOccasions.map(occ => (
+                            <div key={occ.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex gap-4">
+                                    <img
+                                        src={occ.image}
+                                        alt={occ.name}
+                                        className="w-20 h-20 rounded-lg object-cover border-2 border-gray-100"
+                                    />
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-gray-900">{occ.name}</h3>
+                                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{occ.description}</p>
+                                        <p className="text-xs text-blue-600 truncate">{occ.link}</p>
+                                        <p className="text-xs text-gray-500">Order: {occ.order}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => setIsEditingShopItem({ type: 'shop-occasion', data: occ })}
+                                        className="flex-1 text-blue-600 border border-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-50"
+                                    >
+                                        <Edit className="w-4 h-4 inline mr-1" /> Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleShopItemDelete('shop-occasions', occ._id || occ.id)}
+                                        className="flex-1 text-red-600 border border-red-600 px-3 py-1 rounded text-sm hover:bg-red-50"
+                                    >
+                                        <Trash2 className="w-4 h-4 inline mr-1" /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             {isEditingShopItem && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-96 shadow-xl space-y-4">
-                        <h3 className="text-lg font-bold">
-                            {isEditingShopItem.data._id ? 'Edit' : 'Add'} {isEditingShopItem.type === 'section' ? 'Section' : isEditingShopItem.type === 'category' ? 'Category' : isEditingShopItem.type === 'sub-category' ? 'Sub-category' : 'Special Occasion'}
+                    <div className="bg-white p-4 rounded-lg w-80 shadow-xl space-y-3">
+                        <h3 className="text-base font-bold">
+                            {isEditingShopItem.data._id ? 'Edit' : 'Add'} {isEditingShopItem.type === 'section' ? 'Section' : isEditingShopItem.type === 'category' ? 'Category' : isEditingShopItem.type === 'sub-category' ? 'Sub-category' : isEditingShopItem.type === 'shop-occasion' ? 'Shop Occasion' : 'Special Occasion'}
                         </h3>
 
                         {isEditingShopItem.type === 'section' ? (
@@ -1596,41 +1654,49 @@ export const Admin: React.FC = () => {
                                     />
                                 </div>
                             </>
-                        ) : isEditingShopItem.type === 'special-occasion' ? (
+                        ) : isEditingShopItem.type === 'special-occasion' || isEditingShopItem.type === 'shop-occasion' ? (
                             <>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Occasion Name</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Occasion Name</label>
                                     <input
                                         placeholder="e.g., Mother's Day"
                                         value={isEditingShopItem.data.name || ''}
                                         onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, name: e.target.value } })}
-                                        className="w-full border p-2 rounded"
+                                        className="w-full border p-1 rounded text-sm"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Description</label>
                                     <textarea
                                         placeholder="Add a catchy description..."
                                         value={isEditingShopItem.data.description || ''}
                                         onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, description: e.target.value } })}
-                                        className="w-full border p-2 rounded"
-                                        rows={2}
+                                        className="w-full border p-1 rounded text-sm"
+                                        rows={1}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Link (URL)</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Link (URL)</label>
                                     <input
                                         placeholder="/products?q=Mother"
                                         value={isEditingShopItem.data.link || ''}
                                         onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, link: e.target.value } })}
-                                        className="w-full border p-2 rounded"
+                                        className="w-full border p-1 rounded text-sm"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
-                                    <div className="space-y-2">
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Image</label>
+                                    <div className="space-y-1">
                                         {isEditingShopItem.data.image && (
-                                            <img src={isEditingShopItem.data.image} alt="Preview" className="w-20 h-20 object-cover rounded border" />
+                                            <div className="flex items-center gap-2">
+                                                <img src={isEditingShopItem.data.image} alt="Preview" className="w-12 h-12 object-cover rounded border" />
+                                                <button
+                                                    onClick={() => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, image: '' } })}
+                                                    className="text-xs text-red-600 hover:text-red-800 underline"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
                                         )}
                                         <input
                                             type="file"
@@ -1648,7 +1714,7 @@ export const Admin: React.FC = () => {
                                                     reader.readAsDataURL(file);
                                                 }
                                             }}
-                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                                            className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                                         />
                                     </div>
                                 </div>
@@ -1679,53 +1745,56 @@ export const Admin: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                </div >
+            )
+            }
 
             {/* CONVERT CATEGORY MODAL */}
-            {isConvertingCategory && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-                    <div className="bg-white p-6 rounded-lg w-96 shadow-xl space-y-4">
-                        <h3 className="text-lg font-bold flex items-center gap-2">
-                            <RotateCcw className="w-5 h-5 text-purple-600" />
-                            Convert to Sub-category
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                            You are converting <strong>{isConvertingCategory.name}</strong> into a sub-category. All products in this category will be moved.
-                        </p>
+            {
+                isConvertingCategory && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+                        <div className="bg-white p-6 rounded-lg w-96 shadow-xl space-y-4">
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                <RotateCcw className="w-5 h-5 text-purple-600" />
+                                Convert to Sub-category
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                You are converting <strong>{isConvertingCategory.name}</strong> into a sub-category. All products in this category will be moved.
+                            </p>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Parent Category</label>
-                            <select
-                                className="w-full border p-2 rounded"
-                                onChange={(e) => {
-                                    if (e.target.value) {
-                                        if (window.confirm(`Are you sure you want to make "${isConvertingCategory.name}" a sub-category of "${shopCategories.find(c => c.id === e.target.value)?.name}"?`)) {
-                                            handleCategoryConvert(isConvertingCategory._id || '', e.target.value);
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Select Parent Category</label>
+                                <select
+                                    className="w-full border p-2 rounded"
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            if (window.confirm(`Are you sure you want to make "${isConvertingCategory.name}" a sub-category of "${shopCategories.find(c => c.id === e.target.value)?.name}"?`)) {
+                                                handleCategoryConvert(isConvertingCategory._id || '', e.target.value);
+                                            }
                                         }
+                                    }}
+                                >
+                                    <option value="">Select Category...</option>
+                                    {shopCategories
+                                        .filter(c => c.id !== isConvertingCategory.id)
+                                        .map(c => <option key={c.id} value={c.id}>{c.name}</option>)
                                     }
-                                }}
-                            >
-                                <option value="">Select Category...</option>
-                                {shopCategories
-                                    .filter(c => c.id !== isConvertingCategory.id)
-                                    .map(c => <option key={c.id} value={c.id}>{c.name}</option>)
-                                }
-                            </select>
-                        </div>
+                                </select>
+                            </div>
 
-                        <div className="flex justify-end pt-2">
-                            <button
-                                onClick={() => setIsConvertingCategory(null)}
-                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
-                            >
-                                Cancel
-                            </button>
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    onClick={() => setIsConvertingCategory(null)}
+                                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 
     const renderContent = () => { switch (activeTab) { case 'products': return renderProducts(); case 'orders': return renderOrders(); case 'customers': return renderCustomers(); case 'sellers': return renderSellers(); case 'payments': return renderPayments(); case 'logistics': return renderLogistics(); case 'returns': return renderReturns(); case 'reviews': return renderReviews(); case 'analytics': return renderDashboard(); case 'coupons': return renderCoupons(); case 'security': return renderSecurity(); case 'settings': return renderSecurity(); case 'shop-sections': return renderShopSections(); default: return renderDashboard(); } };
@@ -1817,6 +1886,67 @@ export const Admin: React.FC = () => {
                                                 className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
                                             />
                                             <label htmlFor="isBestseller" className="font-bold text-gray-700">Bestseller Product (Show on Home)</label>
+                                        </div>
+
+                                        <div className="pt-6 col-span-2">
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">Shop By Occasion</label>
+                                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-4">
+                                                {/* Standard Occasions */}
+                                                <div>
+                                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block p-1">Standard Occasions</span>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                        {shopOccasions.length > 0 ? shopOccasions.map(occ => (
+                                                            <label key={occ.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white cursor-pointer transition-all border border-transparent hover:border-gray-200 group">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={(editedProduct.occasions || []).includes(occ.name)}
+                                                                    onChange={e => {
+                                                                        const currentOccasions = editedProduct.occasions || [];
+                                                                        let newOccasions;
+                                                                        if (e.target.checked) {
+                                                                            newOccasions = [...currentOccasions, occ.name];
+                                                                        } else {
+                                                                            newOccasions = currentOccasions.filter(name => name !== occ.name);
+                                                                        }
+                                                                        setEditedProduct({ ...editedProduct, occasions: newOccasions });
+                                                                    }}
+                                                                    className="w-4 h-4 text-primary rounded focus:ring-primary"
+                                                                />
+                                                                <span className="text-xs font-bold text-gray-600 group-hover:text-primary transition-colors">{occ.name}</span>
+                                                            </label>
+                                                        )) : <p className="text-xs text-gray-400 p-2 col-span-full">No standard occasions found.</p>}
+                                                    </div>
+                                                </div>
+
+                                                {/* Special Occasions */}
+                                                {specialOccasions.length > 0 && (
+                                                    <div>
+                                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block p-1 border-t border-gray-200 pt-3 mt-1">Seasonal / Special</span>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                            {specialOccasions.map(occ => (
+                                                                <label key={occ.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white cursor-pointer transition-all border border-transparent hover:border-gray-200 group">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={(editedProduct.occasions || []).includes(occ.name)}
+                                                                        onChange={e => {
+                                                                            const currentOccasions = editedProduct.occasions || [];
+                                                                            let newOccasions;
+                                                                            if (e.target.checked) {
+                                                                                newOccasions = [...currentOccasions, occ.name];
+                                                                            } else {
+                                                                                newOccasions = currentOccasions.filter(name => name !== occ.name);
+                                                                            }
+                                                                            setEditedProduct({ ...editedProduct, occasions: newOccasions });
+                                                                        }}
+                                                                        className="w-4 h-4 text-primary rounded focus:ring-primary"
+                                                                    />
+                                                                    <span className="text-xs font-bold text-gray-600 group-hover:text-primary transition-colors">{occ.name}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div></div>)}
                                 {editTab === 'images' && (
@@ -3043,7 +3173,7 @@ export const Admin: React.FC = () => {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                                <label className="block text-sm font-medium text-gray-700">Company Name <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={newSellerData.companyName || ''}
@@ -3053,7 +3183,7 @@ export const Admin: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Contact Person</label>
+                                <label className="block text-sm font-medium text-gray-700">Contact Person <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={newSellerData.contactPerson || ''}
@@ -3063,7 +3193,7 @@ export const Admin: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Email</label>
+                                <label className="block text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
                                 <input
                                     type="email"
                                     value={newSellerData.email || ''}
@@ -3073,7 +3203,7 @@ export const Admin: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Phone</label>
+                                <label className="block text-sm font-medium text-gray-700">Phone <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={newSellerData.phone || ''}

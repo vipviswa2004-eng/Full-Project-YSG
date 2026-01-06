@@ -58,6 +58,7 @@ export interface Product {
   subCategoryId?: string; // Link to shop sub-category
   isTrending?: boolean;
   isBestseller?: boolean;
+  occasions?: string[];
   symbolNumberConfig?: {
     enabled: boolean;
     title: string;
@@ -152,6 +153,8 @@ export interface Seller {
   rating: number;
   balance: number;
   returnRate?: number;
+  joinedDate?: string | Date;
+  productsCount?: number;
 }
 
 export interface Shipment {
@@ -243,4 +246,15 @@ export interface SpecialOccasion {
   image: string;
   link: string;
   order: number;
+}
+
+export interface ShopOccasion {
+  _id?: string;
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  link: string;
+  order: number;
+  color?: string;
 }

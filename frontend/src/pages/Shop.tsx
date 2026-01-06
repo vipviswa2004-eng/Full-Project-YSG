@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate, useNavigationType } from 'react-router-dom';
-import { Star, Heart, Filter, X } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import { useCart } from '../context';
 import { Product } from '../types';
 import { calculatePrice } from '../data/products';
+import { ProductCard } from '../components/ProductCard';
 
 export const Shop: React.FC = () => {
-    const { currency, wishlist, toggleWishlist } = useCart();
+    const { currency } = useCart();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const navType = useNavigationType();
@@ -14,6 +15,7 @@ export const Shop: React.FC = () => {
     const subCategoryFilter = searchParams.get('subCategory');
     const searchQuery = searchParams.get('q');
     const filterType = searchParams.get('filter');
+    const occasionFilter = searchParams.get('occasion');
 
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -100,13 +102,6 @@ export const Shop: React.FC = () => {
             : `$${(price * 0.012).toFixed(2)}`;
     };
 
-    const isInWishlist = (id: string) => wishlist.some(p => p.id === id);
-
-    const handleWishlistToggle = (e: React.MouseEvent, product: any) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleWishlist(product);
-    };
 
     // Current category and subcategories
     const currentCategory = useMemo(() => {
@@ -169,6 +164,12 @@ export const Shop: React.FC = () => {
             result = result.filter(p => p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
         }
 
+        if (occasionFilter) {
+            const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const target = normalize(occasionFilter);
+            result = result.filter(p => p.occasions && p.occasions.some(occ => normalize(occ) === target));
+        }
+
         if (subCategoryFilter && currentSubCategory) {
             result = result.filter(p => p.subCategoryId === currentSubCategory.id);
         }
@@ -200,7 +201,7 @@ export const Shop: React.FC = () => {
             });
         }
         return result;
-    }, [products, categoryFilter, subCategoryFilter, currentSubCategory, minPrice, maxPrice, sortBy, filterType, searchQuery]);
+    }, [products, categoryFilter, subCategoryFilter, occasionFilter, currentSubCategory, minPrice, maxPrice, sortBy, filterType, searchQuery]);
 
     const SkeletonCard = () => (
         <div className="bg-white rounded overflow-hidden border border-gray-100 animate-pulse">
@@ -247,6 +248,12 @@ export const Shop: React.FC = () => {
                                 onClick={() => subCategoryFilter && navigate(`/shop?category=${encodeURIComponent(categoryFilter)}`)}>
                                 {categoryFilter}
                             </span>
+                        </>
+                    )}
+                    {occasionFilter && (
+                        <>
+                            <span className="text-gray-400">/</span>
+                            <span className="text-gray-900 font-bold">{occasionFilter}</span>
                         </>
                     )}
                     {subCategoryFilter && (
@@ -401,7 +408,8 @@ export const Shop: React.FC = () => {
                                         {searchQuery ? `Results for "${searchQuery}"` :
                                             (subCategoryFilter ? subCategoryFilter :
                                                 (categoryFilter ? categoryFilter :
-                                                    (filterType === 'recent' ? 'Recently Viewed' : 'Shop All Gifts')))}
+                                                    (occasionFilter ? occasionFilter :
+                                                        (filterType === 'recent' ? 'Recently Viewed' : 'Shop All Gifts'))))}
                                         {processedProducts.length > 0 && (
                                             <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-widest border border-primary/10">
                                                 {processedProducts.length} items
@@ -411,7 +419,7 @@ export const Shop: React.FC = () => {
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="h-1 w-8 bg-primary rounded-full" />
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            {categoryFilter || 'Trending Collection'}
+                                            {categoryFilter || occasionFilter || 'Trending Collection'}
                                         </p>
                                     </div>
                                 </div>
@@ -495,97 +503,17 @@ export const Shop: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {processedProducts.map((product) => {
-                                        const prices = calculatePrice(product);
-                                        const productId = product.id || (product as any)._id;
-                                        return (
-                                            <div key={productId} className="relative group bg-white border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 rounded-lg overflow-hidden flex flex-col h-full transform-gpu hover:-translate-y-1">
-                                                <Link
-                                                    to={`/product/${productId}`}
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        handleProductClick(productId);
-                                                    }}
-                                                    className="flex flex-col h-full"
-                                                >
-                                                    <div className="relative aspect-[3/4] bg-white overflow-hidden p-3 bg-gradient-to-b from-gray-50/50 to-white">
-                                                        <img
-                                                            className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
-                                                            src={product.image}
-                                                            alt={product.name}
-                                                            loading="lazy"
-                                                        />
-
-                                                        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                                                            {product.discount && (
-                                                                <div className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg shadow-red-600/20 uppercase tracking-tighter">
-                                                                    {product.discount}% OFF
-                                                                </div>
-                                                            )}
-                                                            {product.isBestseller && (
-                                                                <div className="bg-yellow-500 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg shadow-yellow-500/20 uppercase tracking-tighter border border-yellow-400/30">
-                                                                    BESTSELLER
-                                                                </div>
-                                                            )}
-                                                            {product.isTrending && (
-                                                                <div className="bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg shadow-blue-600/20 uppercase tracking-tighter border border-blue-400/30">
-                                                                    TRENDING
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="absolute inset-x-3 bottom-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hidden md:block">
-                                                            <div className="bg-white/90 backdrop-blur-md py-2 px-4 rounded-lg shadow-xl text-center">
-                                                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">
-                                                                    Customize Now
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="p-4 bg-white flex-1 border-t border-gray-50 flex flex-col justify-between">
-                                                        <div>
-                                                            <p className="text-[9px] font-black text-gray-400 h-3 uppercase tracking-tighter mb-1">
-                                                                {product.category}
-                                                            </p>
-                                                            <h3 className="text-xs font-bold text-gray-900 line-clamp-2 h-9 mb-2 transition-colors group-hover:text-primary leading-tight">
-                                                                {product.name}
-                                                            </h3>
-                                                            <div className="flex items-center gap-2 mb-3">
-                                                                <div className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm shadow-green-600/10">
-                                                                    {product.rating || 4.5} <Star className="w-2.5 h-2.5 fill-current" />
-                                                                </div>
-                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                                                                    ({product.reviewsCount || 12} reviews)
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-end justify-between mt-auto">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-base font-black text-gray-900 leading-none">
-                                                                    {formatPrice(prices.final)}
-                                                                </span>
-                                                                {product.discount && (
-                                                                    <span className="text-[10px] text-gray-400 line-through font-bold mt-1">
-                                                                        {formatPrice(prices.original)}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
-                                                                <Star className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                                <button
-                                                    onClick={(e) => handleWishlistToggle(e, product)}
-                                                    className={`absolute top-3 right-3 p-2 rounded-full shadow-lg z-20 transition-all duration-300 ${isInWishlist(productId) ? 'bg-red-50 text-red-500 scale-110 shadow-red-500/10' : 'bg-white/80 backdrop-blur-sm text-gray-400 hover:text-red-500 hover:bg-white'}`}
-                                                >
-                                                    <Heart className={`w-3.5 h-3.5 transition-transform duration-300 ${isInWishlist(productId) ? 'fill-current' : 'group-hover/heart:scale-125'}`} />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
+                                    {processedProducts.map((product) => (
+                                        <ProductCard
+                                            key={product.id || (product as any)._id}
+                                            product={product}
+                                            formatPrice={formatPrice}
+                                            onProductClick={(id, e) => {
+                                                e.preventDefault();
+                                                handleProductClick(id);
+                                            }}
+                                        />
+                                    ))}
                                 </div>
                             )}
                         </div>

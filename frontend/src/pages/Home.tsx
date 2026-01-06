@@ -3,6 +3,8 @@ import { calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context';
 import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Briefcase, Sparkles, History } from 'lucide-react';
+import birthdayImg from '../assets/birthday.png';
+
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion } from '../types';
 
@@ -10,7 +12,8 @@ import { Section, ShopCategory, SpecialOccasion } from '../types';
 // products import removed previously
 
 const OCCASIONS = [
-  { id: 'birthday', name: 'Birthday', image: 'https://images.unsplash.com/photo-1530103862676-de3c9fa59588?q=80&w=400&auto=format&fit=crop', color: 'from-pink-500 to-rose-500' },
+  { id: 'birthday', name: 'Birthday', image: birthdayImg, color: 'from-pink-500 to-rose-500' },
+
   { id: 'anniversary', name: 'Wedding & Anniversary', image: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=400&auto=format&fit=crop', color: 'from-red-500 to-pink-600' },
   { id: 'love', name: 'Love & Romance', image: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?q=80&w=400&auto=format&fit=crop', color: 'from-purple-500 to-indigo-500' },
   { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', color: 'from-yellow-400 to-orange-500' },
@@ -187,6 +190,7 @@ export const Home: React.FC = () => {
   // Use context products (from DB)
   const displayProducts = contextProducts;
   const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasion[]>([]);
+  const [shopOccasions, setShopOccasions] = useState<any[]>([]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -196,20 +200,44 @@ export const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Fetch sections and shop categories
+    // 1. Try to load from cache first for instant display
+    const cachedSections = localStorage.getItem('cache_sections');
+    const cachedCategories = localStorage.getItem('cache_shopCategories');
+    const cachedSpecial = localStorage.getItem('cache_specialOccasions');
+    const cachedShopOccasions = localStorage.getItem('cache_shopOccasions');
+
+    if (cachedSections) setSections(JSON.parse(cachedSections));
+    if (cachedCategories) setShopCategories(JSON.parse(cachedCategories));
+    if (cachedSpecial) setSpecialOccasions(JSON.parse(cachedSpecial));
+    if (cachedShopOccasions) setShopOccasions(JSON.parse(cachedShopOccasions));
+
+    // 2. Fetch fresh data
     const fetchShopData = async () => {
       try {
-        const [sectionsRes, categoriesRes, occasionsRes] = await Promise.all([
+        const [sectionsRes, categoriesRes, occasionsRes, shopOccasionsRes] = await Promise.all([
           fetch('http://localhost:5000/api/sections'),
           fetch('http://localhost:5000/api/shop-categories'),
-          fetch('http://localhost:5000/api/special-occasions')
+          fetch('http://localhost:5000/api/special-occasions'),
+          fetch('http://localhost:5000/api/shop-occasions')
         ]);
+
         const sectionsData = await sectionsRes.json();
         const categoriesData = await categoriesRes.json();
         const occasionsData = await occasionsRes.json();
+        const shopOccasionsData = await shopOccasionsRes.json();
+
+        // Update state
         setSections(sectionsData);
         setShopCategories(categoriesData);
         setSpecialOccasions(occasionsData);
+        setShopOccasions(shopOccasionsData);
+
+        // Update cache
+        localStorage.setItem('cache_sections', JSON.stringify(sectionsData));
+        localStorage.setItem('cache_shopCategories', JSON.stringify(categoriesData));
+        localStorage.setItem('cache_specialOccasions', JSON.stringify(occasionsData));
+        localStorage.setItem('cache_shopOccasions', JSON.stringify(shopOccasionsData));
+
       } catch (error) {
         console.error('Failed to fetch shop data:', error);
       }
@@ -370,25 +398,32 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {specialOccasions.map((occasion) => (
-              <Link
-                key={occasion.id}
-                to={occasion.link}
-                className="group relative overflow-hidden rounded-2xl aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500"
-              >
-                <img
-                  src={occasion.image}
-                  alt={occasion.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
-                  <h3 className="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-1">{occasion.name}</h3>
-                  <p className="text-gray-200 text-sm opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
-                    {occasion.description}
-                  </p>
-                </div>
-              </Link>
-            ))}
+            {specialOccasions.map((occasion) => {
+              const getLink = () => {
+                if (occasion.link && occasion.link.trim() !== '' && occasion.link !== '#') return occasion.link;
+                return `/products?occasion=${encodeURIComponent(occasion.name)}`;
+              };
+
+              return (
+                <Link
+                  key={occasion.id}
+                  to={getLink()}
+                  className="group relative overflow-hidden rounded-2xl aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500"
+                >
+                  <img
+                    src={occasion.image}
+                    alt={occasion.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+                    <h3 className="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-1">{occasion.name}</h3>
+                    <p className="text-gray-200 text-sm opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                      {occasion.description}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </FadeInSection>
@@ -398,8 +433,17 @@ export const Home: React.FC = () => {
         <div className="max-w-7xl mx-auto py-6 px-4">
           <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Shop By Occasion</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {OCCASIONS.map(occ => (
-              <Link to={`/products?q=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-32 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
+            {shopOccasions.length > 0 ? shopOccasions.slice(0, 4).map((occ, idx) => {
+              const staticOcc = OCCASIONS.find(o => o.name === occ.name) || OCCASIONS[idx % OCCASIONS.length];
+              return (
+                <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-32 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
+                  <img src={occ.image} alt={occ.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className={`absolute inset-0 bg-gradient-to-b ${staticOcc?.color || 'from-gray-500 to-gray-700'} opacity-60 group-hover:opacity-50 transition-opacity`} />
+                  <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-bold text-lg md:text-xl drop-shadow-md tracking-wide border-b-2 border-transparent group-hover:border-white transition-all pb-1">{occ.name}</span></div>
+                </Link>
+              );
+            }) : OCCASIONS.map(occ => (
+              <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-32 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
                 <img src={occ.image} alt={occ.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className={`absolute inset-0 bg-gradient-to-b ${occ.color} opacity-60 group-hover:opacity-50 transition-opacity`} />
                 <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-bold text-lg md:text-xl drop-shadow-md tracking-wide border-b-2 border-transparent group-hover:border-white transition-all pb-1">{occ.name}</span></div>
