@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SEO } from '../components/SEO';
 import { Mail, Phone, Building, CheckCircle, Gift, Award, Users } from 'lucide-react';
 
 export const CorporateGifting: React.FC = () => {
@@ -26,6 +27,11 @@ export const CorporateGifting: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg">
+            <SEO
+                title="Corporate Gifting & Bulk Orders"
+                description="Premium corporate gifts and bulk orders. Custom branding with neon signs and personalized products. Get a quote today."
+                keywords={['corporate gifts', 'bulk orders', 'business gifts', 'custom branding', 'office decor']}
+            />
             {/* Hero Section */}
             <div className="relative bg-gray-900 text-white py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
                 <div className="absolute inset-0">
@@ -57,7 +63,7 @@ export const CorporateGifting: React.FC = () => {
             <div className="py-16 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900">Why Choose Yathes Sign Galaxy?</h2>
+                        <h2 className="text-3xl font-bold text-gray-900">Why Choose Sign Galaxy?</h2>
                         <p className="mt-4 text-gray-600">We specialize in turning corporate gifts into memorable experiences.</p>
                     </div>
 

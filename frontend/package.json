@@ -1,5 +1,5 @@
 {
-  "name": "yathes-sign-galaxy",
+  "name": "sign-galaxy",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,13 +11,17 @@
   "dependencies": {
     "@google/genai": "^1.30.0",
     "@types/fabric": "^5.3.10",
+    "canvas-confetti": "^1.9.4",
     "fabric": "^6.9.0",
+    "framer-motion": "^12.24.6",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-helmet-async": "^2.0.5",
     "react-router-dom": "^7.9.6"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.2.0",

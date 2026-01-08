@@ -317,7 +317,7 @@ export const getGiftAdvice = async (userMessage: string, chatHistory: { role: st
       `${msg.role === 'user' ? 'User' : 'Genie'}: ${msg.text}`
     ).join('\n');
 
-    const systemInstruction = `You are the "Gift Genie" 🧞‍♂️ for Yathes Sign Galaxy.
+    const systemInstruction = `You are the "Gift Genie" 🧞‍♂️ for Sign Galaxy.
     
     **YOUR MISSION:**
     Help the user find the perfect personalized gift from our catalog based on their answers.
@@ -371,7 +371,7 @@ export const getGiftAdvice = async (userMessage: string, chatHistory: { role: st
 export const generateProductDescription = async (name: string, category: string) => {
   try {
     const model = 'gemini-2.5-flash';
-    const prompt = `You are an expert copywriter for a premium personalized gift store called "Yathes Sign Galaxy".
+    const prompt = `You are an expert copywriter for a premium personalized gift store called "Sign Galaxy".
     Write a compelling, engaging, and detailed product description for:
     
     Product Name: "${name}"

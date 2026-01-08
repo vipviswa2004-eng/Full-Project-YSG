@@ -112,7 +112,7 @@ export const WhatsAppChat: React.FC = () => {
                         <div className="bg-white p-2.5 rounded-lg rounded-tl-none shadow-sm mb-3 border border-gray-100 max-w-[95%]">
                             <p className="text-gray-700 text-xs">
                                 Hi there! 👋 <br />
-                                Welcome to Yathes Sign Galaxy. How can we help you today?
+                                Welcome to Sign Galaxy. How can we help you today?
                             </p>
                             <span className="text-[9px] text-gray-400 mt-1 block text-right">Just now</span>
                         </div>

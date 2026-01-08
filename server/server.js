@@ -6,11 +6,32 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion } = require('./models');
+const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient } = require('./models');
 
 const app = express();
 const PORT = 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yathes_sign_galaxy";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/sign_galaxy";
+
+// Seed Shop Recipients
+const seedRecipients = async () => {
+  try {
+    console.log("Seeding/Updating default Shop Recipients...");
+    const defaults = [
+      { id: 'rec_him', name: 'For Him', link: '/products?recipient=Him', order: 1, image: '/recipients/recipient_him.png' },
+      { id: 'rec_her', name: 'For Her', link: '/products?recipient=Her', order: 2, image: '/recipients/recipient_her.png' },
+      { id: 'rec_couples', name: 'For Couples', link: '/products?recipient=Couples', order: 3, image: '/recipients/recipient_couples.png' },
+      { id: 'rec_kids', name: 'For Kids', link: '/products?recipient=Kids', order: 4, image: '/recipients/recipient_kids.png' },
+      { id: 'rec_parents', name: 'For Parents', link: '/products?recipient=Parents', order: 5, image: '/recipients/recipient_parents.png' }
+    ];
+
+    for (const rec of defaults) {
+      await ShopRecipient.findOneAndUpdate({ id: rec.id }, rec, { upsert: true, new: true });
+    }
+    console.log("Default Shop Recipients seeded/updated.");
+  } catch (err) {
+    console.error("Error seeding recipients:", err);
+  }
+};
 
 // ---------- MIDDLEWARE ----------
 app.use(
@@ -148,6 +169,70 @@ app.get("/auth/test", (req, res) => {
   res.send("Server is working! OAuth should work too.");
 });
 
+// ---------- IN-MEMORY CACHE ----------
+const memoryCache = {
+  data: {},
+  expiry: {},
+  get: function (key) {
+    if (this.data[key] && this.expiry[key] > Date.now()) {
+      return this.data[key];
+    }
+    return null;
+  },
+  set: function (key, value, durationInSeconds = 600) { // Default 10 mins
+    this.data[key] = value;
+    this.expiry[key] = Date.now() + durationInSeconds * 1000;
+  },
+  clear: function (key) {
+    delete this.data[key];
+    delete this.expiry[key];
+  }
+};
+
+// ---------- SITEMAP ----------
+app.get('/sitemap.xml', async (req, res) => {
+  const DOMAIN = 'https://signgalaxy.com';
+  try {
+    const products = await Product.find({ status: 'Active' });
+    const categories = await ShopCategory.find();
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+
+    // Static pages
+    const staticPages = [
+      { url: '/', priority: '1.0', freq: 'daily' },
+      { url: '/shop', priority: '0.9', freq: 'daily' },
+      { url: '/customize', priority: '0.8', freq: 'weekly' },
+      { url: '/corporate', priority: '0.7', freq: 'monthly' },
+      { url: '/contact', priority: '0.6', freq: 'monthly' },
+      { url: '/about', priority: '0.6', freq: 'monthly' }
+    ];
+
+    staticPages.forEach(page => {
+      xml += `<url><loc>${DOMAIN}${page.url}</loc><changefreq>${page.freq}</changefreq><priority>${page.priority}</priority></url>`;
+    });
+
+    // Dynamic Categories
+    categories.forEach(c => {
+      xml += `<url><loc>${DOMAIN}/shop?category=${encodeURIComponent(c.name)}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
+    });
+
+    // Dynamic Products
+    products.forEach(p => {
+      xml += `<url><loc>${DOMAIN}/product/${p.id || p._id}</loc><lastmod>${new Date().toISOString()}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
+    });
+
+    xml += '</urlset>';
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (e) {
+    console.error("Sitemap Generation Error:", e);
+    res.status(500).send("Error generating sitemap");
+  }
+});
+
 app.get(
   "/auth/google",
   passport.authenticate("google", {
@@ -212,6 +297,20 @@ app.get("/api/logout", (req, res) => {
 app.get("/api/orders", async (req, res) => {
   try {
     const orders = await Order.find().sort({ date: -1 });
+    res.json(orders.map(o => ({ ...o.toObject(), id: o._id })));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get My Orders (User)
+app.get("/api/my-orders", async (req, res) => {
+  try {
+    const email = req.user ? req.user.email : req.query.email;
+    if (!email) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const orders = await Order.find({ "user.email": email }).sort({ date: -1 });
     res.json(orders.map(o => ({ ...o.toObject(), id: o._id })));
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -699,7 +798,11 @@ app.delete("/api/sizes/:id", async (req, res) => {
 // ---------- SECTIONS ----------
 app.get("/api/sections", async (req, res) => {
   try {
+    const cached = memoryCache.get('sections');
+    if (cached) return res.json(cached);
+
     const sections = await Section.find().sort({ order: 1 });
+    memoryCache.set('sections', sections);
     res.json(sections);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -710,6 +813,7 @@ app.post("/api/sections", async (req, res) => {
   try {
     const section = new Section(req.body);
     await section.save();
+    memoryCache.clear('sections');
     res.json(section);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -719,6 +823,7 @@ app.post("/api/sections", async (req, res) => {
 app.put("/api/sections/:id", async (req, res) => {
   try {
     const section = await Section.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    memoryCache.clear('sections');
     res.json(section);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -730,6 +835,8 @@ app.delete("/api/sections/:id", async (req, res) => {
     await Section.findByIdAndDelete(req.params.id);
     // Also delete all categories in this section
     await ShopCategory.deleteMany({ sectionId: req.params.id });
+    memoryCache.clear('sections');
+    memoryCache.clear('categories'); // Clear related if needed, but shop-categories is separate
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -872,7 +979,11 @@ app.delete("/api/sub-categories/:id", async (req, res) => {
 // ---------- SPECIAL OCCASIONS ----------
 app.get("/api/special-occasions", async (req, res) => {
   try {
+    const cached = memoryCache.get('specialOccasions');
+    if (cached) return res.json(cached);
+
     const occasions = await SpecialOccasion.find().sort({ order: 1 });
+    memoryCache.set('specialOccasions', occasions);
     res.json(occasions);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -883,6 +994,7 @@ app.post("/api/special-occasions", async (req, res) => {
   try {
     const occasion = new SpecialOccasion(req.body);
     await occasion.save();
+    memoryCache.clear('specialOccasions');
     res.json(occasion);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -892,6 +1004,7 @@ app.post("/api/special-occasions", async (req, res) => {
 app.put("/api/special-occasions/:id", async (req, res) => {
   try {
     const occasion = await SpecialOccasion.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    memoryCache.clear('specialOccasions');
     res.json(occasion);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -901,6 +1014,7 @@ app.put("/api/special-occasions/:id", async (req, res) => {
 app.delete("/api/special-occasions/:id", async (req, res) => {
   try {
     await SpecialOccasion.findByIdAndDelete(req.params.id);
+    memoryCache.clear('specialOccasions');
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -911,7 +1025,11 @@ app.delete("/api/special-occasions/:id", async (req, res) => {
 // ---------- SHOP BY OCCASION ----------
 app.get("/api/shop-occasions", async (req, res) => {
   try {
+    const cached = memoryCache.get('shopOccasions');
+    if (cached) return res.json(cached);
+
     const occasions = await ShopOccasion.find().sort({ order: 1 });
+    memoryCache.set('shopOccasions', occasions);
     res.json(occasions);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -922,6 +1040,7 @@ app.post("/api/shop-occasions", async (req, res) => {
   try {
     const occasion = new ShopOccasion(req.body);
     await occasion.save();
+    memoryCache.clear('shopOccasions');
     res.json(occasion);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -931,6 +1050,7 @@ app.post("/api/shop-occasions", async (req, res) => {
 app.put("/api/shop-occasions/:id", async (req, res) => {
   try {
     const occasion = await ShopOccasion.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    memoryCache.clear('shopOccasions');
     res.json(occasion);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -940,6 +1060,52 @@ app.put("/api/shop-occasions/:id", async (req, res) => {
 app.delete("/api/shop-occasions/:id", async (req, res) => {
   try {
     await ShopOccasion.findByIdAndDelete(req.params.id);
+    memoryCache.clear('shopOccasions');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- SHOP RECIPIENTS ----------
+app.get("/api/shop-recipients", async (req, res) => {
+  try {
+    const cached = memoryCache.get('shopRecipients');
+    if (cached) return res.json(cached);
+
+    const recipients = await ShopRecipient.find().sort({ order: 1 });
+    memoryCache.set('shopRecipients', recipients);
+    res.json(recipients);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/shop-recipients", async (req, res) => {
+  try {
+    const recipient = new ShopRecipient(req.body);
+    await recipient.save();
+    memoryCache.clear('shopRecipients');
+    res.json(recipient);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put("/api/shop-recipients/:id", async (req, res) => {
+  try {
+    const recipient = await ShopRecipient.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    memoryCache.clear('shopRecipients');
+    res.json(recipient);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/shop-recipients/:id", async (req, res) => {
+  try {
+    await ShopRecipient.findByIdAndDelete(req.params.id);
+    memoryCache.clear('shopRecipients');
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -1373,4 +1539,5 @@ app.delete("/api/sellers/:id", async (req, res) => {
 // ---------- MISC ROUTES ----------
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  seedRecipients();
 });

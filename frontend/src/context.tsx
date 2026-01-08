@@ -7,6 +7,7 @@ interface AppContextType {
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
   removeFromCart: (cartId: string) => void;
+  clearCart: () => void;
   updateCartItemQuantity: (cartId: string, quantity: number) => void;
   wishlist: Product[];
   toggleWishlist: (product: Product) => void;
@@ -282,6 +283,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ));
   };
 
+  const clearCart = () => {
+    setCart([]);
+  };
+
   const toggleWishlist = (product: Product) => {
     setWishlist(prev => {
       const exists = prev.find(p => p.id === product.id);
@@ -293,7 +298,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AppContext.Provider value={{ cart, addToCart, removeFromCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, products: dbProducts }}>
+    <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, products: dbProducts }}>
       {children}
     </AppContext.Provider>
   );

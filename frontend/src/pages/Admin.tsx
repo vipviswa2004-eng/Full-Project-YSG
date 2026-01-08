@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
 // import { products as initialProducts } from '../data/products';
-import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion, ShopOccasion } from '../types';
+import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion, ShopOccasion, ShopRecipient } from '../types';
 // import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini'; // Unused
 import {
     Plus, Minus, Edit, LayoutDashboard, Package,
@@ -38,7 +38,8 @@ export const Admin: React.FC = () => {
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
     const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasion[]>([]);
     const [shopOccasions, setShopOccasions] = useState<ShopOccasion[]>([]);
-    const [shopSectionTab, setShopSectionTab] = useState<'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions'>('sections');
+    const [shopRecipients, setShopRecipients] = useState<ShopRecipient[]>([]);
+    const [shopSectionTab, setShopSectionTab] = useState<'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions' | 'shop-recipients'>('sections');
     const [subCategoryListFilter, setSubCategoryListFilter] = useState<string>('');
     const [isEditingShopItem, setIsEditingShopItem] = useState<any>(null);
     const [isConvertingCategory, setIsConvertingCategory] = useState<ShopCategory | null>(null);
@@ -120,18 +121,20 @@ export const Admin: React.FC = () => {
 
     const fetchShopData = async () => {
         try {
-            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes] = await Promise.all([
+            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes, recipientsRes] = await Promise.all([
                 fetch('http://localhost:5000/api/sections'),
                 fetch('http://localhost:5000/api/shop-categories'),
                 fetch('http://localhost:5000/api/sub-categories'),
                 fetch('http://localhost:5000/api/special-occasions'),
-                fetch('http://localhost:5000/api/shop-occasions')
+                fetch('http://localhost:5000/api/shop-occasions'),
+                fetch('http://localhost:5000/api/shop-recipients')
             ]);
             setSections(await sectionsRes.json());
             setShopCategories(await categoriesRes.json());
             setSubCategories(await subCategoriesRes.json());
             setSpecialOccasions(await occasionsRes.json());
             setShopOccasions(await shopOccasionsRes.json());
+            setShopRecipients(await recipientsRes.json());
         } catch (error) {
             console.error("Failed to fetch shop data", error);
         }
@@ -219,10 +222,10 @@ export const Admin: React.FC = () => {
         fetchShopData();
     }, []);
 
-    const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions', data: any) => {
+    const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions' | 'shop-recipients', data: any) => {
         try {
             const method = data._id ? 'PUT' : 'POST';
-            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : 'shop-occasions';
+            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : type === 'shop-recipients' ? 'shop-recipients' : 'shop-occasions';
             const url = `http://localhost:5000/api/${apiPath}${data._id ? `/${data._id}` : ''}`;
 
             const res = await fetch(url, {
@@ -245,10 +248,10 @@ export const Admin: React.FC = () => {
         }
     };
 
-    const handleShopItemDelete = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions', id: string) => {
+    const handleShopItemDelete = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions' | 'shop-recipients', id: string) => {
         if (!window.confirm("Are you sure?")) return;
         try {
-            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : 'shop-occasions';
+            const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : type === 'shop-recipients' ? 'shop-recipients' : 'shop-occasions';
             const res = await fetch(`http://localhost:5000/api/${apiPath}/${id}`, { method: 'DELETE' });
 
             if (!res.ok) throw new Error(`Failed to delete ${type}`);
@@ -594,7 +597,9 @@ export const Admin: React.FC = () => {
                                                 <span className={`px-2 py-1 rounded-full text-xs ${o.status === 'Delivered' ? 'bg-green-100 text-green-700' :
                                                     o.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
                                                         o.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
-                                                            'bg-yellow-100 text-yellow-700'
+                                                            o.status === 'Design Approved' ? 'bg-teal-100 text-teal-700' :
+                                                                o.status === 'Design Changes Requested' ? 'bg-orange-100 text-orange-700' :
+                                                                    'bg-yellow-100 text-yellow-700'
                                                     }`}>
                                                     {o.status}
                                                 </span>
@@ -759,7 +764,12 @@ export const Admin: React.FC = () => {
                                     description: '',
                                     stock: 0,
                                     status: 'Draft',
-                                    variations: []
+                                    variations: [],
+                                    aboutSections: [
+                                        { id: 'desc', title: 'Description', content: '', isHidden: false },
+                                        { id: 'instr', title: 'Instructions', content: 'Handle with care. Clean with a soft, dry cloth.', isHidden: false },
+                                        { id: 'del', title: 'Delivery Info', content: 'Standard shipping available.', isHidden: false }
+                                    ]
                                 })}
                                 className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-700 hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-95 shadow-sm shadow-primary/20"
                             >
@@ -871,7 +881,14 @@ export const Admin: React.FC = () => {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500 ease-out">
                                                 <button
-                                                    onClick={() => setIsEditing(p)}
+                                                    onClick={() => setIsEditing({
+                                                        ...p,
+                                                        aboutSections: p.aboutSections || [
+                                                            { id: 'desc', title: 'Description', content: p.description || '', isHidden: false },
+                                                            { id: 'instr', title: 'Instructions', content: 'Handle with care. Clean with a soft, dry cloth.', isHidden: false },
+                                                            { id: 'del', title: 'Delivery Info', content: 'Standard shipping available.', isHidden: false }
+                                                        ]
+                                                    })}
                                                     className="p-2.5 bg-white border border-gray-200 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm active:scale-95"
                                                     title="Edit Product"
                                                 >
@@ -892,7 +909,7 @@ export const Admin: React.FC = () => {
                         </table>
                     </div>
                 </div>
-            </div>
+            </div >
         );
     };
     const fetchProducts = async () => {
@@ -1063,8 +1080,18 @@ export const Admin: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4">₹{o.total}</td>
                                 <td className="px-6 py-4">
-                                    <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value as OrderStatus)} className="border rounded text-xs p-1 bg-gray-50">
-                                        {['Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'].map(s => <option key={s}>{s}</option>)}
+                                    <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value as OrderStatus)} className="border rounded text-xs p-1 bg-gray-50 max-w-[120px]">
+                                        {[
+                                            'Payment Confirmed',
+                                            'Design Pending',
+                                            'Design Sent',
+                                            'Design Approved',
+                                            'Design Changes Requested',
+                                            'Packed',
+                                            'Shipped',
+                                            'Delivered',
+                                            'Cancelled'
+                                        ].map(s => <option key={s}>{s}</option>)}
                                     </select>
                                 </td>
                                 <td className="px-6 py-4 text-right space-x-2">
@@ -1227,6 +1254,12 @@ export const Admin: React.FC = () => {
                         className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'shop-occasions' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         Shop By Occasion
+                    </button>
+                    <button
+                        onClick={() => setShopSectionTab('shop-recipients')}
+                        className={`px-4 py-2 font-medium text-sm transition-colors ${shopSectionTab === 'shop-recipients' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Shop By Recipient
                     </button>
                 </div>
             </div>
@@ -1485,11 +1518,56 @@ export const Admin: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Shop By Recipient Tab */}
+            {shopSectionTab === 'shop-recipients' && (
+                <div className="space-y-4">
+                    <button
+                        onClick={() => setIsEditingShopItem({ type: 'shop-recipient', data: { id: `rec_${Date.now()}`, name: '', image: '', link: '', order: shopRecipients.length + 1 } })}
+                        className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary-dark"
+                    >
+                        + Add Recipient
+                    </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {shopRecipients.map(rec => (
+                            <div key={rec.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex gap-4">
+                                    <img
+                                        src={rec.image}
+                                        alt={rec.name}
+                                        className="w-20 h-20 rounded-lg object-cover border-2 border-gray-100"
+                                    />
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-gray-900">{rec.name}</h3>
+                                        <p className="text-xs text-blue-600 truncate">{rec.link}</p>
+                                        <p className="text-xs text-gray-500">Order: {rec.order}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => setIsEditingShopItem({ type: 'shop-recipient', data: rec })}
+                                        className="flex-1 text-blue-600 border border-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-50"
+                                    >
+                                        <Edit className="w-4 h-4 inline mr-1" /> Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleShopItemDelete('shop-recipients', rec._id || rec.id)}
+                                        className="flex-1 text-red-600 border border-red-600 px-3 py-1 rounded text-sm hover:bg-red-50"
+                                    >
+                                        <Trash2 className="w-4 h-4 inline mr-1" /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             {isEditingShopItem && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white p-4 rounded-lg w-80 shadow-xl space-y-3">
                         <h3 className="text-base font-bold">
-                            {isEditingShopItem.data._id ? 'Edit' : 'Add'} {isEditingShopItem.type === 'section' ? 'Section' : isEditingShopItem.type === 'category' ? 'Category' : isEditingShopItem.type === 'sub-category' ? 'Sub-category' : isEditingShopItem.type === 'shop-occasion' ? 'Shop Occasion' : 'Special Occasion'}
+                            {isEditingShopItem.data._id ? 'Edit' : 'Add'} {isEditingShopItem.type === 'section' ? 'Section' : isEditingShopItem.type === 'category' ? 'Category' : isEditingShopItem.type === 'sub-category' ? 'Sub-category' : isEditingShopItem.type === 'shop-occasion' ? 'Shop Occasion' : isEditingShopItem.type === 'shop-recipient' ? 'Recipient' : 'Special Occasion'}
                         </h3>
 
                         {isEditingShopItem.type === 'section' ? (
@@ -1728,6 +1806,70 @@ export const Admin: React.FC = () => {
                                     />
                                 </div>
                             </>
+                        ) : isEditingShopItem.type === 'shop-recipient' ? (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Recipient Name</label>
+                                    <input
+                                        placeholder="e.g., Him"
+                                        value={isEditingShopItem.data.name || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, name: e.target.value } })}
+                                        className="w-full border p-1 rounded text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Link (URL)</label>
+                                    <input
+                                        placeholder="/shop?recipient=Him"
+                                        value={isEditingShopItem.data.link || ''}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, link: e.target.value } })}
+                                        className="w-full border p-1 rounded text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Image</label>
+                                    <div className="space-y-1">
+                                        {isEditingShopItem.data.image && (
+                                            <div className="flex items-center gap-2">
+                                                <img src={isEditingShopItem.data.image} alt="Preview" className="w-12 h-12 object-cover rounded border" />
+                                                <button
+                                                    onClick={() => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, image: '' } })}
+                                                    className="text-xs text-red-600 hover:text-red-800 underline"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setIsEditingShopItem({
+                                                            ...isEditingShopItem,
+                                                            data: { ...isEditingShopItem.data, image: reader.result as string }
+                                                        });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                            className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                                    <input
+                                        type="number"
+                                        value={isEditingShopItem.data.order || 1}
+                                        onChange={e => setIsEditingShopItem({ ...isEditingShopItem, data: { ...isEditingShopItem.data, order: parseInt(e.target.value) } })}
+                                        className="w-full border p-2 rounded"
+                                    />
+                                </div>
+                            </>
                         ) : null}
 
                         <div className="flex justify-end gap-2 pt-4">
@@ -1738,7 +1880,7 @@ export const Admin: React.FC = () => {
                                 Cancel
                             </button>
                             <button
-                                onClick={() => handleShopItemSave(isEditingShopItem.type === 'section' ? 'sections' : isEditingShopItem.type === 'category' ? 'categories' : isEditingShopItem.type === 'sub-category' ? 'sub-categories' : 'special-occasions', isEditingShopItem.data)}
+                                onClick={() => handleShopItemSave(isEditingShopItem.type === 'section' ? 'sections' : isEditingShopItem.type === 'category' ? 'categories' : isEditingShopItem.type === 'sub-category' ? 'sub-categories' : isEditingShopItem.type === 'shop-recipient' ? 'shop-recipients' : isEditingShopItem.type === 'shop-occasion' ? 'shop-occasions' : 'special-occasions', isEditingShopItem.data)}
                                 className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark font-bold"
                             >
                                 Save
@@ -1815,7 +1957,7 @@ export const Admin: React.FC = () => {
                     <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full h-[90vh] flex flex-col animate-fade-in-up">
                         <div className="p-4 border-b flex justify-between items-center bg-gray-50"><h3 className="font-bold text-lg flex items-center gap-2"><Edit className="w-5 h-5 text-primary" /> Edit: {editedProduct.name}</h3><button onClick={() => setIsEditing(null)} className="hover:bg-gray-200 p-1 rounded"><X className="w-6 h-6" /></button></div>
                         <div className="flex flex-1 overflow-hidden">
-                            <div className="w-48 bg-gray-50 border-r border-gray-200 flex flex-col p-2 gap-1">{['vital', 'images', 'variations', 'desc'].map(tab => (<button key={tab} onClick={() => setEditTab(tab as any)} className={`text-left px-4 py-3 rounded-md text-sm font-medium transition-all ${editTab === tab ? 'bg-white shadow text-primary' : 'text-gray-600 hover:bg-gray-100'}`}>{tab === 'vital' && 'Vital Info'} {tab === 'images' && 'Images & Enhance'} {tab === 'variations' && 'Variations'} {tab === 'desc' && 'Description'}</button>))}</div>
+                            <div className="w-48 bg-gray-50 border-r border-gray-200 flex flex-col p-2 gap-1">{['vital', 'images', 'variations', 'desc'].map(tab => (<button key={tab} onClick={() => setEditTab(tab as any)} className={`text-left px-4 py-3 rounded-md text-sm font-medium transition-all ${editTab === tab ? 'bg-white shadow text-primary' : 'text-gray-600 hover:bg-gray-100'}`}>{tab === 'vital' && 'Vital Info'} {tab === 'images' && 'Images & Enhance'} {tab === 'variations' && 'Variations'} {tab === 'desc' && 'About the Product'}</button>))}</div>
                             <div className="flex-1 p-8 overflow-y-auto">
                                 {editTab === 'vital' && (<div className="space-y-6">
                                     {/* Vital Info Fields */}
@@ -1946,6 +2088,33 @@ export const Admin: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {/* Shop By Recipient */}
+                                                <div>
+                                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block p-1 border-t border-gray-200 pt-3 mt-1">Shop By Recipient</span>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                                        {['Him', 'Her', 'Couples', 'Kids', 'Parents'].map(rec => (
+                                                            <label key={rec} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white cursor-pointer transition-all border border-transparent hover:border-gray-200 group">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={(editedProduct.occasions || []).includes(rec)}
+                                                                    onChange={e => {
+                                                                        const currentOccasions = editedProduct.occasions || [];
+                                                                        let newOccasions;
+                                                                        if (e.target.checked) {
+                                                                            newOccasions = [...currentOccasions, rec];
+                                                                        } else {
+                                                                            newOccasions = currentOccasions.filter(name => name !== rec);
+                                                                        }
+                                                                        setEditedProduct({ ...editedProduct, occasions: newOccasions });
+                                                                    }}
+                                                                    className="w-4 h-4 text-primary rounded focus:ring-primary"
+                                                                />
+                                                                <span className="text-xs font-bold text-gray-600 group-hover:text-primary transition-colors">{rec}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div></div>)}
@@ -3152,7 +3321,92 @@ export const Admin: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
-                                {editTab === 'desc' && (<div><textarea value={editedProduct.description} onChange={e => setEditedProduct({ ...editedProduct, description: e.target.value })} className="w-full h-64 border p-2" /></div>)}
+                                {editTab === 'desc' && (
+                                    <div className="space-y-6">
+                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800 mb-4">
+                                            <p className="flex items-center gap-2 font-bold"><Eye className="w-4 h-4" /> Notes:</p>
+                                            <ul className="list-disc pl-5 mt-1 space-y-1">
+                                                <li>The "Description" section is the main product description shown on cards and SEO.</li>
+                                                <li>You can rename sections or hide them using the checkbox.</li>
+                                                <li>Users will see these as tabs on the product page.</li>
+                                            </ul>
+                                        </div>
+                                        {editedProduct.aboutSections?.map((section, idx) => (
+                                            <div key={section.id} className={`p-4 rounded-xl border-2 transition-all ${section.isHidden ? 'bg-gray-50 border-gray-200 opacity-75' : 'bg-white border-gray-200 focus-within:border-primary focus-within:ring-4 ring-primary/5'}`}>
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div className="flex items-center gap-3 flex-1">
+                                                        <input
+                                                            value={section.title}
+                                                            onChange={e => {
+                                                                const updated = [...(editedProduct.aboutSections || [])];
+                                                                updated[idx] = { ...updated[idx], title: e.target.value };
+                                                                setEditedProduct({ ...editedProduct, aboutSections: updated });
+                                                            }}
+                                                            className="font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none transition-colors"
+                                                            placeholder="Section Title"
+                                                        />
+                                                        {section.isHidden && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold">Hidden</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        {idx !== 0 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const updated = [...(editedProduct.aboutSections || [])];
+                                                                    updated.splice(idx, 1);
+                                                                    setEditedProduct({ ...editedProduct, aboutSections: updated });
+                                                                }}
+                                                                className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
+                                                                title="Delete Section"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={section.isHidden}
+                                                                onChange={e => {
+                                                                    const updated = [...(editedProduct.aboutSections || [])];
+                                                                    updated[idx] = { ...updated[idx], isHidden: e.target.checked };
+                                                                    setEditedProduct({ ...editedProduct, aboutSections: updated });
+                                                                }}
+                                                                className="w-4 h-4 text-primary rounded focus:ring-primary border-gray-300"
+                                                            />
+                                                            <span className="text-sm font-medium text-gray-600">Hide Section</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <textarea
+                                                    value={section.content}
+                                                    onChange={e => {
+                                                        const updated = [...(editedProduct.aboutSections || [])];
+                                                        updated[idx] = { ...updated[idx], content: e.target.value };
+                                                        // Sync description with the first section
+                                                        const updates: any = { aboutSections: updated };
+                                                        if (idx === 0) updates.description = e.target.value;
+                                                        setEditedProduct({ ...editedProduct, ...updates });
+                                                    }}
+                                                    className="w-full h-48 border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all leading-relaxed"
+                                                    placeholder={`Enter ${section.title} content here...`}
+                                                />
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setEditedProduct({
+                                                ...editedProduct,
+                                                aboutSections: [...(editedProduct.aboutSections || []), {
+                                                    id: `sec_${Date.now()}`,
+                                                    title: 'New Section',
+                                                    content: '',
+                                                    isHidden: false
+                                                }]
+                                            })}
+                                            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-bold hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Plus className="w-5 h-5" /> Add New Section
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">

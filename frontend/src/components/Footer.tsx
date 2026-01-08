@@ -5,12 +5,18 @@ export const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-white pt-10 pb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="flex flex-col md:flex-row justify-between gap-10">
           <div>
-            <h3 className="text-xl font-bold mb-4 text-accent">YATHES SIGN GALAXY</h3>
-            <p className="text-gray-400 text-sm">
-              Premium personalized gifts for every occasion.
-              Turn your memories into timeless art with our 3D crystals and engravings.
+            <div className="flex items-center gap-0 -mb-10 -ml-[2rem] -mt-7">
+              <img src="/logo-icon.jpg" alt="UC" className="h-48 w-auto object-contain mix-blend-screen brightness-110 -mr-12" />
+              <div className="flex flex-col">
+                <h3 className="text-2xl font-black tracking-tighter text-[#FFB300] leading-none">SIGN GALAXY</h3>
+                <span className="text-[10px] text-gray-400 tracking-widest uppercase">Personalized Gifts</span>
+              </div>
+            </div>
+            <p className="text-gray-400 text-sm ml-6 max-w-[17rem]">
+              Premium personalized gifts for every occasions.
+              Turning moments into memories !
             </p>
           </div>
           <div>
@@ -52,7 +58,7 @@ export const Footer: React.FC = () => {
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-500">
-          <p>© 2025 YATHES SIGN GALAXY a unit of uc groups. All rights reserved.</p>
+          <p>© 2025 SIGN GALAXY a unit of uc groups. All rights reserved.</p>
         </div>
       </div>
     </footer>

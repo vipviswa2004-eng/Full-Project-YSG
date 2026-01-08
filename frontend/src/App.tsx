@@ -13,6 +13,7 @@ import { Customize } from './pages/Customize';
 import { ProductDetails } from './pages/ProductDetails';
 import { Cart } from './pages/Cart';
 import { Admin } from './pages/Admin';
+import { Orders } from './pages/Orders';
 import { Wishlist } from './pages/Wishlist';
 import { CorporateGifting } from './pages/CorporateGifting';
 import { TermsConditions } from './pages/TermsConditions';
@@ -79,6 +80,7 @@ const AppContent: React.FC = () => {
           <Route path="/customize" element={<Customize />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/orders" element={<Orders />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/corporate" element={<CorporateGifting />} />
           <Route path="/terms" element={<TermsConditions />} />

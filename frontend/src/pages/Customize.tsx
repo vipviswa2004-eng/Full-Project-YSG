@@ -1,4 +1,5 @@
 import React from 'react';
+import { SEO } from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
@@ -7,6 +8,10 @@ export const Customize: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg py-8">
+            <SEO
+                title="Customize Your Neon Sign - Online Designer"
+                description="Design your custom neon sign with our easy-to-use online tool. Preview text, fonts, and colors instantly."
+            />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <button
                     onClick={() => navigate(-1)}

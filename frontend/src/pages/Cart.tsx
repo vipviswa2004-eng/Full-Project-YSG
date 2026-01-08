@@ -3,18 +3,19 @@ import React, { useEffect } from 'react';
 import { useCart } from '../context';
 import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus } from 'lucide-react';
 import { WHATSAPP_NUMBERS, VariationOption } from '../types';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export const Cart: React.FC = () => {
-  const { cart, removeFromCart, updateCartItemQuantity, currency } = useCart();
+  const { cart, removeFromCart, updateCartItemQuantity, currency, user, clearCart } = useCart();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [isPaymentConfirmed, setIsPaymentConfirmed] = React.useState(false);
 
   const total = cart.reduce((acc, item) => acc + (item.calculatedPrice * item.quantity), 0);
 
   // UPI Configuration
-  // UPI Configuration
   const UPI_ID = "Pos.11391465@indus";
-  const PAYEE_NAME = "YATHES SIGN GALAXY";
+  const PAYEE_NAME = "SIGN GALAXY";
 
   const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`;
   // Use static QR code image instead of dynamically generated one
@@ -35,44 +36,114 @@ export const Cart: React.FC = () => {
     }
   }, [searchParams]);
 
-  const handleCheckout = () => {
-    let message = "NEW ORDER REQUEST - YATHES SIGN GALAXY\n\n";
-    cart.forEach((item, idx) => {
-      message += `${idx + 1}. ${item.name} (Qty: ${item.quantity})\n`;
-      message += `   Custom Text: ${item.customName || 'None'}\n`;
-      if (item.symbolNumber) {
-        message += `   Symbol Number: ${item.symbolNumber}\n`;
+  const handleCheckout = async () => {
+    if (!window.confirm("Have you completed the payment? Click OK to confirm order and send details.")) {
+      return;
+    }
+
+    try {
+      // 1. Create Order in Database
+      const orderData = {
+        user: user ? {
+          email: user.email,
+          name: user.displayName || user.email.split('@')[0],
+          phone: user.phone || ''
+        } : {
+          email: 'guest@signgalaxy.com',
+          name: 'Guest User'
+        },
+        items: cart.map(item => ({
+          productId: item.id,
+          name: item.name,
+          price: item.calculatedPrice,
+          quantity: item.quantity,
+          image: item.image,
+          customImage: item.customImage,
+          customName: item.customName,
+          selectedVariations: item.selectedVariations
+        })),
+        total: total,
+        status: 'Design Pending',
+        paymentMethod: 'UPI',
+        orderId: `ORD-${Date.now()}`,
+        date: new Date()
+      };
+
+      const response = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        console.error("Failed to save order to database");
+        // Check if we should proceed anyway? 
+        // Yes, user priority is WhatsApp. But we should log it.
+      } else {
+        console.log("Order saved to database");
+        // Only clear cart if order saved successfully
+        clearCart();
       }
+
+    } catch (error) {
+      console.error("Error creating order:", error);
+    }
+
+    // 2. Send Details via WhatsApp (Original Logic)
+    let message = "Hello Sign Galaxy 👋\n";
+    message += "I’ve placed an order successfully.\n\n";
+    message += "*ORDER DETAILS*\n";
+    message += "--------------------------------\n";
+
+    cart.forEach((item, idx) => {
+      message += `*Item ${idx + 1}: ${item.name}*\n`;
+      message += `• Qty: ${item.quantity}\n`;
+      message += `• Price: ${formatPrice(item.calculatedPrice)}\n`;
+
+      if (item.customName) {
+        message += `• Custom Text: "${item.customName}"\n`;
+      }
+
+      if (item.symbolNumber) {
+        message += `• Symbol Number: ${item.symbolNumber}\n`;
+      }
+
       if (item.selectedVariations) {
-        Object.entries(item.selectedVariations).forEach(([_key, opt]) => {
-          const v = opt as VariationOption;
-          message += `   ${v.label} (${formatPrice(v.priceAdjustment)})\n`;
+        Object.entries(item.selectedVariations).forEach(([name, opt]) => {
+          message += `• ${name}: ${(opt as VariationOption).label}\n`;
         });
       }
-      if (item.extraHeads && item.extraHeads > 0) {
-        message += `   Extra Heads: ${item.extraHeads}\n`;
-      }
-      message += `   AI Swap Requested: Yes\n`;
 
-      // Include Product Image URL
+      if (item.extraHeads && item.extraHeads > 0) {
+        message += `• Extra Persons: ${item.extraHeads}\n`;
+      }
+
+      // Include Image URL
       const imgUrl = item.customImage || item.image;
       if (imgUrl && !imgUrl.startsWith('data:')) {
         const fullImgUrl = imgUrl.startsWith('http') ? imgUrl : `${window.location.origin}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
-        message += `   Product Image: ${fullImgUrl}\n`;
+        // Custom image logic: if customImage exists, it's an uploaded photo
+        const imageLabel = item.customImage ? "Uploaded Photo" : "Product Image";
+        message += `• ${imageLabel}: ${fullImgUrl}\n`;
       }
 
-      message += `   Price: ${formatPrice(item.calculatedPrice)}\n\n`;
+      message += "\n";
     });
-    message += `TOTAL: ${formatPrice(total)}\n\n`;
-    message += "Payment Status: PAID via UPI QR\n";
-    message += "Please confirm order processing.";
+
+    message += "--------------------------------\n";
+    message += `*💰 Grand Total: ${formatPrice(total)}*\n`;
+    message += "✅ *Payment Status:* Paid via UPI\n";
+    message += "--------------------------------\n\n";
+    message += "📍 *Delivery Details:*\n";
+    message += "[Please type your Name & Address here]\n\n";
+    message += "Please share the design preview for my approval.\n";
+    message += "Thank you 😊";
 
     const encodedMsg = encodeURIComponent(message);
     const waLink = `https://wa.me/${WHATSAPP_NUMBERS[0]}?text=${encodedMsg}`;
 
-    if (window.confirm("Have you completed the payment? Click OK to send order details via WhatsApp.")) {
-      window.open(waLink, '_blank');
-    }
+    window.open(waLink, '_blank');
+    navigate('/orders');
   };
 
   if (cart.length === 0) {
@@ -97,7 +168,7 @@ export const Cart: React.FC = () => {
               {cart.map((item) => (
                 <li key={item.cartId} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-                    <div className="h-24 w-24 sm:h-32 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
+                    <div className="h-24 w-24 sm:h-32 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)}>
                       <img
                         src={item.customDesign?.preview || item.customImage || item.image}
                         alt={item.name}
@@ -108,7 +179,12 @@ export const Cart: React.FC = () => {
                     <div className="flex-1 w-full relative">
                       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2 mb-2">
                         <div>
-                          <h3 className="text-lg font-bold text-gray-900 line-clamp-2">{item.name}</h3>
+                          <h3
+                            className="text-lg font-bold text-gray-900 line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => navigate(`/product/${item.id}`)}
+                          >
+                            {item.name}
+                          </h3>
                           <p className="text-sm text-gray-500 font-medium">{item.category}</p>
                         </div>
                         <p className="text-lg font-bold text-primary">{formatPrice(item.calculatedPrice * item.quantity)}</p>
@@ -133,7 +209,7 @@ export const Cart: React.FC = () => {
                             <p className="text-xs text-purple-800 font-medium">Symbol: #{item.symbolNumber}</p>
                           </div>
                         )}
-                        {item.extraHeads && item.extraHeads > 0 && <p className="text-xs text-blue-600 font-medium">+ {item.extraHeads} Extra Persons</p>}
+                        {(item.extraHeads || 0) > 0 && <p className="text-xs text-blue-600 font-medium">+ {item.extraHeads} Extra Persons</p>}
                       </div>
 
                       <div className="flex flex-row items-center justify-between mt-4">
@@ -284,15 +360,29 @@ export const Cart: React.FC = () => {
                   <span className="bg-green-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-green-600/20">2</span>
                   <h3 className="font-bold text-gray-900">Confirm Order</h3>
                 </div>
-                <p className="text-xs text-gray-500 mb-4 px-2">After successful payment, click below to share order details and delivery address on WhatsApp.</p>
+                <div className="flex items-center justify-center gap-2 mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                  <input
+                    type="checkbox"
+                    id="payment-confirmed"
+                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300"
+                    checked={isPaymentConfirmed}
+                    onChange={(e) => setIsPaymentConfirmed(e.target.checked)}
+                  />
+                  <label htmlFor="payment-confirmed" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                    I have completed the payment of <span className="font-bold text-gray-900">{formatPrice(total)}</span>
+                  </label>
+                </div>
 
                 <button
                   onClick={handleCheckout}
-                  className="w-full group relative flex justify-center items-center px-6 py-4 border border-transparent rounded-xl shadow-lg shadow-green-600/20 text-base font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-1 active:translate-y-0 overflow-hidden"
+                  disabled={!isPaymentConfirmed}
+                  className={`w-full group relative flex justify-center items-center px-6 py-4 border border-transparent rounded-xl shadow-lg text-base font-bold text-white transition-all transform overflow-hidden ${isPaymentConfirmed ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20 hover:-translate-y-1 active:translate-y-0' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
-                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
-                  <Phone className="w-5 h-5 mr-2 animate-bounce-subtle" />
-                  <span>Send Details via WhatsApp</span>
+                  {isPaymentConfirmed && (
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                  )}
+                  <Phone className={`w-5 h-5 mr-2 ${isPaymentConfirmed ? 'animate-bounce-subtle' : ''}`} />
+                  <span>Confirm Payment & Order</span>
                 </button>
                 <p className="mt-3 text-[10px] text-gray-400">Order Ref: #{Date.now().toString().slice(-6)} • Secure & Encrypted</p>
               </div>

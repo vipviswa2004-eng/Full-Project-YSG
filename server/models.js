@@ -28,6 +28,12 @@ const ProductSchema = new mongoose.Schema({
   isTrending: { type: Boolean, default: false },
   isBestseller: { type: Boolean, default: false },
   occasions: [String],
+  aboutSections: [{
+    id: String,
+    title: String,
+    content: String,
+    isHidden: Boolean
+  }],
   symbolNumberConfig: {
     enabled: { type: Boolean, default: false },
     title: { type: String, default: 'Symbol Number' },
@@ -60,7 +66,7 @@ const OrderSchema = new mongoose.Schema({
   user: Object,
   items: Array,
   total: Number,
-  status: { type: String, default: 'Pending' },
+  status: { type: String, default: 'Design Pending' },
   paymentMethod: String,
   shippingAddress: Object,
   date: { type: Date, default: Date.now },
@@ -149,6 +155,15 @@ const ShopOccasionSchema = new mongoose.Schema({
   color: { type: String, default: 'from-gray-500 to-gray-700' }
 });
 
+// Shop By Recipient
+const ShopRecipientSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  image: String,
+  link: String,
+  order: { type: Number, default: 0 }
+});
+
 // Seller Schema
 const SellerSchema = new mongoose.Schema({
   id: String,
@@ -211,6 +226,7 @@ const ShopCategory = mongoose.model('ShopCategory', ShopCategorySchema);
 const SubCategory = mongoose.model('SubCategory', SubCategorySchema);
 const SpecialOccasion = mongoose.model('SpecialOccasion', SpecialOccasionSchema);
 const ShopOccasion = mongoose.model('ShopOccasion', ShopOccasionSchema);
+const ShopRecipient = mongoose.model('ShopRecipient', ShopRecipientSchema);
 const Seller = mongoose.model('Seller', SellerSchema);
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 const ReturnRequest = mongoose.model('ReturnRequest', ReturnRequestSchema);
@@ -229,6 +245,7 @@ module.exports = {
   SubCategory,
   SpecialOccasion,
   ShopOccasion,
+  ShopRecipient,
   Seller,
   Transaction,
   ReturnRequest,

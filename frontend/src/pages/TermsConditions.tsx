@@ -8,7 +8,7 @@ export const TermsConditions: React.FC = () => {
             <div className="prose prose-purple max-w-none text-gray-700 space-y-6">
                 <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Introduction</h2>
-                    <p>Welcome to Yathes Sign Galaxy. By accessing our website and placing an order, you agree to be bound by these Terms and Conditions.</p>
+                    <p>Welcome to Sign Galaxy. By accessing our website and placing an order, you agree to be bound by these Terms and Conditions.</p>
                 </section>
 
                 <section>
@@ -23,12 +23,12 @@ export const TermsConditions: React.FC = () => {
 
                 <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">4. Intellectual Property</h2>
-                    <p>All content on this website, including images, designs, and text, is the property of Yathes Sign Galaxy and is protected by copyright laws.</p>
+                    <p>All content on this website, including images, designs, and text, is the property of Sign Galaxy and is protected by copyright laws.</p>
                 </section>
 
                 <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">5. Contact Us</h2>
-                    <p>If you have any questions about these Terms, please contact us at support@yathessigngalaxy.com.</p>
+                    <p>If you have any questions about these Terms, please contact us at support@signgalaxy.com.</p>
                 </section>
             </div>
         </div>

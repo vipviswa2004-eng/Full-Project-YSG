@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { SEO } from '../components/SEO';
 import { useParams, useNavigate } from 'react-router-dom';
 import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { VariationOption, Review } from '../types';
-import { Type, Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, ThumbsUp, ThumbsDown, X, Truck, RefreshCcw, Award, ArrowRight, Eye } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2 } from 'lucide-react';
 
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -12,9 +13,12 @@ export const ProductDetails: React.FC = () => {
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
+
     const scrollToReviews = () => {
         reviewsRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
+
+
 
     const initialProduct = products.find(p => p.id === id || (p as any)._id === id) || localProducts.find(p => p.id === id);
     const [product, setProduct] = useState(initialProduct);
@@ -27,7 +31,6 @@ export const ProductDetails: React.FC = () => {
         }
     }, [products, id]);
 
-    const [customName, setCustomName] = useState('');
     const [extraHeads, setExtraHeads] = useState(0);
     const [symbolNumber, setSymbolNumber] = useState('');
 
@@ -76,6 +79,79 @@ export const ProductDetails: React.FC = () => {
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+
+    // Customization Modal State
+    const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
+    const [customizeStep, setCustomizeStep] = useState(1);
+    const [customImage, setCustomImage] = useState<string | null>(null);
+    const [customImageFile, setCustomImageFile] = useState<File | null>(null);
+    const [customText, setCustomText] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Description Tab State
+    const [descriptionTab, setDescriptionTab] = useState<string | null>(null);
+
+    // Show All Reviews State
+    const [showAllReviews, setShowAllReviews] = useState(false);
+
+
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setCustomImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCustomImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setCustomImage(null);
+        setCustomImageFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleModalAddToCart = async () => {
+        let uploadedImageUrl = null;
+
+        // If a new file is selected, upload it
+        if (customImageFile) {
+            setIsUploading(true);
+            try {
+                const formData = new FormData();
+                formData.append('image', customImageFile);
+
+                const response = await fetch('http://localhost:5000/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const data = await response.json();
+                uploadedImageUrl = data.url;
+            } catch (error) {
+                console.error("Image upload failed", error);
+                showNotification("Failed to upload image. Please try again.", "error");
+                setIsUploading(false);
+                return;
+            }
+            setIsUploading(false);
+        } else if (customImage && !customImage.startsWith('data:')) {
+            // Already a URL (re-editing case potentially)
+            uploadedImageUrl = customImage;
+        }
+
+        executeAddToCart(false, uploadedImageUrl || customImage, customText); // Fallback to customImage (base64) if upload skipped or failed but we proceed? No, if upload fails we return. If no file, we pass null or existing.
+        setIsCustomizeModalOpen(false);
+    };
 
 
     useEffect(() => {
@@ -178,7 +254,7 @@ export const ProductDetails: React.FC = () => {
     const isInWishlist = wishlist.some(p => p.id === product.id);
     const formatPrice = (price: number) => { return currency === 'INR' ? `₹${price.toLocaleString('en-IN')}` : `$${(price * 0.012).toFixed(2)}`; };
     const shareUrl = window.location.href;
-    const shareText = `Check out ${product.name} on Yathes Sign Galaxy!`;
+    const shareText = `Check out ${product.name} on Sign Galaxy!`;
 
     const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
         setToastMessage(message);
@@ -219,13 +295,18 @@ export const ProductDetails: React.FC = () => {
         if (option.image) { setActiveImage(option.image); }
     };
 
-    const handleAddToCart = (redirect: boolean) => {
+    const executeAddToCart = (redirect: boolean, finalCustomImage: string | null, finalCustomText: string) => {
         try {
+            const finalCustomName = [
+                finalCustomText ? `"${finalCustomText}"` : '',
+                receiverLocation ? `[Location: ${receiverCountry} - ${receiverLocation}]` : ''
+            ].filter(Boolean).join(' ');
+
             addToCart({
                 ...product,
                 cartId: Date.now().toString(),
-                customName: receiverLocation ? `${customName} [Location: ${receiverCountry} - ${receiverLocation}]` : customName,
-                customImage: null,
+                customName: finalCustomName,
+                customImage: finalCustomImage,
                 calculatedPrice: prices.final,
                 originalPrice: prices.original,
                 quantity: 1,
@@ -243,6 +324,34 @@ export const ProductDetails: React.FC = () => {
             console.error("Add to cart failed", error);
             showNotification("Failed to add to cart. Please try again.", "error");
         }
+    };
+
+    const handleAddToCartClick = () => {
+        setIsCustomizeModalOpen(true);
+        setCustomizeStep(1);
+    };
+
+    const handleBuyNowClick = () => {
+        // For buy now, we can either skip customization or open it with a flag. 
+        // For now, let's open the customization modal too, but we need to know we are buying now.
+        // Or simpler, just let Buy Now act as "Skip & Buy" if the user wants quick checkout, 
+        // BUT for personalized gifts, customization is key.
+        // Let's open the modal for Buy Now as well to ensure data is captured.
+        // However, the user specifically asked to change "Add to Cart". 
+        // I will link Buy Now to the same flow but maybe with a different final action?
+        // Let's stick to the request for "Add to Cart". 
+        // Existing Buy Now behavior adds to cart and redirects.
+        // I'll keep Buy Now as is (direct add without customization) OR update it.
+        // Given it's a personalized site, Buy Now should probably also customize.
+        // But to avoid overstepping, I will invoke the modal for Add to Cart.
+        // And maybe for Buy Now I will just do the old behavior (add current state).
+        // Actually, let's make the "Add to Cart" inside the modal handle the final logic.
+
+        // If the user clicks "Buy Now", maybe they expect to skip? 
+        // I will keep Buy Now as 'Direct Add' for now, or maybe open modal?
+        // Let's just implement the new flow for "Add to Cart" button as requested.
+
+        executeAddToCart(true, null, ""); // Direct Buy Now (no custom image/text unless gathered elsewhere)
     };
 
     const handleWishlistToggle = () => {
@@ -330,45 +439,25 @@ export const ProductDetails: React.FC = () => {
         setIsZoomed(false);
     };
 
-    const handleReviewLike = (index: number) => {
-        const updated = [...productReviews];
-        const review = updated[index] as any;
 
-        if (review.userAction === 'like') {
-            review.likes = (review.likes || 0) - 1;
-            review.userAction = null;
-        } else {
-            if (review.userAction === 'dislike') {
-                review.dislikes = (review.dislikes || 0) - 1;
-            }
-            review.likes = (review.likes || 0) + 1;
-            review.userAction = 'like';
-        }
-        setProductReviews(updated);
-    };
-
-    const handleReviewDislike = (index: number) => {
-        const updated = [...productReviews];
-        const review = updated[index] as any;
-
-        if (review.userAction === 'dislike') {
-            review.dislikes = (review.dislikes || 0) - 1;
-            review.userAction = null;
-        } else {
-            if (review.userAction === 'like') {
-                review.likes = (review.likes || 0) - 1;
-            }
-            review.dislikes = (review.dislikes || 0) + 1;
-            review.userAction = 'dislike';
-        }
-        setProductReviews(updated);
-    };
 
     const variationImages = product.variations?.flatMap(v => v.options.map(o => o.image).filter(Boolean)) || [] as string[];
     const allImages = [product.image, ...variationImages, ...(product.gallery || [])].filter((img, idx, self) => img && self.indexOf(img) === idx) as string[];
 
     return (
         <div className="bg-app-bg min-h-screen pb-24 md:pb-12 overflow-x-hidden">
+            <SEO
+                title={product.name}
+                description={product.description || `Customize and buy ${product.name} at Sign Galaxy. Premium quality, best prices.`}
+                image={product.image}
+                type="product"
+                productData={{
+                    price: prices.final,
+                    currency: currency,
+                    availability: 'InStock',
+                    brand: 'Sign Galaxy'
+                }}
+            />
             {/* Mobile Header */}
             <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-40 px-4 h-14 flex items-center justify-between border-b shadow-sm">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600" title="Go Back"><ArrowLeft className="w-6 h-6" /></button>
@@ -490,7 +579,12 @@ export const ProductDetails: React.FC = () => {
                             {/* Customization Options */}
                             <div className="space-y-6">
                                 {/* Other Variations (excluding Size, Light Base, Shape, and Color) */}
-                                {product.variations?.filter(v => v.name !== 'Size' && !v.name.toLowerCase().includes('light base') && v.name !== 'Shape' && v.name !== 'Color').map((v) => (
+                                {product.variations?.filter(v =>
+                                    v.name.toLowerCase() !== 'size' &&
+                                    !v.name.toLowerCase().includes('light base') &&
+                                    v.name.toLowerCase() !== 'shape' &&
+                                    v.name.toLowerCase() !== 'color'
+                                ).map((v) => (
                                     <div key={v.id}>
                                         <h3 className="text-sm font-medium text-gray-900 mb-2">{v.name}</h3>
                                         <div className="flex flex-wrap gap-2">
@@ -505,11 +599,6 @@ export const ProductDetails: React.FC = () => {
                                                         <span className="font-medium">{opt.label}</span>
                                                         {opt.size && <span className="text-[10px] text-gray-500">{opt.size}</span>}
                                                         {opt.description && <span className="text-[10px] text-gray-400">{opt.description}</span>}
-                                                        {opt.priceAdjustment > 0 && (
-                                                            <span className="text-xs font-bold text-green-600">
-                                                                +₹{opt.priceAdjustment}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </button>
                                             ))}
@@ -574,7 +663,7 @@ export const ProductDetails: React.FC = () => {
 
                                 {/* Size Variation - Prominently displayed above Custom Text */}
                                 {(() => {
-                                    const sizeVariation = product.variations?.find(v => v.name === 'Size');
+                                    const sizeVariation = product.variations?.find(v => v.name.toLowerCase() === 'size');
                                     if (!sizeVariation) return null;
 
                                     return (
@@ -590,12 +679,8 @@ export const ProductDetails: React.FC = () => {
                                                         <div className="flex flex-col items-center gap-1">
                                                             {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover mb-1" alt="" />}
                                                             <span className="font-bold">{opt.label}</span>
+                                                            {opt.size && <span className="text-[10px] text-gray-500 font-medium">{opt.size}</span>}
                                                             {opt.description && <span className="text-[10px] text-gray-500">{opt.description}</span>}
-                                                            {opt.priceAdjustment > 0 && (
-                                                                <span className="text-xs font-bold text-green-600 mt-1">
-                                                                    +₹{opt.priceAdjustment}
-                                                                </span>
-                                                            )}
                                                         </div>
                                                     </button>
                                                 ))}
@@ -606,7 +691,7 @@ export const ProductDetails: React.FC = () => {
 
                                 {/* Shape Variation */}
                                 {(() => {
-                                    const shapeVariation = product.variations?.find(v => v.name === 'Shape');
+                                    const shapeVariation = product.variations?.find(v => v.name.toLowerCase() === 'shape');
                                     if (!shapeVariation) return null;
 
                                     return (
@@ -622,11 +707,8 @@ export const ProductDetails: React.FC = () => {
                                                         <div className="flex flex-col items-center gap-1">
                                                             {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover mb-1" alt="" />}
                                                             <span className="font-bold">{opt.label}</span>
-                                                            {opt.priceAdjustment > 0 && (
-                                                                <span className="text-xs font-bold text-green-600 mt-1">
-                                                                    +₹{opt.priceAdjustment}
-                                                                </span>
-                                                            )}
+                                                            {opt.size && <span className="text-[10px] text-gray-500 font-medium">{opt.size}</span>}
+                                                            {opt.description && <span className="text-[10px] text-gray-400 font-medium">{opt.description}</span>}
                                                         </div>
                                                     </button>
                                                 ))}
@@ -637,7 +719,7 @@ export const ProductDetails: React.FC = () => {
 
                                 {/* Color Variation */}
                                 {(() => {
-                                    const colorVariation = product.variations?.find(v => v.name === 'Color');
+                                    const colorVariation = product.variations?.find(v => v.name.toLowerCase() === 'color');
                                     if (!colorVariation) return null;
 
                                     return (
@@ -660,11 +742,8 @@ export const ProductDetails: React.FC = () => {
                                                             )}
                                                             <div className="text-center leading-tight">
                                                                 <span className="text-xs font-bold text-gray-800 block">{opt.label}</span>
-                                                                {opt.priceAdjustment > 0 && (
-                                                                    <span className="text-[10px] font-bold text-green-600">
-                                                                        +₹{opt.priceAdjustment}
-                                                                    </span>
-                                                                )}
+                                                                {opt.size && <span className="text-[8px] text-gray-500 font-medium block">{opt.size}</span>}
+                                                                {opt.description && <span className="text-[8px] text-gray-400 font-medium block">{opt.description}</span>}
                                                             </div>
                                                         </div>
                                                         {selectedVariations[colorVariation.id]?.id === opt.id && (
@@ -692,17 +771,13 @@ export const ProductDetails: React.FC = () => {
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(lightBaseVariation.id, opt, lightBaseVariation.name)}
-                                                        className={`px-3 py-2 text-sm rounded-md border transition-all flex items-center gap-2 ${selectedVariations[lightBaseVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-1 ring-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                                        className={`px-3 py-2 text-sm rounded-md border transition-all flex items-center gap-3 ${selectedVariations[lightBaseVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-1 ring-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
                                                     >
-                                                        {opt.image && <img src={opt.image} className="w-6 h-6 rounded object-cover" alt="" />}
-                                                        <div className="flex flex-col items-start leading-none gap-0.5">
+                                                        {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover" alt="" />}
+                                                        <div className="flex flex-col items-start leading-none gap-1">
                                                             <span className="font-medium">{opt.label}</span>
-                                                            {opt.description && <span className="text-[10px] text-gray-400">{opt.description}</span>}
-                                                            {opt.priceAdjustment > 0 && (
-                                                                <span className="text-xs font-bold text-green-600">
-                                                                    +₹{opt.priceAdjustment}
-                                                                </span>
-                                                            )}
+                                                            {opt.size && <span className="text-[10px] text-gray-500 font-medium">{opt.size}</span>}
+                                                            {opt.description && <span className="text-[10px] text-gray-400 font-medium">{opt.description}</span>}
                                                         </div>
                                                     </button>
                                                 ))}
@@ -740,13 +815,7 @@ export const ProductDetails: React.FC = () => {
                                     </div>
                                 )}
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Custom Text</label>
-                                    <div className="relative">
-                                        <Type className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                                        <input type="text" value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="Happy Birthday!" className="pl-10 w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary py-2.5 border" />
-                                    </div>
-                                </div>
+
 
 
 
@@ -799,127 +868,462 @@ export const ProductDetails: React.FC = () => {
                                     </button>
                                 </div>
 
-                                <div className="pt-6 border-t border-gray-100">
-                                    <h4 className="font-bold text-gray-900 mb-3 text-lg">Product Description</h4>
-                                    <div className="text-gray-600 leading-relaxed space-y-4 text-sm md:text-base">
-                                        {product.description.split('\n').map((paragraph, idx) => (
-                                            <p key={idx}>{paragraph}</p>
+                                {/* About the Product Tabs */}
+                                <div className="mt-8 border-t border-gray-100 pt-6">
+                                    <h4 className="font-bold text-gray-900 mb-4 text-lg">About the product</h4>
+
+                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                        {(product.aboutSections?.filter(s => !s.isHidden).length ? product.aboutSections.filter(s => !s.isHidden) : [
+                                            { id: 'description', title: 'Description' },
+                                            { id: 'instructions', title: 'Instructions' },
+                                            { id: 'delivery', title: 'Delivery Info' }
+                                        ]).map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setDescriptionTab(descriptionTab === tab.id ? null : tab.id)}
+                                                className={`
+                                                    px-3 py-1.5 md:px-6 md:py-2.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-all border-2
+                                                    ${descriptionTab === tab.id
+                                                        ? 'bg-[#E8F5E9] border-[#4CAF50] text-[#1B5E20]'
+                                                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}
+                                                `}
+                                            >
+                                                {tab.title}
+                                            </button>
                                         ))}
                                     </div>
+
+                                    {descriptionTab && (
+                                        <div className="text-gray-600 leading-relaxed space-y-4 text-sm md:text-base min-h-[100px] bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 animate-fade-in">
+                                            {(() => {
+                                                const sections = product.aboutSections?.filter(s => !s.isHidden);
+                                                if (sections && sections.length > 0) {
+                                                    const section = sections.find(s => s.id === descriptionTab);
+                                                    if (!section) return null;
+
+                                                    // Use special formatting for the "Description" section or first section
+                                                    if (section.title === 'Description' || section.id === 'desc') {
+                                                        return (
+                                                            <div className="animate-fade-in">
+                                                                <h5 className="font-bold text-gray-900 mb-2">{section.title}:</h5>
+                                                                <div className="space-y-2 mb-4">
+                                                                    {section.content.split('\n').map((paragraph, idx) => (
+                                                                        <p key={idx} className="flex gap-2">
+                                                                            <span className="text-gray-400 mt-1.5">•</span>
+                                                                            <span>{paragraph}</span>
+                                                                        </p>
+                                                                    ))}
+                                                                </div>
+                                                                <ul className="space-y-1 text-gray-500 text-sm mt-4 pt-4 border-t border-gray-100">
+                                                                    <li className="flex gap-2"><span className="text-gray-400">•</span> Net Quantity: 1 Unit</li>
+                                                                    <li className="flex gap-2"><span className="text-gray-400">•</span> Country of Origin: India</li>
+                                                                </ul>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    // Default renderer for other sections
+                                                    return (
+                                                        <div className="animate-fade-in whitespace-pre-wrap">
+                                                            {section.content}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // Fallback for legacy products
+                                                if (descriptionTab === 'description') {
+                                                    return (
+                                                        <div className="animate-fade-in">
+                                                            <h5 className="font-bold text-gray-900 mb-2">Product Details:</h5>
+                                                            <div className="space-y-2 mb-4">
+                                                                {product.description.split('\n').map((paragraph, idx) => (
+                                                                    <p key={idx} className="flex gap-2">
+                                                                        <span className="text-gray-400 mt-1.5">•</span>
+                                                                        <span>{paragraph}</span>
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                            <ul className="space-y-1 text-gray-500 text-sm mt-4 pt-4 border-t border-gray-100">
+                                                                <li className="flex gap-2"><span className="text-gray-400">•</span> Net Quantity: 1 Unit</li>
+                                                                <li className="flex gap-2"><span className="text-gray-400">•</span> Country of Origin: India</li>
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (descriptionTab === 'instructions') {
+                                                    return (
+                                                        <div className="animate-fade-in space-y-3">
+                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Handle with care to avoid scratches.</p>
+                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Clean with a soft, dry cloth only.</p>
+                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Keep away from direct sunlight for longevity.</p>
+                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Do not use abrasive chemicals for cleaning.</p>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (descriptionTab === 'delivery') {
+                                                    return (
+                                                        <div className="animate-fade-in space-y-4">
+                                                            <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100">
+                                                                <Truck className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                                                                <div>
+                                                                    <p className="font-bold text-gray-900">Shipping</p>
+                                                                    <p className="text-xs text-gray-500">Delivery in 5-7 business days across India.</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100">
+                                                                <Clock className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                                                                <div>
+                                                                    <p className="font-bold text-gray-900">Processing</p>
+                                                                    <p className="text-xs text-gray-500">Delivery time depends on location and courier partner.</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100">
+                                                                <RefreshCcw className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                                                                <div>
+                                                                    <p className="font-bold text-gray-900">Returns</p>
+                                                                    <p className="text-xs text-gray-500">7-day replacement policy for damaged items.</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                            })()}
+                                        </div>
+                                    )}
                                 </div>
 
 
 
-                                {/* Reviews Section (Scrollable) */}
-                                <div ref={reviewsRef} className="border-t border-gray-200 pt-6">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-6">Ratings & Reviews</h3>
 
-                                    {/* Overall Rating & Distribution */}
-                                    <div className="flex flex-col md:flex-row items-start gap-8 mb-8 bg-gray-50 p-6 rounded-xl">
-                                        <div className="text-center md:text-left">
-                                            <div className="flex items-baseline gap-2 justify-center md:justify-start">
-                                                <span className="text-5xl font-bold text-gray-900">{product.rating || 0}</span>
-                                                <div className="flex text-yellow-400">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star key={i} className={`w-5 h-5 ${i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'}`} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <p className="text-gray-500 text-sm mt-1">Total {productReviews.length} Ratings</p>
-                                        </div>
-
-                                        <div className="flex-1 w-full space-y-2">
-                                            {[5, 4, 3, 2, 1].map(star => {
-                                                const count = productReviews.filter(r => Math.round(r.rating) === star).length;
-                                                const percentage = productReviews.length > 0 ? (count / productReviews.length) * 100 : 0;
-                                                return (
-                                                    <div key={star} className="flex items-center gap-3 text-sm">
-                                                        <span className="w-3 font-medium">{star}</span>
-                                                        <Star className="w-3 h-3 text-gray-400 fill-current" />
-                                                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full rounded-full ${star === 5 ? 'bg-green-500' : star === 4 ? 'bg-lime-500' : star === 3 ? 'bg-yellow-400' : 'bg-red-500'}`}
-                                                                style={{ width: `${percentage}%` }}
-                                                            />
-                                                        </div>
-                                                        <span className="w-6 text-right text-gray-500">{count}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Reviews List Header */}
-                                    <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                        <h4 className="font-bold text-gray-900">Reviews ({productReviews.length})</h4>
-                                        <button onClick={() => setIsReviewModalOpen(true)} className="text-primary text-sm font-bold hover:underline">Rate and Write Review</button>
-                                    </div>
-
-                                    {/* Scrollable Reviews List */}
-                                    <div className="max-h-[400px] overflow-y-auto space-y-6 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-                                        {productReviews.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-500">
-                                                <p>No reviews yet. Be the first to review!</p>
-                                            </div>
-                                        ) : (
-                                            productReviews.map((review, idx) => (
-                                                <div key={idx} className="flex gap-4 border-b border-gray-100 pb-6 last:border-0">
-                                                    {/* Avatar */}
-                                                    <div className="flex-shrink-0">
-                                                        <div className="w-12 h-12 rounded-full border-2 border-purple-600 flex items-center justify-center text-purple-600 font-bold text-lg bg-white uppercase">
-                                                            {review.userName ? review.userName.substring(0, 2) : 'CU'}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Content */}
-                                                    <div className="flex-1">
-                                                        <div className="mb-1">
-                                                            <h4 className="font-bold text-gray-900 text-base">{review.userName || 'Customer'}</h4>
-                                                            <p className="text-xs text-gray-500">{review.location || 'Bangalore'} - {new Date(review.date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                                                        </div>
-
-                                                        <div className="flex text-yellow-400 mb-2">
-                                                            {[...Array(5)].map((_, i) => (
-                                                                <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-                                                            ))}
-                                                        </div>
-
-                                                        <p className="text-gray-800 text-sm mb-3 leading-relaxed">{review.comment}</p>
-
-                                                        <div className="flex gap-6 text-gray-400">
-                                                            <button
-                                                                onClick={() => handleReviewLike(idx)}
-                                                                className={`flex items-center gap-1.5 transition-colors ${(review as any).userAction === 'like' ? 'text-blue-600' : 'hover:text-gray-600'}`}
-                                                            >
-                                                                <ThumbsUp className={`w-4 h-4 ${(review as any).userAction === 'like' ? 'fill-current' : ''}`} />
-                                                                <span className="text-xs font-medium">{review.likes || 0}</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleReviewDislike(idx)}
-                                                                className={`flex items-center gap-1.5 transition-colors ${(review as any).userAction === 'dislike' ? 'text-red-600' : 'hover:text-gray-600'}`}
-                                                            >
-                                                                <ThumbsDown className={`w-4 h-4 ${(review as any).userAction === 'dislike' ? 'fill-current' : ''}`} />
-                                                                <span className="text-xs font-medium">{review.dislikes || 0}</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
                         {/* Action Buttons - Fixed at bottom for mobile, docked at bottom for desktop */}
                         <div className="fixed bottom-0 left-0 right-0 lg:relative lg:bottom-auto p-4 bg-white border-t border-gray-100 z-50 flex gap-4 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] lg:shadow-none lg:bg-transparent lg:border-none lg:pt-6">
-                            <button onClick={() => handleAddToCart(false)} className="flex-1 bg-white border-2 border-primary text-primary py-4 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 text-base shadow-sm">Add to Cart</button>
-                            <button onClick={() => handleAddToCart(true)} className="flex-1 bg-primary text-white py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all active:scale-95 text-base">Buy Now</button>
+                            <button onClick={handleAddToCartClick} className="flex-1 bg-white border-2 border-primary text-primary py-4 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 text-base shadow-sm">Customize & Add to Cart</button>
+                            <button onClick={handleBuyNowClick} className="flex-1 bg-primary text-white py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all active:scale-95 text-base">Buy Now</button>
                         </div>
                     </div>
                 </div>
 
+                {/* Customization Modal */}
+                {isCustomizeModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+                        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-up relative flex flex-col max-h-[90vh]">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-purple-50 to-white p-6 border-b border-gray-100 relative">
+                                <button
+                                    onClick={() => setIsCustomizeModalOpen(false)}
+                                    className="absolute top-4 right-4 p-2 bg-white rounded-full text-gray-400 hover:text-gray-600 shadow-sm transition-colors border border-gray-100"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                                <h2 className="text-xl font-bold text-gray-900 text-center">Personalize Your Gift</h2>
+
+                                {/* Steps Indicator */}
+                                <div className="flex items-center justify-center gap-4 mt-6">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${customizeStep === 1 ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-green-500 text-white'}`}>
+                                        {customizeStep > 1 ? <CheckCircle className="w-5 h-5" /> : '1'}
+                                    </div>
+                                    <div className={`w-12 h-1 rounded-full transition-colors ${customizeStep > 1 ? 'bg-green-500' : 'bg-gray-200'}`} />
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${customizeStep === 2 ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-gray-100 text-gray-400'}`}>
+                                        2
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 overflow-y-auto">
+                                {customizeStep === 1 ? (
+                                    <div className="space-y-6">
+                                        <div className="text-center space-y-2">
+                                            <h3 className="font-bold text-gray-900">Upload Photo <span className="text-gray-400 font-normal">(Required)</span></h3>
+                                            <p className="text-xs text-gray-500">Clear front-facing photo recommended</p>
+                                        </div>
+
+                                        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 transition-all hover:bg-gray-100 group">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                ref={fileInputRef}
+                                                onChange={handleImageUpload}
+                                                className="hidden"
+                                                id="photo-upload"
+                                            />
+
+                                            {customImage ? (
+                                                <div className="relative aspect-square w-full max-w-[200px] mx-auto rounded-lg overflow-hidden border border-gray-200 shadow-sm animate-fade-in">
+                                                    <img src={customImage} alt="Preview" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={handleRemoveImage}
+                                                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-md transition-transform hover:scale-110"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label htmlFor="photo-upload" className="flex flex-col items-center gap-3 cursor-pointer py-4">
+                                                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-200 group-hover:scale-110 transition-transform">
+                                                        <Sparkles className="w-8 h-8 text-primary" />
+                                                    </div>
+                                                    <button
+                                                        className="px-6 py-2.5 bg-primary/10 text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-colors pointer-events-none"
+                                                    >
+                                                        Upload Photo
+                                                    </button>
+                                                </label>
+                                            )}
+                                        </div>
+
+                                        <p className="text-xs text-center text-gray-500 -mt-2">
+                                            Our designers will adjust your image and share a preview before production.
+                                        </p>
+
+                                        {/* Notice Box */}
+                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 flex items-start gap-3">
+                                            <Award className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="font-bold text-amber-800 text-sm">No Approval, No Production</h4>
+                                                <p className="text-xs text-amber-700/80 mt-1 leading-relaxed">
+                                                    We will send a design preview for your approval on WhatsApp soon. Orders are only produced after you confirm your design!
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Buttons */}
+                                        <div className="flex gap-3 pt-2">
+                                            <button
+                                                onClick={() => {
+                                                    setIsCustomizeModalOpen(false);
+                                                    executeAddToCart(false, null, ""); // Skip entirely
+                                                }}
+                                                className="flex-1 py-3 px-4 border border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                            >
+                                                Skip & Personalize Later
+                                            </button>
+                                            <button
+                                                onClick={() => setCustomizeStep(2)}
+                                                className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold text-sm hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                            >
+                                                Next Step
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-6 flex flex-col gap-1 items-center text-center">
+                                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                                <span className="flex items-center gap-1" title="Frequent Reorders"><MessageCircle className="w-3.5 h-3.5" /> Frequent Reorders</span>
+                                                <span className="text-gray-300">•</span>
+                                                <span className="flex items-center gap-1" title="Fast Design Approval"><Clock className="w-3.5 h-3.5" /> Fast Design Approval</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+                                                <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                                                <span>Loved by 10,000+ Customers</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6 animate-slide-in-right">
+                                        <div className="text-center">
+                                            <h3 className="font-bold text-gray-900">Add Text <span className="text-gray-400 font-normal">(Optional)</span></h3>
+                                        </div>
+
+                                        <div>
+                                            <input
+                                                type="text"
+                                                value={customText}
+                                                onChange={(e) => setCustomText(e.target.value)}
+                                                placeholder="Enter your personalized message"
+                                                className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-base outline-none bg-gray-50 focus:bg-white"
+                                            />
+                                            <p className="text-center text-xs text-gray-400 mt-2">Example: "Happy Birthday Mom!", "Love You Forever"</p>
+                                        </div>
+
+                                        {/* Notice Box (Repeated) */}
+                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 flex items-start gap-3">
+                                            <Award className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="font-bold text-amber-800 text-sm">No Approval, No Production</h4>
+                                                <p className="text-xs text-amber-700/80 mt-1 leading-relaxed">
+                                                    We will send a design preview on WhatsApp soon. Orders are only produced after you confirm your design!
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Buttons */}
+                                        <div className="flex gap-3 pt-2">
+                                            <button
+                                                onClick={() => setCustomizeStep(1)}
+                                                className="flex-1 py-3 px-4 border border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                            >
+                                                Previous Step
+                                            </button>
+                                            <button
+                                                onClick={handleModalAddToCart}
+                                                disabled={isUploading}
+                                                className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold text-sm hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                                            >
+                                                {isUploading ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        Uploading...
+                                                    </>
+                                                ) : (
+                                                    'Add to Cart'
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-6 flex flex-col gap-1 items-center text-center">
+                                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                                <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> Frequent Reorders</span>
+                                                <span className="text-gray-300">•</span>
+                                                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Fast Design Approval</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+                                                <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                                                <span>Loved by 10,000+ Customers</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Related Products Section */}
+                {/* MOVED CUSTOMER REVIEWS SECTION */}
+                <div ref={reviewsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6">Ratings & Reviews</h3>
+
+                    {/* Overall Rating & Distribution */}
+                    {/* Overall Rating & Distribution - Compact & Enhanced */}
+                    <div className="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm mb-8 max-w-4xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-center">
+                            {/* Left: Score */}
+                            <div className="text-center md:text-left md:pr-8 md:border-r border-gray-100">
+                                <div className="text-5xl font-black text-gray-900 tracking-tight leading-none mb-1">
+                                    {product.rating || 0}
+                                    <span className="text-lg text-gray-400 font-medium ml-1">/5</span>
+                                </div>
+                                <div className="flex justify-center md:justify-start text-yellow-400 gap-1 my-2">
+                                    {[...Array(5)].map((_, i) => (
+                                        <Star
+                                            key={i}
+                                            className={`w-5 h-5 ${i < Math.round(product.rating || 0) ? 'fill-current text-yellow-400' : 'text-gray-200 fill-gray-100'}`}
+                                        />
+                                    ))}
+                                </div>
+                                <p className="text-gray-500 text-xs font-medium">
+                                    Based on {productReviews.length} Verified Reviews
+                                </p>
+                            </div>
+
+                            {/* Right: Bars */}
+                            <div className="space-y-2">
+                                {[5, 4, 3, 2, 1].map(star => {
+                                    const count = productReviews.filter(r => Math.round(r.rating) === star).length;
+                                    const percentage = productReviews.length > 0 ? (count / productReviews.length) * 100 : 0;
+                                    return (
+                                        <div key={star} className="flex items-center gap-3 group">
+                                            <div className="flex items-center gap-1 w-12 shrink-0">
+                                                <span className="text-sm font-bold text-gray-700">{star}</span>
+                                                <Star className="w-3 h-3 text-gray-300 fill-current" />
+                                            </div>
+                                            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${percentage > 0
+                                                        ? (star >= 4 ? 'bg-green-500' : star === 3 ? 'bg-yellow-400' : 'bg-red-500')
+                                                        : 'bg-transparent'
+                                                        }`}
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-xs font-medium text-gray-400 w-8 text-right tabular-nums group-hover:text-gray-600 transition-colors">
+                                                {count}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-end mb-8">
+                        <div>
+                            <h4 className="font-bold text-gray-900 text-lg">Customer Reviews</h4>
+                        </div>
+                    </div>
+
+                    {/* Reviews Grid (FNP Style) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {productReviews.length === 0 ? (
+                            <div className="col-span-full text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-gray-400">
+                                    <MessageCircle className="w-8 h-8" />
+                                </div>
+                                <h4 className="font-bold text-gray-900">No reviews yet</h4>
+                                <p className="text-gray-500 text-sm mt-1">Be the first to share your experience!</p>
+                            </div>
+                        ) : (
+                            productReviews.slice(0, showAllReviews ? productReviews.length : 4).map((review, idx) => (
+                                <div key={idx} className="bg-white border border-gray-100 rounded-xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md transition-all flex flex-col h-full">
+
+                                    {/* Card Header */}
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold uppercase tracking-wider">
+                                            {review.userName ? review.userName.substring(0, 2) : 'CU'}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 text-sm leading-tight">{review.userName || 'Customer'}</h4>
+                                            <span className="text-[11px] text-gray-400 font-medium">
+                                                {/* Mock "time ago" for demo, or real date */}
+                                                {new Date(review.date || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Stars */}
+                                    <div className="flex text-green-600 mb-3">
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : 'text-gray-200'}`} />
+                                        ))}
+                                    </div>
+
+                                    {/* Review Content */}
+                                    <div className="flex-1 mb-4">
+                                        <p className="text-gray-700 text-sm leading-relaxed line-clamp-4">
+                                            {review.comment}
+                                        </p>
+                                    </div>
+
+                                    {/* Card Footer tags */}
+                                    <div className="pt-3 border-t border-gray-50 flex flex-wrap gap-2 mt-auto">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px] font-medium text-gray-500">
+                                            Occasion: {product.category || 'Gift'}
+                                        </span>
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px] font-medium text-gray-500">
+                                            City: {review.location || 'India'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Show All Reviews Button */}
+                    {productReviews.length > 4 && !showAllReviews && (
+                        <div className="mt-8 text-center">
+                            <button
+                                onClick={() => setShowAllReviews(true)}
+                                className="px-6 py-2 border border-gray-300 rounded-full text-sm font-bold text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                            >
+                                Show All Reviews ({productReviews.length})
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <div className="bg-white py-12 border-t border-gray-100 mt-8">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between items-end mb-6">
@@ -1031,6 +1435,6 @@ export const ProductDetails: React.FC = () => {
                     )
                 }
             </div>
-        </div>
+        </div >
     );
 };

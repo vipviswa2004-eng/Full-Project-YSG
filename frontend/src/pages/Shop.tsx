@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { SEO } from '../components/SEO';
 import { Link, useSearchParams, useNavigate, useNavigationType } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
 import { useCart } from '../context';
@@ -16,6 +17,8 @@ export const Shop: React.FC = () => {
     const searchQuery = searchParams.get('q');
     const filterType = searchParams.get('filter');
     const occasionFilter = searchParams.get('occasion');
+    const budgetParam = searchParams.get('budget');
+    const recipientFilter = searchParams.get('recipient');
 
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -29,8 +32,17 @@ export const Shop: React.FC = () => {
     const [maxPrice, setMaxPrice] = useState('');
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-    // Handle legacy category links that are now sub-categories
+    // Handle legacy category links and Budget parameter parsing
     useEffect(() => {
+        // Budget parsing
+        if (budgetParam) {
+            const [min, max] = budgetParam.split('-');
+            if (min !== undefined) setMinPrice(min);
+            if (max !== undefined) setMaxPrice(max === 'max' ? '' : max);
+            setIsFilterExpanded(false); // Close mobile filters if applying from URL
+        }
+
+        // Category handling
         if (categoryFilter && !subCategoryFilter && shopCategories.length > 0 && subCategories.length > 0) {
             const isCategory = shopCategories.find(c => c.name.toLowerCase() === categoryFilter.toLowerCase());
             if (!isCategory) {
@@ -43,7 +55,7 @@ export const Shop: React.FC = () => {
                 }
             }
         }
-    }, [categoryFilter, subCategoryFilter, shopCategories, subCategories, navigate]);
+    }, [categoryFilter, subCategoryFilter, budgetParam, shopCategories, subCategories, navigate]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -144,6 +156,10 @@ export const Shop: React.FC = () => {
                 console.error(e);
                 result = [];
             }
+        } else if (filterType === 'trending') {
+            result = result.filter(p => p.isTrending);
+        } else if (filterType === 'bestsellers') {
+            result = result.filter(p => p.isBestseller);
         }
 
         if (searchQuery) {
@@ -168,6 +184,30 @@ export const Shop: React.FC = () => {
             const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
             const target = normalize(occasionFilter);
             result = result.filter(p => p.occasions && p.occasions.some(occ => normalize(occ) === target));
+        }
+
+        if (recipientFilter) {
+            const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const target = normalize(recipientFilter);
+            result = result.filter(p => {
+                const searchStr = `${p.name} ${p.description} ${p.category} ${p.pdfPrice}`.toLowerCase();
+                const inOccasions = p.occasions && p.occasions.some(occ => normalize(occ).includes(target));
+                const inDescription = searchStr.includes(target);
+                // Also handle "For Him" specifically if target is "him"
+                const specificMatch = (target === 'him' && (
+                    (searchStr.includes('for him') || searchStr.includes('men')) &&
+                    !searchStr.includes('women') && !searchStr.includes('for her')
+                )) ||
+                    (target === 'her' && (
+                        (searchStr.includes('for her') || searchStr.includes('women')) &&
+                        !searchStr.includes('brother') && !searchStr.includes('for him')
+                    )) ||
+                    (target === 'kids' && (searchStr.includes('kids') || searchStr.includes('children'))) ||
+                    (target === 'couples' && (searchStr.includes('couple') || searchStr.includes('wedding'))) ||
+                    (target === 'parents' && (searchStr.includes('parents') || searchStr.includes('mom') || searchStr.includes('dad')));
+
+                return inOccasions || inDescription || specificMatch;
+            });
         }
 
         if (subCategoryFilter && currentSubCategory) {
@@ -201,7 +241,7 @@ export const Shop: React.FC = () => {
             });
         }
         return result;
-    }, [products, categoryFilter, subCategoryFilter, occasionFilter, currentSubCategory, minPrice, maxPrice, sortBy, filterType, searchQuery]);
+    }, [products, categoryFilter, subCategoryFilter, occasionFilter, recipientFilter, currentSubCategory, minPrice, maxPrice, sortBy, filterType, searchQuery]);
 
     const SkeletonCard = () => (
         <div className="bg-white rounded overflow-hidden border border-gray-100 animate-pulse">
@@ -235,6 +275,17 @@ export const Shop: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg py-8">
+            <SEO
+                title={
+                    searchQuery ? `Search Results for "${searchQuery}"` :
+                        recipientFilter ? `Gifts For ${recipientFilter}` :
+                            subCategoryFilter ? `${subCategoryFilter} - ${categoryFilter}` :
+                                categoryFilter ? categoryFilter :
+                                    occasionFilter ? `${occasionFilter} Gifts` :
+                                        "Shop Personalized Gifts"
+                }
+                description={`Browse our collection of ${categoryFilter || 'personalized gifts'}. Top quality, best prices.`}
+            />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Breadcrumbs */}
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-4 px-2 sm:px-0">
@@ -406,10 +457,11 @@ export const Shop: React.FC = () => {
                                 <div>
                                     <h1 className="text-xl lg:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                                         {searchQuery ? `Results for "${searchQuery}"` :
-                                            (subCategoryFilter ? subCategoryFilter :
-                                                (categoryFilter ? categoryFilter :
-                                                    (occasionFilter ? occasionFilter :
-                                                        (filterType === 'recent' ? 'Recently Viewed' : 'Shop All Gifts'))))}
+                                            recipientFilter ? `Gifts For ${recipientFilter}` :
+                                                (subCategoryFilter ? subCategoryFilter :
+                                                    (categoryFilter ? categoryFilter :
+                                                        (occasionFilter ? occasionFilter :
+                                                            (filterType === 'recent' ? 'Recently Viewed' : 'Shop All Gifts'))))}
                                         {processedProducts.length > 0 && (
                                             <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-widest border border-primary/10">
                                                 {processedProducts.length} items

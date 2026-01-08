@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Sparkles, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart, ArrowLeft, ClipboardCheck } from 'lucide-react';
 import { useCart } from '../context';
 // import { products } from '../data/products';
 import { Product } from '../types';
@@ -232,11 +232,11 @@ export const Navbar: React.FC = () => {
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white hover:text-[#f5ebd0] md:hidden p-1" title="Open menu">
                 <Menu className="h-6 w-6" />
               </button>
-              <Link to="/" className="flex-shrink-0 flex items-center gap-1.5 focus:outline-none">
-                <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-accent shrink-0" />
+              <Link to="/" className="flex-shrink-0 flex items-center gap-0 focus:outline-none -ml-4">
+                <img src="/logo-icon.jpg" alt="UC" className="h-16 w-auto object-contain mix-blend-screen brightness-110 -mr-4" />
                 <div className="flex flex-col">
-                  <span className="font-black text-base md:text-xl tracking-tighter text-accent leading-none block">SIGN GALAXY</span>
-                  <span className="text-[8px] md:text-[10px] text-gray-400 tracking-widest uppercase hidden sm:block">Yathes Personalized Gifts</span>
+                  <span className="font-black text-xl tracking-tighter text-[#FFB300] leading-none block">SIGN GALAXY</span>
+                  <span className="text-[10px] text-gray-400 tracking-widest uppercase block">Personalized Gifts</span>
                 </div>
               </Link>
             </div>
@@ -333,12 +333,23 @@ export const Navbar: React.FC = () => {
                   <Heart className="h-6 w-6" />
                   {wishlist.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">{wishlist.length}</span>}
                 </Link>
+                <Link to="/cart" className="relative text-white hover:text-[#f5ebd0] p-1">
+                  <ShoppingCart className="h-6 w-6" />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">
+                      {cart.reduce((acc, item) => acc + item.quantity, 0)}
+                    </span>
+                  )}
+                </Link>
+                <Link to="/orders" className="text-white hover:text-[#f5ebd0] p-1 hidden md:block" title="Orders">
+                  <ClipboardCheck className="h-6 w-6" />
+                </Link>
                 <button type="button" onClick={openLoginModal} className="text-white hover:text-[#f5ebd0] flex items-center gap-2 transition-colors">
                   {user ? (
                     <div className="flex items-center gap-1">
-                      <span className="text-xs md:text-sm font-bold text-[#f5ebd0] max-w-[80px] truncate hidden md:block">
+                      {/* <span className="text-xs md:text-sm font-bold text-[#f5ebd0] max-w-[80px] truncate hidden md:block">
                         {user.email.split('@')[0]}
-                      </span>
+                      </span> */}
                       <div className="w-8 h-8 bg-purple-900 rounded-full flex items-center justify-center text-white font-bold border border-purple-700">
                         {user.email.charAt(0).toUpperCase()}
                       </div>
@@ -350,14 +361,6 @@ export const Navbar: React.FC = () => {
                     </div>
                   )}
                 </button>
-                <Link to="/cart" className="relative text-white hover:text-[#f5ebd0] p-1">
-                  <ShoppingCart className="h-6 w-6" />
-                  {cart.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">
-                      {cart.reduce((acc, item) => acc + item.quantity, 0)}
-                    </span>
-                  )}
-                </Link>
               </div>
             </div>
           </div>
@@ -493,6 +496,7 @@ export const Navbar: React.FC = () => {
               <div className="flex-1 overflow-y-auto py-4 space-y-2">
                 <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">Home</Link>
                 <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">Shop All</Link>
+                <Link to="/orders" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">My Orders</Link>
                 <Link to="/corporate" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">Corporate Orders</Link>
                 <Link to="/cart" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-white hover:bg-gray-800 font-medium">My Cart ({cart.length})</Link>
                 <Link

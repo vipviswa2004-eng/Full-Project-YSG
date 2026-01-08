@@ -64,6 +64,12 @@ export interface Product {
     title: string;
     image?: string;
   };
+  aboutSections?: {
+    id: string;
+    title: string;
+    content: string;
+    isHidden: boolean;
+  }[];
 }
 
 export interface CartItem extends Product {
@@ -79,7 +85,7 @@ export interface CartItem extends Product {
   selectedVariations?: Record<string, VariationOption>; // variationId -> selectedOption
 }
 
-export type OrderStatus = 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Refunded';
+export type OrderStatus = 'Payment Confirmed' | 'Design Pending' | 'Design Sent' | 'Design Approved' | 'Design Changes Requested' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Refunded';
 
 export interface Order {
   id: string;
@@ -107,6 +113,7 @@ export interface User {
   googleId?: string;
   displayName?: string;
   image?: string;
+  phone?: string;
 }
 
 export interface Customer {
@@ -257,4 +264,13 @@ export interface ShopOccasion {
   link: string;
   order: number;
   color?: string;
+}
+
+export interface ShopRecipient {
+  _id?: string;
+  id: string;
+  name: string;
+  image: string;
+  link: string;
+  order: number;
 }

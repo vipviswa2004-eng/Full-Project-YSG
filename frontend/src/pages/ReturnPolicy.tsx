@@ -28,7 +28,7 @@ export const ReturnPolicy: React.FC = () => {
 
                 <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">2. How to Request a Return</h2>
-                    <p>Please email us at support@yathessigngalaxy.com within 48 hours of delivery. Include your order number, clear photos of the issue, and the <strong>mandatory unboxing video</strong>.</p>
+                    <p>Please email us at support@signgalaxy.com within 48 hours of delivery. Include your order number, clear photos of the issue, and the <strong>mandatory unboxing video</strong>.</p>
                 </section>
 
                 <section>
