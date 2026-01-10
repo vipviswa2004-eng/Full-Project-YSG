@@ -10,16 +10,20 @@ interface OrderItem {
     quantity: number;
     image: string;
     customization?: any;
+    customName?: string;
+    customImage?: string;
+    selectedVariations?: Record<string, any>;
 }
 
 interface Order {
     id: string;
     _id: string;
     date: string;
-    status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+    status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Design Pending' | 'Design Sent';
     total: number;
     items: OrderItem[];
     orderId: string;
+    paymentStatus?: 'Paid' | 'Unpaid' | 'Refunded';
 }
 
 export const Orders: React.FC = () => {
@@ -47,7 +51,7 @@ export const Orders: React.FC = () => {
 
         const fetchOrders = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/my-orders', {
+                const response = await fetch(`http://localhost:5000/api/my-orders?email=${encodeURIComponent(user.email)}`, {
                     credentials: 'include'
                 });
                 if (response.ok) {
@@ -173,80 +177,212 @@ export const Orders: React.FC = () => {
                 ) : (
                     <div className="space-y-6">
                         {orders.map((order) => (
-                            <div key={order._id || order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md">
+                            <div key={order._id || order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md group">
                                 {/* Order Header */}
                                 <div
                                     className="p-6 cursor-pointer bg-white hover:bg-gray-50/50 transition-colors"
                                     onClick={() => toggleOrder(order._id || order.id)}
                                 >
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <div className="flex items-start gap-4">
-                                            <div className="bg-gray-100 p-3 rounded-lg">
-                                                <Package className="w-6 h-6 text-gray-600" />
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                        <div className="flex items-start gap-5">
+                                            <div className="bg-primary/5 p-4 rounded-xl shrink-0 group-hover:scale-105 transition-transform">
+                                                <Package className="w-8 h-8 text-primary" />
                                             </div>
-                                            <div>
-                                                <div className="flex items-baseline gap-3 mb-1">
-                                                    <span className="font-bold text-lg text-gray-900">#{order.orderId || (order._id ? order._id.slice(-6).toUpperCase() : 'UNKNOWN')}</span>
-                                                    <span className="text-sm text-gray-500">
-                                                        Placed on {new Date(order.date).toLocaleDateString()}
+                                            <div className="space-y-1">
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <h3 className="font-bold text-xl text-gray-900">
+                                                        #{order.orderId || (order._id ? order._id.slice(-6).toUpperCase() : 'UNKNOWN')}
+                                                    </h3>
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusColor(order.status)}`}>
+                                                        {order.status === 'Delivered' && <CheckCircle className="w-3.5 h-3.5" />}
+                                                        {order.status === 'Shipped' && <Truck className="w-3.5 h-3.5" />}
+                                                        {order.status === 'Processing' && <Clock className="w-3.5 h-3.5" />}
+                                                        {(order.status === 'Design Pending' ? 'Design in Progress' : order.status === 'Design Sent' ? 'Design Shared' : order.status)}
                                                     </span>
                                                 </div>
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
-                                                    {order.status === 'Delivered' && <CheckCircle className="w-3.5 h-3.5" />}
-                                                    {order.status === 'Shipped' && <Truck className="w-3.5 h-3.5" />}
-                                                    {order.status === 'Processing' && <Clock className="w-3.5 h-3.5" />}
-                                                    {order.status}
-                                                </div>
+                                                <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                                                    Placed on {new Date(order.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                </p>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
+                                        <div className="flex items-center justify-between md:justify-end gap-8 w-full md:w-auto">
                                             <div className="text-right">
-                                                {/* <p className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">Total</p> */}
-                                                <p className="font-bold text-gray-900 text-lg">₹{order.total?.toLocaleString()}</p>
+                                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Total Amount</p>
+                                                <p className="font-extrabold text-gray-900 text-2xl">₹{order.total?.toLocaleString()}</p>
+                                                <div className="flex justify-end mt-1">
+                                                    {(order.paymentStatus === 'Unpaid') ? (
+                                                        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 uppercase tracking-wide">Payment: Unpaid</span>
+                                                    ) : (
+                                                        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100 uppercase tracking-wide">Payment: Paid</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            {expandedOrders.includes(order._id || order.id) ? (
-                                                <ChevronUp className="w-5 h-5 text-gray-400" />
-                                            ) : (
-                                                <ChevronDown className="w-5 h-5 text-gray-400" />
-                                            )}
+                                            <div className={`p-2 rounded-full transition-colors ${expandedOrders.includes(order._id || order.id) ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary'}`}>
+                                                {expandedOrders.includes(order._id || order.id) ? (
+                                                    <ChevronUp className="w-6 h-6" />
+                                                ) : (
+                                                    <ChevronDown className="w-6 h-6" />
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Order Details (Expanded) */}
                                 {(expandedOrders.includes(order._id || order.id)) && (
-                                    <div className="border-t border-gray-100 bg-gray-50/30 p-6">
-                                        <div className="space-y-6">
+                                    <div className="border-t border-gray-100 bg-gray-50/50 p-6 animate-slide-down">
+                                        <div className="space-y-4">
                                             {order.items.map((item, idx) => (
-                                                <div key={idx} className="flex flex-col sm:flex-row gap-6 items-start sm:items-center bg-white p-4 rounded-xl border border-gray-100">
-                                                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-lg overflow-hidden border border-gray-200">
-                                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                                <div key={idx} className="flex flex-col sm:flex-row gap-6 items-start bg-white p-5 rounded-xl border border-gray-100 shadow-sm transition-shadow hover:shadow-md">
+                                                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                                                        <img
+                                                            src={item.customImage || item.image}
+                                                            alt={item.name}
+                                                            className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
+                                                        />
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-bold text-gray-900 mb-1">{item.name}</h4>
-                                                        <p className="text-sm text-gray-500 mb-2">Variant: {item.customization ? 'Customized' : 'Standard'}</p>
-                                                        {item.customization?.text && (
-                                                            <p className="text-xs text-gray-500 italic mb-2">"{item.customization.text}"</p>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
-                                                        {/* Actions */}
-                                                        <div className="flex gap-4 text-sm font-medium text-blue-600">
-                                                            <button className="hover:underline">Track Order</button>
-                                                            <button className="hover:underline">Invoice</button>
+
+                                                    <div className="flex-1 min-w-0 space-y-3">
+                                                        <div>
+                                                            <h4 className="font-bold text-gray-900 text-lg mb-1">{item.name}</h4>
+                                                            <p className="text-sm text-primary font-bold">Qty: {item.quantity}</p>
                                                         </div>
 
-                                                        {/* Write Review Button - ONLY if Delivered */}
+                                                        {/* Specs Grid */}
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            {item.selectedVariations && Object.entries(item.selectedVariations).length > 0 && (
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {Object.entries(item.selectedVariations).map(([key, value]: [string, any]) => {
+                                                                        // Clean up key name: size_variation -> Size
+                                                                        const label = key.replace(/_variation$/i, '').replace(/_/g, ' ');
+                                                                        const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+
+                                                                        return (
+                                                                            <span key={key} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                                                                <span className="opacity-60 mr-1">{formattedLabel}:</span> {value.label}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+
+                                                            {/* If no variations and no custom name, show standard badge */}
+                                                            {(!item.selectedVariations || Object.keys(item.selectedVariations).length === 0) && !item.customName && (
+                                                                <span className="inline-flex max-w-max px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Standard Variant</span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Customization Section */}
+                                                        {(item.customName || item.customImage) && (
+                                                            <div className="flex flex-wrap gap-3 mt-2">
+                                                                {item.customName && (
+                                                                    <div className="flex items-start gap-2 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 max-w-full">
+                                                                        <div className="shrink-0 mt-0.5">
+                                                                            <span className="block w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-0.5">Custom Text</p>
+                                                                            <p className="text-sm text-gray-700 italic font-medium">"{item.customName}"</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {item.customImage && (
+                                                                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                                                                        <div className="shrink-0 w-8 h-8 rounded-md overflow-hidden bg-gray-200">
+                                                                            <img src={item.customImage} className="w-full h-full object-cover" alt="Custom upload" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-blue-800 uppercase tracking-wide">Photo Uploaded</p>
+                                                                            <p className="text-xs text-blue-600">Personalized image used</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex flex-row sm:flex-col items-center sm:items-end w-full sm:w-auto gap-3 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-100 sm:pl-6 sm:border-l sm:border-gray-100">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const message = `Hi, I would like to track my order #${order.orderId || order._id}.`;
+                                                                window.open(`https://wa.me/916380016798?text=${encodeURIComponent(message)}`, '_blank');
+                                                            }}
+                                                            className="flex-1 sm:flex-none w-full sm:w-32 py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <Truck className="w-4 h-4" /> Track
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Simple invoice print view
+                                                                const invoiceContent = `
+                                                                    <html>
+                                                                    <head>
+                                                                        <title>Invoice #${order.orderId}</title>
+                                                                        <style>
+                                                                            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
+                                                                            .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+                                                                            .logo { font-size: 24px; font-weight: bold; color: #5f259f; }
+                                                                            .invoice-details { text-align: right; }
+                                                                            .item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 15px 0; }
+                                                                            .total { text-align: right; margin-top: 30px; font-size: 20px; font-weight: bold; }
+                                                                            .footer { margin-top: 50px; text-align: center; color: #888; font-size: 12px; }
+                                                                        </style>
+                                                                    </head>
+                                                                    <body>
+                                                                        <div class="header">
+                                                                            <div class="logo">SIGN GALAXY</div>
+                                                                            <div class="invoice-details">
+                                                                                <p><strong>Order ID:</strong> ${order.orderId || order._id}</p>
+                                                                                <p><strong>Date:</strong> ${new Date(order.date).toLocaleDateString()}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        <h3>Order Summary</h3>
+                                                                        
+                                                                        ${order.items.map(i => `
+                                                                            <div class="item">
+                                                                                <div>
+                                                                                    <strong>${i.name}</strong><br/>
+                                                                                    <small>Qty: ${i.quantity}</small>
+                                                                                </div>
+                                                                                <div>₹${i.price}</div>
+                                                                            </div>
+                                                                        `).join('')}
+                                                                        
+                                                                        <div class="total">
+                                                                            Total: ₹${order.total?.toLocaleString()}
+                                                                        </div>
+
+                                                                        <div class="footer">
+                                                                            Thank you for shopping with Sign Galaxy!<br/>
+                                                                            For support contact: 6380016798
+                                                                        </div>
+                                                                        <script>window.print();</script>
+                                                                    </body>
+                                                                    </html>
+                                                                `;
+                                                                const win = window.open('', '_blank');
+                                                                win?.document.write(invoiceContent);
+                                                                win?.document.close();
+                                                            }}
+                                                            className="flex-1 sm:flex-none w-full sm:w-32 py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <Package className="w-4 h-4" /> Invoice
+                                                        </button>
+
                                                         {order.status === 'Delivered' && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openReviewModal({ id: item.productId, name: item.name, image: item.image });
                                                                 }}
-                                                                className="px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors w-full sm:w-auto"
+                                                                className="flex-1 sm:flex-none w-full sm:w-32 py-2 px-4 bg-primary text-white border border-transparent rounded-lg font-bold text-sm hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 shadow-sm shadow-primary/20"
                                                             >
-                                                                Write a Review
+                                                                <Star className="w-4 h-4" /> Review
                                                             </button>
                                                         )}
                                                     </div>

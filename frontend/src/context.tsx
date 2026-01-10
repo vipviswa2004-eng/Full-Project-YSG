@@ -17,6 +17,8 @@ interface AppContextType {
   setCurrency: (currency: 'INR' | 'USD') => void;
   isGiftAdvisorOpen: boolean;
   setIsGiftAdvisorOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isLoginModalOpen: boolean;
+  setIsLoginModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   products: Product[]; // Exposed products from DB
 }
 
@@ -66,6 +68,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [isGiftAdvisorOpen, setIsGiftAdvisorOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // API Base URL
   const API_URL = 'http://localhost:5000/api';
@@ -298,7 +301,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, products: dbProducts }}>
+    <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, isLoginModalOpen, setIsLoginModalOpen, products: dbProducts }}>
       {children}
     </AppContext.Provider>
   );

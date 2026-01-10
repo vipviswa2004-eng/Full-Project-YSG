@@ -5,7 +5,7 @@ import { useCart } from '../context';
 
 export const MobileBottomNav: React.FC = () => {
     const location = useLocation();
-    const { cart, wishlist, user } = useCart();
+    const { cart, wishlist, setIsLoginModalOpen } = useCart();
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -50,12 +50,12 @@ export const MobileBottomNav: React.FC = () => {
                     <span className="text-[10px] font-bold">Cart</span>
                 </Link>
 
-                <Link to={user?.isAdmin ? "/admin" : "/"} className={`flex flex-col items-center justify-center w-1/5 gap-1 transition-all ${isActive('/admin') ? 'text-accent' : 'text-gray-500'}`}>
-                    <div className={`p-1 rounded-xl ${isActive('/admin') ? 'bg-accent/10' : ''}`}>
+                <button onClick={() => setIsLoginModalOpen(true)} className={`flex flex-col items-center justify-center w-1/5 gap-1 transition-all ${isActive('/profile') ? 'text-accent' : 'text-gray-500'}`}>
+                    <div className={`p-1 rounded-xl ${isActive('/profile') ? 'bg-accent/10' : ''}`}>
                         <User className="w-6 h-6" />
                     </div>
-                    <span className="text-[10px] font-bold">{user ? (user.isAdmin ? 'Admin' : 'Profile') : 'Login'}</span>
-                </Link>
+                    <span className="text-[10px] font-bold">Account</span>
+                </button>
             </div>
         </div>
     );

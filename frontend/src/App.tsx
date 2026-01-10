@@ -20,6 +20,7 @@ import { TermsConditions } from './pages/TermsConditions';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { ShippingInfo } from './pages/ShippingInfo';
 import { ReturnPolicy } from './pages/ReturnPolicy';
+import { Profile } from './pages/Profile';
 import { CartProvider, useCart } from './context';
 
 const AppContent: React.FC = () => {
@@ -72,7 +73,7 @@ const AppContent: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-app-bg">
       <Navbar />
       {!isAdminRoute && <CategoryNav />}
-      <main className="flex-grow pb-20 md:pb-0">
+      <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Shop />} />
@@ -82,6 +83,7 @@ const AppContent: React.FC = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/corporate" element={<CorporateGifting />} />
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />

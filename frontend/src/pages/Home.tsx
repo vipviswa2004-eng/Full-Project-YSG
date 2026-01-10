@@ -3,7 +3,7 @@ import { SEO } from '../components/SEO';
 import { calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context';
-import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Briefcase, Sparkles, History, ArrowRight, Wallet } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Sparkles, History, ArrowRight, Wallet } from 'lucide-react';
 import birthdayImg from '../assets/birthday.png';
 import corporateBg from '../assets/corporate_bg.png';
 import corporateProduct from '../assets/corporate_gift_product.png';
@@ -239,24 +239,27 @@ export const Home: React.FC = () => {
   // Use context products (from DB)
   const displayProducts = contextProducts;
   const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasion[]>([]);
-  const [shopOccasions, setShopOccasions] = useState<any[]>([]);
+  const [shopOccasions, setShopOccasions] = useState<ShopOccasion[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [activeHeroView, setActiveHeroView] = useState<string | null>(null);
 
   useEffect(() => {
     // 1. Try to load from cache first for instant display
-    const cachedSections = localStorage.getItem('cache_sections');
-    const cachedCategories = localStorage.getItem('cache_shopCategories');
-    const cachedSpecial = localStorage.getItem('cache_specialOccasions');
-    const cachedShopOccasions = localStorage.getItem('cache_shopOccasions');
+    try {
+      const cachedSections = localStorage.getItem('cache_sections');
+      const cachedCategories = localStorage.getItem('cache_shopCategories');
+      const cachedSpecial = localStorage.getItem('cache_specialOccasions');
+      const cachedShopOccasions = localStorage.getItem('cache_shopOccasions');
+      const cachedRecipients = localStorage.getItem('cache_shopRecipients');
 
-    const cachedRecipients = localStorage.getItem('cache_shopRecipients');
-
-    if (cachedSections) setSections(JSON.parse(cachedSections));
-    if (cachedCategories) setShopCategories(JSON.parse(cachedCategories));
-    if (cachedSpecial) setSpecialOccasions(JSON.parse(cachedSpecial));
-    if (cachedShopOccasions) setShopOccasions(JSON.parse(cachedShopOccasions));
-    if (cachedRecipients) setShopRecipients(JSON.parse(cachedRecipients));
+      if (cachedSections) setSections(JSON.parse(cachedSections));
+      if (cachedCategories) setShopCategories(JSON.parse(cachedCategories));
+      if (cachedSpecial) setSpecialOccasions(JSON.parse(cachedSpecial));
+      if (cachedShopOccasions) setShopOccasions(JSON.parse(cachedShopOccasions));
+      if (cachedRecipients) setShopRecipients(JSON.parse(cachedRecipients));
+    } catch (e) {
+      console.warn("Error reading from cache", e);
+    }
 
     // 2. Fetch fresh data
     const fetchShopData = async () => {
@@ -286,11 +289,17 @@ export const Home: React.FC = () => {
         setShopRecipients(recipientsData);
 
         // Update cache
-        localStorage.setItem('cache_sections', JSON.stringify(sectionsData));
-        localStorage.setItem('cache_shopCategories', JSON.stringify(categoriesData));
-        localStorage.setItem('cache_specialOccasions', JSON.stringify(occasionsData));
-        localStorage.setItem('cache_shopOccasions', JSON.stringify(shopOccasionsData));
-        localStorage.setItem('cache_shopRecipients', JSON.stringify(recipientsData));
+        try {
+          localStorage.setItem('cache_sections', JSON.stringify(sectionsData));
+          localStorage.setItem('cache_shopCategories', JSON.stringify(categoriesData));
+          localStorage.setItem('cache_specialOccasions', JSON.stringify(occasionsData));
+          localStorage.setItem('cache_shopOccasions', JSON.stringify(shopOccasionsData));
+          localStorage.setItem('cache_shopRecipients', JSON.stringify(recipientsData));
+        } catch (e) {
+          console.warn("Cache quota exceeded, skipping cache update", e);
+          // Optional: clear old cache to free space
+          // localStorage.clear(); 
+        }
 
       } catch (error) {
         console.error('Failed to fetch shop data:', error);
@@ -322,12 +331,12 @@ export const Home: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-app-bg font-sans pb-16">
+    <div className="min-h-screen bg-app-bg font-sans pb-0 md:pb-16">
       <SEO
         keywords={['custom gifts', 'personalized neon', 'home decor', 'corporate gifts']}
       />
       {!activeHeroView ? (
-        <div className="relative h-[240px] md:h-[320px] overflow-hidden group bg-gray-900 mt-6 mx-4 rounded-[2.5rem] shadow-2xl border-4 border-white">
+        <div className="relative h-[180px] md:h-[320px] overflow-hidden group bg-gray-900 mt-4 mx-3 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-2 md:border-4 border-white">
           {HERO_SLIDES.map((slide, index) => (
             <div key={slide.id} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
               <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10 z-10" />
@@ -336,15 +345,15 @@ export const Home: React.FC = () => {
                 alt={slide.title}
                 className={`w-full h-full object-cover transition-transform duration-[10s] ease-linear ${index === currentSlide ? 'scale-110' : 'scale-100'}`}
               />
-              <div className="absolute inset-0 z-20 flex items-center justify-between px-10 md:px-20 text-white">
+              <div className="absolute inset-0 z-20 flex items-center justify-between px-6 md:px-20 text-white">
                 <div className="flex flex-col items-start text-left max-w-xl">
-                  <span className={`${slide.color} font-black text-[10px] md:text-xs uppercase tracking-[0.4em] mb-3 animate-fade-in-up drop-shadow-sm`}>{slide.tag}</span>
-                  <h2 className="text-3xl md:text-5xl font-black mb-3 tracking-tighter drop-shadow-2xl animate-fade-in-up leading-tight">{slide.title}</h2>
-                  <p className="text-xs md:text-lg mb-6 text-gray-200 font-medium drop-shadow-md animate-fade-in-up delay-100">{slide.subtitle}</p>
+                  <span className={`${slide.color} font-black text-[9px] md:text-xs uppercase tracking-[0.3em] mb-1 md:mb-3 animate-fade-in-up drop-shadow-sm`}>{slide.tag}</span>
+                  <h2 className="text-2xl md:text-5xl font-black mb-2 md:mb-3 tracking-tighter drop-shadow-2xl animate-fade-in-up leading-tight">{slide.title}</h2>
+                  <p className="text-[10px] md:text-lg mb-4 md:mb-6 text-gray-200 font-medium drop-shadow-md animate-fade-in-up delay-100 max-w-[200px] md:max-w-full leading-tight">{slide.subtitle}</p>
 
                   {slide.type === 'link' ? (
-                    <Link to={slide.link!} className="bg-white text-gray-900 px-8 py-3 rounded-xl font-black text-xs md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-2 transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200">
-                      {slide.cta} <ChevronRight className="w-4 h-4" />
+                    <Link to={slide.link!} className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200">
+                      {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
                     </Link>
                   ) : (
                     <button
@@ -356,9 +365,9 @@ export const Home: React.FC = () => {
                           el?.scrollIntoView({ behavior: 'smooth' });
                         }
                       }}
-                      className="bg-white text-gray-900 px-8 py-3 rounded-xl font-black text-xs md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-2 transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200"
+                      className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200"
                     >
-                      {slide.cta} <ChevronRight className="w-4 h-4" />
+                      {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                   )}
                 </div>
@@ -468,89 +477,88 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Category Chips Mobile */}
-      <div className="md:hidden flex gap-4 overflow-x-auto py-6 px-4 scrollbar-hide bg-white border-b border-gray-100">
-        {shopCategories.length > 0 ? shopCategories.slice(0, 10).map(cat => (
-          <Link
-            key={cat.id}
-            to={`/shop?category=${encodeURIComponent(cat.name)}`}
-            className="flex-shrink-0 flex flex-col items-center gap-2 group w-16"
-          >
-            <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center p-0.5 border-2 border-primary/10 group-active:scale-90 transition-transform overflow-hidden shadow-inner">
-              <img src={cat.image} alt="" className="w-full h-full object-cover rounded-xl" />
-            </div>
-            <span className="text-[10px] font-bold text-gray-800 text-center leading-tight truncate w-full">{cat.name.split(' & ')[0]}</span>
-          </Link>
-        )) : (
-          [...Array(6)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-xl bg-gray-100 animate-pulse" />
-              <div className="w-10 h-2 bg-gray-100 animate-pulse rounded" />
-            </div>
-          ))
-        )}
-      </div>
 
-      {/* Gift Genie Promo Banner */}
+
+
+
+      {/* Special Occasions - NEW SECTION */}
       <FadeInSection>
-        <div className="max-w-7xl mx-auto px-4 py-12 relative">
-          <div className="bg-gradient-to-r from-purple-900 via-indigo-800 to-purple-900 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 border border-purple-700/50">
-            <div className="flex items-center gap-4">
-              <div className="bg-white/10 p-3 rounded-full backdrop-blur-sm">
-                <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-bold text-white">Confused what to buy?</h3>
-                <p className="text-purple-200 text-sm md:text-base">Ask our Gift Genie for perfect recommendations!</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsGiftAdvisorOpen(true)}
-              className="bg-white text-purple-900 px-8 py-3 rounded-full font-bold text-sm md:text-base hover:bg-yellow-400 hover:text-purple-900 transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
-            >
-              <Gift className="w-5 h-5" /> Launch Gift Genie
-            </button>
+        <div id="special-occasions-section" className="max-w-7xl mx-auto py-8 md:py-12 px-4">
+          <div className="text-center mb-6 md:mb-10">
+            <h2 className="text-xl md:text-4xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
+              <Sparkles className="text-accent w-6 h-6 md:w-8 md:h-8" /> Special Occasions
+            </h2>
+            <p className="text-gray-500 mt-2 max-w-2xl mx-auto text-xs md:text-base">Make your milestones unforgettable with our specially curated collections.</p>
+            <div className="mt-3 w-16 md:w-24 h-1 bg-primary mx-auto"></div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
+            {specialOccasions.map((occasion) => {
+              const getLink = () => {
+                if (occasion.link && occasion.link.trim() !== '' && occasion.link !== '#') return occasion.link;
+                return `/products?occasion=${encodeURIComponent(occasion.name)}`;
+              };
+
+              return (
+                <Link
+                  key={occasion.id}
+                  to={getLink()}
+                  className="group relative overflow-hidden rounded-2xl aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500"
+                >
+                  <img
+                    src={occasion.image}
+                    alt={occasion.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+                    <h3 className="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-1">{occasion.name}</h3>
+                    <p className="text-gray-200 text-sm opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                      {occasion.description}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </FadeInSection>
 
-      {/* Gifts by Budget - Quick Access */}
-      {!activeHeroView && (
-        <div className="max-w-7xl mx-auto px-4 mt-16 mb-12 text-center">
-          <div className="mb-10 animate-fade-in-up">
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-3">
-              <Wallet className="w-8 h-8 md:w-10 md:h-10 text-primary" /> Find Gifts by Budget
-            </h2>
-            <p className="text-gray-500 font-bold mt-2 text-lg">Quick picks that fit your pocket</p>
-            <div className="mt-4 w-20 h-1.5 bg-gradient-to-r from-primary/20 via-primary to-primary/20 mx-auto rounded-full"></div>
-          </div>
-          <div className="flex flex-wrap gap-4 md:gap-6 justify-center">
-            {BUDGET_OPTIONS.map((opt, idx) => (
-              <Link
-                key={opt.value}
-                to={`/products?budget=${opt.value}`}
-                className={`group px-8 py-5 rounded-[2rem] text-sm md:text-lg font-black border-2 transition-all hover:shadow-2xl hover:-translate-y-1.5 active:scale-95 flex items-center gap-3 shadow-sm animate-fade-in-up ${opt.color}`}
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                {opt.label}
-                <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-all -translate-x-3 group-hover:translate-x-0" />
+      {/* Occasions Grid */}
+      <FadeInSection>
+        <div id="shop-by-occasion-section" className="max-w-7xl mx-auto py-4 md:py-6 px-4">
+          <h3 className="text-base md:text-xl font-bold text-gray-900 mb-4 md:mb-6 flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Shop By Occasion</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            {shopOccasions.length > 0 ? shopOccasions.slice(0, 4).map((occ, idx) => {
+              const staticOcc = OCCASIONS.find(o => o.name === occ.name) || OCCASIONS[idx % OCCASIONS.length];
+              return (
+                <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-24 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
+                  <img src={occ.image} alt={occ.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className={`absolute inset-0 bg-gradient-to-b ${staticOcc?.color || 'from-gray-500 to-gray-700'} opacity-60 group-hover:opacity-50 transition-opacity`} />
+                  <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-bold text-sm md:text-xl drop-shadow-md tracking-wide border-b-2 border-transparent group-hover:border-white transition-all pb-1 text-center px-1">{occ.name}</span></div>
+                </Link>
+              );
+            }) : OCCASIONS.map(occ => (
+              <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-24 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
+                <img src={occ.image} alt={occ.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div className={`absolute inset-0 bg-gradient-to-b ${occ.color} opacity-60 group-hover:opacity-50 transition-opacity`} />
+                <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-bold text-sm md:text-xl drop-shadow-md tracking-wide border-b-2 border-transparent group-hover:border-white transition-all pb-1 text-center px-1">{occ.name}</span></div>
               </Link>
             ))}
           </div>
         </div>
-      )}
+      </FadeInSection>
 
       {/* Shop By Recipient Section - HIGH CONVERSION */}
       {!activeHeroView && (
         <FadeInSection>
-          <div className="max-w-7xl mx-auto py-12 px-4">
-            <div className="flex justify-between items-end mb-8">
+          <div className="max-w-7xl mx-auto py-8 md:py-12 px-4">
+            <div className="flex justify-between items-end mb-4 md:mb-8">
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Shop by Recipient</h2>
-                <p className="text-sm text-gray-500 mt-1">Find the perfect match for your loved ones</p>
+                <h2 className="text-xl md:text-3xl font-bold text-gray-900">Shop by Recipient</h2>
+                <p className="text-xs md:text-sm text-gray-500 mt-1">Find the perfect match for your loved ones</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-6">
               {shopRecipients.length > 0 ? (
                 shopRecipients.map((recipient) => (
                   <Link
@@ -596,57 +604,61 @@ export const Home: React.FC = () => {
         </FadeInSection>
       )}
 
+
+
+
+
       {/* Trust Strip */}
       <FadeInSection>
-        <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border-y border-purple-100 py-10 mt-12">
+        <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border-y border-purple-100 py-6 md:py-10 mt-6 md:mt-12">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center mb-10">
-              <span className="text-[10px] uppercase tracking-[0.3em] font-black text-gray-400 block mb-3">Trusted by 10,000+ Customers</span>
-              <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-[10px] md:text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
-                <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-green-500" /> Secure UPI Payments</span>
+            <div className="text-center mb-4 md:mb-10">
+              <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-black text-gray-400 block mb-2 md:mb-3">Trusted by 10,000+ Customers</span>
+              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-6 text-[8px] md:text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
+                <span className="flex items-center gap-1 md:gap-2"><ShieldCheck className="w-2.5 h-2.5 md:w-4 md:h-4 text-green-500" /> Secure UPI Payments</span>
                 <span className="hidden md:inline text-gray-200">|</span>
-                <span className="flex items-center gap-2"><Truck className="w-4 h-4 text-blue-500" /> Trusted Delivery</span>
+                <span className="flex items-center gap-1 md:gap-2"><Truck className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-500" /> Trusted Delivery</span>
                 <span className="hidden md:inline text-gray-200">|</span>
-                <span className="flex items-center gap-2"><Zap className="w-4 h-4 text-amber-500" /> SSL Secured</span>
+                <span className="flex items-center gap-1 md:gap-2"><Zap className="w-2.5 h-2.5 md:w-4 md:h-4 text-amber-500" /> SSL Secured</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
-                <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <Truck className="w-7 h-7 md:w-8 md:h-8 text-white" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <Truck className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">Free Delivery</span>
+                  <span className="text-xs md:text-lg font-bold text-gray-800 block">Free Delivery</span>
                   <span className="text-xs text-gray-500 hidden md:block">On all orders</span>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
-                <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <ShieldCheck className="w-7 h-7 md:w-8 md:h-8 text-white" />
+              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <ShieldCheck className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">100% Quality</span>
+                  <span className="text-xs md:text-lg font-bold text-gray-800 block">100% Quality</span>
                   <span className="text-xs text-gray-500 hidden md:block">Guaranteed</span>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
-                <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <Gift className="w-7 h-7 md:w-8 md:h-8 text-white" />
+              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <Gift className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">Premium Packaging</span>
+                  <span className="text-xs md:text-lg font-bold text-gray-800 block">Premium Packaging</span>
                   <span className="text-xs text-gray-500 hidden md:block">Luxury boxes</span>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
-                <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <User className="w-7 h-7 md:w-8 md:h-8 text-white" />
+              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+                <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <User className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-sm md:text-base lg:text-lg font-bold text-gray-800 block">24/7 Support</span>
+                  <span className="text-xs md:text-lg font-bold text-gray-800 block">24/7 Support</span>
                   <span className="text-xs text-gray-500 hidden md:block">Always here</span>
                 </div>
               </div>
@@ -655,81 +667,15 @@ export const Home: React.FC = () => {
         </div>
       </FadeInSection>
 
-      {/* Special Occasions - NEW SECTION */}
+
+
+      {/* Trending Gifts - NEW SECTION */}
       <FadeInSection>
-        <div id="special-occasions-section" className="max-w-7xl mx-auto py-12 px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center justify-center gap-3">
-              <Sparkles className="text-accent w-8 h-8" /> Special Occasions
-            </h2>
-            <p className="text-gray-500 mt-2 max-w-2xl mx-auto">Make your milestones unforgettable with our specially curated collections.</p>
-            <div className="mt-4 w-24 h-1 bg-primary mx-auto"></div>
+        <div className="max-w-7xl mx-auto py-6 md:py-8 px-4">
+          <div className="flex justify-between items-center mb-4 md:mb-6">
+            <div><h2 className="text-xl md:text-3xl font-bold text-gray-900">Trending Gifts 🔥</h2><p className="text-xs md:text-sm text-gray-500 mt-1">Latest favorites everyone is talking about</p></div>
+            <Link to="/products?filter=trending" className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {specialOccasions.map((occasion) => {
-              const getLink = () => {
-                if (occasion.link && occasion.link.trim() !== '' && occasion.link !== '#') return occasion.link;
-                return `/products?occasion=${encodeURIComponent(occasion.name)}`;
-              };
-
-              return (
-                <Link
-                  key={occasion.id}
-                  to={getLink()}
-                  className="group relative overflow-hidden rounded-2xl aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500"
-                >
-                  <img
-                    src={occasion.image}
-                    alt={occasion.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
-                    <h3 className="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-1">{occasion.name}</h3>
-                    <p className="text-gray-200 text-sm opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
-                      {occasion.description}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </FadeInSection>
-
-      {/* Occasions Grid */}
-      <FadeInSection>
-        <div id="shop-by-occasion-section" className="max-w-7xl mx-auto py-6 px-4">
-          <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Shop By Occasion</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {shopOccasions.length > 0 ? shopOccasions.slice(0, 4).map((occ, idx) => {
-              const staticOcc = OCCASIONS.find(o => o.name === occ.name) || OCCASIONS[idx % OCCASIONS.length];
-              return (
-                <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-32 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
-                  <img src={occ.image} alt={occ.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  <div className={`absolute inset-0 bg-gradient-to-b ${staticOcc?.color || 'from-gray-500 to-gray-700'} opacity-60 group-hover:opacity-50 transition-opacity`} />
-                  <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-bold text-lg md:text-xl drop-shadow-md tracking-wide border-b-2 border-transparent group-hover:border-white transition-all pb-1">{occ.name}</span></div>
-                </Link>
-              );
-            }) : OCCASIONS.map(occ => (
-              <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-32 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
-                <img src={occ.image} alt={occ.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                <div className={`absolute inset-0 bg-gradient-to-b ${occ.color} opacity-60 group-hover:opacity-50 transition-opacity`} />
-                <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-bold text-lg md:text-xl drop-shadow-md tracking-wide border-b-2 border-transparent group-hover:border-white transition-all pb-1">{occ.name}</span></div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </FadeInSection>
-
-      {/* Best Sellers Grid (Trending & Best Sellers) */}
-      <FadeInSection>
-        <div className="max-w-7xl mx-auto py-8 px-4">
-          <div className="flex justify-between items-center mb-6">
-            <div><h2 className="text-2xl md:text-3xl font-bold text-gray-900">Trending Gifts 🌟</h2><p className="text-sm text-gray-500 mt-1">Handpicked favorites just for you</p></div>
-            <Link to="/products?filter=trending" className="text-primary font-bold text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-4 h-4" /></Link>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             {displayProducts.filter(p => p.isTrending).map((product) => {
               const prices = calculatePrice(product);
@@ -737,26 +683,26 @@ export const Home: React.FC = () => {
                 <div key={product.id} className="relative group">
                   <Link to={`/product/${product.id}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
                     <div className="relative aspect-square bg-white overflow-hidden">
-                      <img className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                      {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+                      <img className="w-full h-full object-contain p-2 md:p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
+                      {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
 
                       <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
                         <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
                       </div>
                     </div>
 
-                    <div className="p-3 flex flex-col flex-grow">
+                    <div className="p-2 md:p-3 flex flex-col flex-grow">
                       <div className="flex-1">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{product.category}</p>
-                        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-10 leading-5">{product.name}</h3>
-                        <div className="flex items-center gap-1 mt-1.5">
-                          <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
-                          <span className="text-[10px] text-gray-400">(1.2k)</span>
+                        <p className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5 md:mb-1">{product.category}</p>
+                        <h3 className="text-xs md:text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-8 md:h-10 leading-4 md:leading-5">{product.name}</h3>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.9 <Star className="w-2 h-2 fill-current" /></div>
+                          <span className="text-[10px] text-gray-400 hidden md:inline">(850+)</span>
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
-                        <div><span className="text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-xs text-gray-400 line-through ml-2">{formatPrice(prices.original)}</span></div>
+                      <div className="mt-2 md:mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
+                        <div><span className="text-sm md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-[10px] md:text-xs text-gray-400 line-through ml-1 md:ml-2">{formatPrice(prices.original)}</span></div>
                       </div>
                     </div>
                   </Link>
@@ -771,57 +717,86 @@ export const Home: React.FC = () => {
               );
             })}
           </div>
+        </div>
+      </FadeInSection>
 
-          {/* Bestsellers Grid */}
-          <div className="py-8 mt-8">
-            <div className="flex justify-between items-center mb-6">
-              <div><h2 className="text-2xl md:text-3xl font-bold text-gray-900">Best Sellers 🏆</h2><p className="text-sm text-gray-500 mt-1">Our most popular products loved by everyone</p></div>
-              <Link to="/products?sort=Bestsellers" className="text-primary font-bold text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-4 h-4" /></Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              {displayProducts.filter(p => p.isBestseller).map((product) => {
-                const prices = calculatePrice(product);
-                return (
-                  <div key={product.id} className="relative group">
-                    <Link to={`/product/${product.id}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-                      <div className="relative aspect-square bg-white overflow-hidden">
-                        <img className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                        {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+      {/* Best Sellers Grid (Trending & Best Sellers) */}
 
-                        <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
-                          <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
+      <FadeInSection>
+        <div className="max-w-7xl mx-auto py-6 md:py-8 px-4">
+          <div className="flex justify-between items-center mb-4 md:mb-6">
+            <div><h2 className="text-xl md:text-3xl font-bold text-gray-900">Best Sellers 🏆</h2><p className="text-xs md:text-sm text-gray-500 mt-1">Our most popular products loved by everyone</p></div>
+            <Link to="/products?filter=bestseller" className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+            {displayProducts.filter(p => p.isBestseller).map((product) => {
+              const prices = calculatePrice(product);
+              return (
+                <div key={product.id} className="relative group">
+                  <Link to={`/product/${product.id}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
+                    <div className="relative aspect-square bg-white overflow-hidden">
+                      <img className="w-full h-full object-contain p-2 md:p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
+                      {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+
+                      <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
+                        <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2 md:p-3 flex flex-col flex-grow">
+                      <div className="flex-1">
+                        <p className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5 md:mb-1">{product.category}</p>
+                        <h3 className="text-xs md:text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-8 md:h-10 leading-4 md:leading-5">{product.name}</h3>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
+                          <span className="text-[10px] text-gray-400 hidden md:inline">(1.2k)</span>
                         </div>
                       </div>
 
-                      <div className="p-3 flex flex-col flex-grow">
-                        <div className="flex-1">
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{product.category}</p>
-                          <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-10 leading-5">{product.name}</h3>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
-                            <span className="text-[10px] text-gray-400">(1.2k)</span>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
-                          <div><span className="text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-xs text-gray-400 line-through ml-2">{formatPrice(prices.original)}</span></div>
-                        </div>
+                      <div className="mt-2 md:mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
+                        <div><span className="text-sm md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-[10px] md:text-xs text-gray-400 line-through ml-1 md:ml-2">{formatPrice(prices.original)}</span></div>
                       </div>
-                    </Link>
+                    </div>
+                  </Link>
 
-                    <button
-                      onClick={(e) => handleWishlistToggle(e, product)}
-                      className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                    >
-                      <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                  <button
+                    onClick={(e) => handleWishlistToggle(e, product)}
+                    className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                  >
+                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </FadeInSection>
+
+      {/* Gifts by Budget - Quick Access */}
+      {!activeHeroView && (
+        <div className="max-w-7xl mx-auto px-4 mt-8 md:mt-16 mb-8 md:mb-12 text-center">
+          <div className="mb-6 md:mb-10 animate-fade-in-up">
+            <h2 className="text-xl md:text-4xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-2 md:gap-3">
+              <Wallet className="w-6 h-6 md:w-10 md:h-10 text-primary" /> Find Gifts by Budget
+            </h2>
+            <p className="text-gray-500 font-bold mt-2 text-sm md:text-lg">Quick picks that fit your pocket</p>
+            <div className="mt-4 w-16 md:w-20 h-1.5 bg-gradient-to-r from-primary/20 via-primary to-primary/20 mx-auto rounded-full"></div>
+          </div>
+          <div className="flex flex-wrap gap-3 md:gap-6 justify-center">
+            {BUDGET_OPTIONS.map((opt, idx) => (
+              <Link
+                key={opt.value}
+                to={`/products?budget=${opt.value}`}
+                className={`group px-5 py-3 md:px-8 md:py-5 rounded-2xl md:rounded-[2rem] text-xs md:text-lg font-black border-2 transition-all hover:shadow-2xl hover:-translate-y-1.5 active:scale-95 flex items-center gap-2 md:gap-3 shadow-sm animate-fade-in-up ${opt.color}`}
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                {opt.label}
+                <ArrowRight className="w-4 h-4 md:w-5 md:h-5 opacity-0 group-hover:opacity-100 transition-all -translate-x-3 group-hover:translate-x-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Dynamic Shop Sections */}
       {
@@ -835,26 +810,38 @@ export const Home: React.FC = () => {
 
 
 
+      {/* Gift Genie Promo Banner */}
+      <FadeInSection>
+        <div className="max-w-7xl mx-auto px-4 py-12 relative">
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-800 to-purple-900 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 border border-purple-700/50">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/10 p-3 rounded-full backdrop-blur-sm">
+                <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-xl md:text-2xl font-bold text-white">Confused what to buy?</h3>
+                <p className="text-purple-200 text-sm md:text-base">Ask our Gift Genie for perfect recommendations!</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsGiftAdvisorOpen(true)}
+              className="bg-white text-purple-900 px-8 py-3 rounded-full font-bold text-sm md:text-base hover:bg-yellow-400 hover:text-purple-900 transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
+            >
+              <Gift className="w-5 h-5" /> Launch Gift Genie
+            </button>
+          </div>
+        </div>
+      </FadeInSection>
+
+
+
       {/* Recently Viewed */}
       <FadeInSection>
         <RecentlyViewed />
       </FadeInSection>
 
-      {/* Corporate Banner */}
-      <FadeInSection>
-        <div className="bg-gray-900 py-12 mt-8">
-          <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="text-white text-center md:text-left">
-              <h3 className="text-2xl md:text-3xl font-bold mb-2 flex items-center justify-center md:justify-start gap-3"><Briefcase className="w-8 h-8 text-accent" /> Corporate Gifting</h3>
-              <p className="text-gray-400 max-w-lg">Looking for bulk orders? We create premium custom gifts for employees and clients with your company logo.</p>
-            </div>
-            <div className="flex gap-4">
-              <Link to="/corporate" className="bg-white text-gray-900 px-6 py-3 rounded-lg font-bold text-sm hover:bg-gray-100 transition-colors">Contact Sales</Link>
-            </div>
-          </div>
-        </div>
-      </FadeInSection>
 
-    </div>
+
+    </div >
   );
 };

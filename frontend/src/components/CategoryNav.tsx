@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Star, Zap, Layers, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, Star, Zap, Layers, Sparkles, Award } from 'lucide-react';
 import birthdayImg from '../assets/birthday.png';
 
 
@@ -129,6 +129,7 @@ export const CategoryNav: React.FC = () => {
                     name: s.name,
                     categoryId: s.categoryId
                 })));
+
             } catch (error) {
                 console.error('Failed to fetch navigation data:', error);
             } finally {
@@ -207,10 +208,8 @@ export const CategoryNav: React.FC = () => {
                                     onMouseEnter={() => handleNavMouseEnter(item.id)}
                                     onMouseLeave={handleNavMouseLeave}
                                 >
-                                    <Link
-                                        to={item.type === 'section' ? `/products?section=${item.id}` : '/products'}
-                                        onClick={closeMenu}
-                                        className={`flex items-center gap-3 px-3 lg:px-4 py-2 rounded-2xl transition-all duration-500 relative
+                                    <div
+                                        className={`flex items-center gap-3 px-3 lg:px-4 py-2 rounded-2xl transition-all duration-500 relative cursor-default
                                             ${activeDropdown === item.id ? 'bg-primary/5 shadow-inner' : 'hover:bg-gray-50/80'}
                                         `}
                                     >
@@ -233,7 +232,7 @@ export const CategoryNav: React.FC = () => {
                                         <div className={`absolute bottom-0 left-6 right-6 h-1 bg-primary rounded-full transition-all duration-500 transform origin-left
                                             ${activeDropdown === item.id ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'}
                                         `}></div>
-                                    </Link>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -243,7 +242,7 @@ export const CategoryNav: React.FC = () => {
                     <div
                         className={`absolute top-full left-1/2 -translate-x-1/2 w-full max-w-[1024px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.15)] transition-all duration-500 origin-top z-50 flex overflow-hidden rounded-b-2xl border-x border-b border-gray-100 backdrop-blur-sm
                             ${activeDropdown ? 'opacity-100 scale-y-100 translate-y-0' : 'opacity-0 scale-y-95 -translate-y-2 invisible pointer-events-none'}`}
-                        style={{ height: '480px' }}
+                        style={{ height: '380px' }}
                         onMouseEnter={handleMenuMouseEnter}
                         onMouseLeave={handleNavMouseLeave}
                     >
@@ -252,30 +251,30 @@ export const CategoryNav: React.FC = () => {
                                 {/* Handle Sections (Personalized, Corporate) */}
                                 {NAV_ITEMS.find(i => i.id === activeDropdown)?.type === 'section' && (
                                     <>
-                                        <div className="w-[280px] bg-gray-50/80 border-r border-gray-100/50 overflow-y-auto no-scrollbar py-5 px-3">
-                                            <div className="px-3 mb-5">
-                                                <h5 className="text-[10.5px] font-black text-gray-400 uppercase tracking-[0.18em] mb-1">Categories</h5>
+                                        <div className="w-[240px] bg-gray-50/80 border-r border-gray-100/50 overflow-y-auto no-scrollbar py-4 px-2">
+                                            <div className="px-3 mb-3">
+                                                <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.18em] mb-1">Categories</h5>
                                                 <div className="h-0.5 w-6 bg-primary/20 rounded-full"></div>
                                             </div>
-                                            <div className="space-y-1.5">
+                                            <div className="space-y-1">
                                                 {getCategoriesForSection(activeDropdown).map((cat) => (
                                                     <Link
                                                         key={cat.id}
                                                         to={`/products?category=${encodeURIComponent(cat.name)}`}
                                                         onClick={closeMenu}
                                                         onMouseEnter={() => setHoveredCategoryId(cat.id)}
-                                                        className={`px-4 py-3 text-[14px] cursor-pointer rounded-xl transition-all duration-300 flex items-center justify-between group/cat-link
+                                                        className={`px-3 py-2.5 text-[13px] cursor-pointer rounded-xl transition-all duration-300 flex items-center justify-between group/cat-link
                                                             ${hoveredCategoryId === cat.id ? 'bg-white text-primary font-bold shadow-md shadow-black/5 -translate-x-1' : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'}
                                                         `}
                                                     >
                                                         <span className="truncate pr-2">{cat.name}</span>
-                                                        <ChevronRight className={`w-4 h-4 transition-all duration-500 ${hoveredCategoryId === cat.id ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform -translate-x-2'}`} />
+                                                        <ChevronRight className={`w-3.5 h-3.5 transition-all duration-500 ${hoveredCategoryId === cat.id ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform -translate-x-2'}`} />
                                                     </Link>
                                                 ))}
                                             </div>
                                         </div>
 
-                                        <div className="flex-1 bg-white p-10 overflow-y-auto no-scrollbar bg-gradient-to-br from-white to-gray-50/30">
+                                        <div className="flex-1 bg-white p-6 overflow-y-auto no-scrollbar bg-gradient-to-br from-white to-gray-50/30">
                                             {hoveredCategoryId && (
                                                 <CategoryDetails
                                                     category={categories.find(c => c.id === hoveredCategoryId)!}
@@ -290,34 +289,34 @@ export const CategoryNav: React.FC = () => {
                                 {/* Handle Occasions Dropdown */}
                                 {NAV_ITEMS.find(i => i.id === activeDropdown)?.type === 'occasions' && (
                                     <>
-                                        <div className="w-[280px] bg-gray-50/80 border-r border-gray-100/50 overflow-y-auto no-scrollbar py-5 px-3">
-                                            <div className="px-3 mb-5">
-                                                <h5 className="text-[10.5px] font-black text-gray-400 uppercase tracking-[0.18em] mb-1">Occasions</h5>
+                                        <div className="w-[240px] bg-gray-50/80 border-r border-gray-100/50 overflow-y-auto no-scrollbar py-4 px-2">
+                                            <div className="px-3 mb-3">
+                                                <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.18em] mb-1">Occasions</h5>
                                                 <div className="h-0.5 w-6 bg-primary/20 rounded-full"></div>
                                             </div>
-                                            <div className="space-y-1.5">
+                                            <div className="space-y-1">
                                                 {STATIC_OCCASIONS.map((occ) => (
                                                     <Link
                                                         key={occ.id}
                                                         to={`/products?occasion=${encodeURIComponent(occ.name)}`}
                                                         onClick={closeMenu}
                                                         onMouseEnter={() => setHoveredOccasionId(occ.id)}
-                                                        className={`px-4 py-3 text-[14px] cursor-pointer rounded-xl transition-all duration-300 flex items-center justify-between group/occ-link
+                                                        className={`px-3 py-2.5 text-[13px] cursor-pointer rounded-xl transition-all duration-300 flex items-center justify-between group/occ-link
                                                             ${hoveredOccasionId === occ.id ? 'bg-white text-primary font-bold shadow-md shadow-black/5 -translate-x-1' : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'}
                                                         `}
                                                     >
                                                         <span className="truncate pr-2">{occ.name}</span>
-                                                        <ChevronRight className={`w-4 h-4 transition-all duration-500 ${hoveredOccasionId === occ.id ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform -translate-x-2'}`} />
+                                                        <ChevronRight className={`w-3.5 h-3.5 transition-all duration-500 ${hoveredOccasionId === occ.id ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform -translate-x-2'}`} />
                                                     </Link>
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="flex-1 bg-white p-10 overflow-y-auto no-scrollbar flex items-center justify-center bg-gradient-to-br from-white to-gray-50/50">
+                                        <div className="flex-1 bg-white p-6 overflow-y-auto no-scrollbar flex items-center justify-center bg-gradient-to-br from-white to-gray-50/50">
                                             {hoveredOccasionId && (
                                                 <div className="text-center animate-in fade-in zoom-in duration-500 max-w-md">
-                                                    <div className="relative group/occ-img mb-8">
+                                                    <div className="relative group/occ-img mb-6">
                                                         <div className="absolute inset-0 bg-primary/10 rounded-[3rem] blur-3xl group-hover/occ-img:bg-primary/20 transition-all duration-700"></div>
-                                                        <div className="relative w-48 h-48 rounded-[2.5rem] overflow-hidden shadow-2xl mx-auto border-8 border-white group-hover/occ-img:scale-105 transition-transform duration-500">
+                                                        <div className="relative w-40 h-40 rounded-[2rem] overflow-hidden shadow-2xl mx-auto border-4 border-white group-hover/occ-img:scale-105 transition-transform duration-500">
                                                             <img
                                                                 src={STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.image || ''}
                                                                 alt="Occasion"
@@ -325,12 +324,12 @@ export const CategoryNav: React.FC = () => {
                                                             />
                                                         </div>
                                                     </div>
-                                                    <h4 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">{STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.name}</h4>
-                                                    <p className="text-gray-400 text-base leading-relaxed mb-10">{STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.description}</p>
+                                                    <h4 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">{STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.name}</h4>
+                                                    <p className="text-gray-400 text-sm leading-relaxed mb-6">{STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.description}</p>
                                                     <Link
                                                         to={`/products?occasion=${encodeURIComponent(STATIC_OCCASIONS.find(o => o.id === hoveredOccasionId)?.name || '')}`}
                                                         onClick={closeMenu}
-                                                        className="px-12 py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-2xl shadow-primary/30 hover:shadow-black/30 hover:-translate-y-1"
+                                                        className="px-8 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-primary/30 hover:shadow-black/30 hover:-translate-y-1"
                                                     >
                                                         Shop Collection
                                                     </Link>
@@ -338,34 +337,35 @@ export const CategoryNav: React.FC = () => {
                                             )}
                                         </div>
                                     </>
+
                                 )}
 
                                 {/* Dedicated Special Occasions Mega Menu - Global backend dynamic list */}
                                 {NAV_ITEMS.find(i => i.id === activeDropdown)?.type === 'special_occasions' && (
-                                    <div className="w-full p-12 overflow-y-auto no-scrollbar bg-gradient-to-br from-white to-orange-50/20">
+                                    <div className="w-full p-6 overflow-y-auto no-scrollbar bg-gradient-to-br from-white to-orange-50/20">
                                         <div className="max-w-4xl mx-auto">
-                                            <div className="mb-12 text-center">
-                                                <h4 className="text-3xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-3">
-                                                    <Sparkles className="w-8 h-8 text-orange-400" />
+                                            <div className="mb-6 text-center">
+                                                <h4 className="text-2xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-2">
+                                                    <Sparkles className="w-6 h-6 text-orange-400" />
                                                     Special Occasions
                                                 </h4>
-                                                <p className="text-gray-400 text-lg mt-3">Curated collections for life's most beautiful milestones</p>
-                                                <div className="h-1 w-16 bg-primary/20 rounded-full mx-auto mt-6"></div>
+                                                <p className="text-gray-400 text-sm mt-1">Curated collections for life's most beautiful milestones</p>
+                                                <div className="h-1 w-12 bg-primary/20 rounded-full mx-auto mt-3"></div>
                                             </div>
-                                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 pb-6">
                                                 {occasions.map(occ => (
                                                     <Link
                                                         key={occ.id}
                                                         to={`/products?occasion=${encodeURIComponent(occ.name)}`}
                                                         onClick={closeMenu}
-                                                        className="group/occ-card relative aspect-[4/3] rounded-[2rem] overflow-hidden shadow-xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-500 hover:-translate-y-2 border-4 border-white"
+                                                        className="group/occ-card relative aspect-[3/2] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1 border-2 border-white"
                                                     >
                                                         <img src={occ.image} alt={occ.name} className="w-full h-full object-cover group-hover/occ-card:scale-110 transition-transform duration-1000" />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
-                                                        <div className="absolute bottom-6 left-6 right-6">
-                                                            <p className="text-white font-black text-xl tracking-tight leading-tight mb-2">{occ.name}</p>
-                                                            <div className="flex items-center gap-2 text-white/70 text-[10px] uppercase font-bold tracking-[0.2em] opacity-0 group-hover/occ-card:opacity-100 transform translate-y-4 group-hover/occ-card:translate-y-0 transition-all duration-500">
-                                                                Explore Collection <ChevronRight className="w-3 h-3" />
+                                                        <div className="absolute bottom-4 left-4 right-4">
+                                                            <p className="text-white font-black text-lg tracking-tight leading-tight mb-1">{occ.name}</p>
+                                                            <div className="flex items-center gap-2 text-white/70 text-[9px] uppercase font-bold tracking-[0.2em] opacity-0 group-hover/occ-card:opacity-100 transform translate-y-2 group-hover/occ-card:translate-y-0 transition-all duration-500">
+                                                                Explore <ChevronRight className="w-3 h-3" />
                                                             </div>
                                                         </div>
                                                     </Link>
@@ -374,6 +374,9 @@ export const CategoryNav: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Bestseller Mega Menu */}
+
                             </>
                         )}
                     </div>
@@ -395,15 +398,21 @@ export const CategoryNav: React.FC = () => {
                                 </div>
                             </Link>
 
-                            <Link to="/products?filter=new" onClick={closeMenu} className="group flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-blue-50/50 transition-all duration-500 border border-transparent hover:border-blue-100">
-                                <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-1.5xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-500 shadow-sm border border-blue-100/50">
-                                    <Star className="w-4.5 h-4.5 text-blue-500 fill-blue-500" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] lg:text-[11px] font-black text-gray-900 tracking-tight leading-none mb-0.5">NEW</span>
-                                    <span className="text-[8.5px] lg:text-[9.5px] text-gray-400 font-bold tracking-wider">Just In</span>
-                                </div>
-                            </Link>
+                            <div className="relative">
+                                <Link
+                                    to="/products?filter=bestseller"
+                                    onClick={closeMenu}
+                                    className="group flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-500 border border-transparent hover:bg-yellow-50/50 hover:border-yellow-100"
+                                >
+                                    <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-1.5xl bg-yellow-50 flex items-center justify-center group-hover:bg-yellow-100 transition-colors duration-500 shadow-sm border border-yellow-100/50">
+                                        <Award className="w-4.5 h-4.5 text-yellow-600 fill-yellow-600" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[10px] lg:text-[11px] font-black text-gray-900 tracking-tight leading-none mb-0.5">BESTSELLER</span>
+                                        <span className="text-[8.5px] lg:text-[9.5px] text-gray-400 font-bold tracking-wider">Top Rated</span>
+                                    </div>
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -416,28 +425,28 @@ export const CategoryNav: React.FC = () => {
 const CategoryDetails: React.FC<{ category: ShopCategory, subCategories: SubCategory[], closeMenu: () => void }> = ({ category, subCategories, closeMenu }) => {
     return (
         <div className="animate-in fade-in slide-in-from-left-6 duration-500">
-            <div className="mb-8">
+            <div className="mb-6">
                 <div className="flex items-center gap-2.5 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shadow-sm">
                         <Layers className="w-4 h-4 text-primary" />
                     </div>
-                    <h4 className="text-gray-900 font-black text-2xl tracking-tight leading-none">{category.name}</h4>
+                    <h4 className="text-gray-900 font-black text-xl tracking-tight leading-none">{category.name}</h4>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="h-1 w-12 bg-primary rounded-full shadow-[0_1px_6px_rgba(var(--primary-rgb),0.3)]"></div>
-                    <span className="text-[11px] font-black text-gray-300 uppercase tracking-[0.15em]">Curated Collections</span>
+                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.15em]">Curated Collections</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                 <Link
                     to={`/products?category=${encodeURIComponent(category.name)}`}
                     onClick={closeMenu}
-                    className="col-span-2 text-[14px] font-black text-gray-900 hover:text-white transition-all py-3 px-5 rounded-xl border-2 border-gray-50 bg-gray-50/50 hover:bg-primary hover:border-primary flex items-center justify-between group/all shadow-sm hover:shadow-[0_8px_20px_rgba(var(--primary-rgb),0.3)] hover:-translate-y-0.5"
+                    className="col-span-2 text-[13px] font-black text-gray-900 hover:text-white transition-all py-2.5 px-4 rounded-xl border-2 border-gray-50 bg-gray-50/50 hover:bg-primary hover:border-primary flex items-center justify-between group/all shadow-sm hover:shadow-[0_8px_20px_rgba(var(--primary-rgb),0.3)] hover:-translate-y-0.5"
                 >
                     <span>View Full Collection</span>
-                    <div className="w-7 h-7 rounded-full bg-white group-hover/all:bg-white/20 flex items-center justify-center transition-colors">
-                        <ChevronRight className="w-3.5 h-3.5 text-primary group-hover/all:text-white" />
+                    <div className="w-6 h-6 rounded-full bg-white group-hover/all:bg-white/20 flex items-center justify-center transition-colors">
+                        <ChevronRight className="w-3 h-3 text-primary group-hover/all:text-white" />
                     </div>
                 </Link>
 
@@ -448,9 +457,9 @@ const CategoryDetails: React.FC<{ category: ShopCategory, subCategories: SubCate
                             key={sub.id}
                             to={`/products?category=${encodeURIComponent(category.name)}&subCategory=${encodeURIComponent(sub.name)}`}
                             onClick={closeMenu}
-                            className="text-[13px] font-bold text-gray-600 hover:text-primary transition-all py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-primary/5 group/sub border border-transparent hover:border-primary/10"
+                            className="text-[12px] font-bold text-gray-600 hover:text-primary transition-all py-1.5 px-2.5 rounded-lg flex items-center gap-2 hover:bg-primary/5 group/sub border border-transparent hover:border-primary/10"
                         >
-                            <div className="w-2 h-2 rounded-full border-2 border-gray-200 group-hover/sub:scale-110 group-hover/sub:border-primary group-hover/sub:bg-primary transition-all duration-300 shadow-sm"></div>
+                            <div className="w-1.5 h-1.5 rounded-full border border-gray-200 group-hover/sub:scale-110 group-hover/sub:border-primary group-hover/sub:bg-primary transition-all duration-300 shadow-sm"></div>
                             <span className="group-hover/sub:translate-x-0.5 transition-transform duration-300">{sub.name}</span>
                         </Link>
                     ))
@@ -458,16 +467,16 @@ const CategoryDetails: React.FC<{ category: ShopCategory, subCategories: SubCate
             </div>
 
             {subCategories.filter(sub => sub.categoryId === category.id).length === 0 && (
-                <div className="flex flex-col items-center justify-center py-10 text-center bg-gray-50/50 rounded-[1.5rem] mt-4 border-2 border-dashed border-gray-100">
-                    <div className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center mb-4">
-                        <Star className="w-5 h-5 text-primary shadow-sm" />
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-gray-50/50 rounded-[1.5rem] mt-3 border-2 border-dashed border-gray-100">
+                    <div className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center mb-3">
+                        <Star className="w-4 h-4 text-primary shadow-sm" />
                     </div>
-                    <h5 className="text-gray-900 font-black text-[15px] mb-1">Exclusive Series</h5>
-                    <p className="text-gray-400 text-[11px] mb-6 max-w-[200px]">Hand-crafted masterpieces waiting for you</p>
+                    <h5 className="text-gray-900 font-black text-[14px] mb-1">Exclusive Series</h5>
+                    <p className="text-gray-400 text-[10px] mb-4 max-w-[180px]">Hand-crafted masterpieces waiting for you</p>
                     <Link
                         to={`/products?category=${encodeURIComponent(category.name)}`}
                         onClick={closeMenu}
-                        className="px-8 py-2.5 bg-primary text-white text-[11px] font-black uppercase tracking-[0.1em] rounded-lg hover:bg-black transition-all shadow-[0_8px_20px_rgba(var(--primary-rgb),0.2)] hover:shadow-black/20 hover:-translate-y-0.5"
+                        className="px-6 py-2 bg-primary text-white text-[10px] font-black uppercase tracking-[0.1em] rounded-lg hover:bg-black transition-all shadow-[0_8px_20px_rgba(var(--primary-rgb),0.2)] hover:shadow-black/20 hover:-translate-y-0.5"
                     >
                         Explore Now
                     </Link>

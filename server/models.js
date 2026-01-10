@@ -64,7 +64,16 @@ const UserSchema = new mongoose.Schema({
 // Order Schema
 const OrderSchema = new mongoose.Schema({
   user: Object,
-  items: Array,
+  items: [{
+    productId: String,
+    name: String,
+    price: Number,
+    quantity: Number,
+    image: String,
+    customImage: String,
+    customName: String,
+    selectedVariations: Object
+  }],
   total: Number,
   status: { type: String, default: 'Design Pending' },
   paymentMethod: String,

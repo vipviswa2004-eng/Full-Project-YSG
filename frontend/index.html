@@ -20,7 +20,7 @@
             primary: '#6b21a8',
             secondary: '#e9d5ff',
             accent: '#f59e0b',
-            'app-bg': '#f5ebd0',
+            'app-bg': '#ffffff',
           },
           keyframes: {
             'slide-down': {
@@ -57,7 +57,7 @@
   </script>
   <style>
     body {
-      background-color: #f5ebd0 !important;
+      background-color: #ffffff !important;
     }
 
     .no-scrollbar::-webkit-scrollbar {
@@ -65,6 +65,16 @@
     }
 
     .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Globally hide scrollbars */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    * {
       -ms-overflow-style: none;
       scrollbar-width: none;
     }

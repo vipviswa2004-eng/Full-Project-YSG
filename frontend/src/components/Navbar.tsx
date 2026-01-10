@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart, ArrowLeft, ClipboardCheck } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart, ArrowLeft, Briefcase, ArrowRight, ClipboardCheck, Eye, EyeOff } from 'lucide-react';
 import { useCart } from '../context';
 // import { products } from '../data/products';
 import { Product } from '../types';
 
 export const Navbar: React.FC = () => {
-  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products } = useCart();
+  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products, isLoginModalOpen, setIsLoginModalOpen } = useCart();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -199,6 +199,7 @@ export const Navbar: React.FC = () => {
     setEmailInput('');
     setPhoneInput('');
     setPasswordInput('');
+    setShowPassword(false);
     setAuthError('');
   };
 
@@ -207,6 +208,7 @@ export const Navbar: React.FC = () => {
     setEmailInput('');
     setPhoneInput('');
     setPasswordInput('');
+    setShowPassword(false);
     setAuthError('');
   };
 
@@ -333,7 +335,7 @@ export const Navbar: React.FC = () => {
                   <Heart className="h-6 w-6" />
                   {wishlist.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">{wishlist.length}</span>}
                 </Link>
-                <Link to="/cart" className="relative text-white hover:text-[#f5ebd0] p-1">
+                <Link to="/cart" className="relative text-white hover:text-[#f5ebd0] p-1 hidden md:block">
                   <ShoppingCart className="h-6 w-6" />
                   {cart.length > 0 && (
                     <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">
@@ -344,7 +346,7 @@ export const Navbar: React.FC = () => {
                 <Link to="/orders" className="text-white hover:text-[#f5ebd0] p-1 hidden md:block" title="Orders">
                   <ClipboardCheck className="h-6 w-6" />
                 </Link>
-                <button type="button" onClick={openLoginModal} className="text-white hover:text-[#f5ebd0] flex items-center gap-2 transition-colors">
+                <button type="button" onClick={openLoginModal} className="text-white hover:text-[#f5ebd0] items-center gap-2 transition-colors hidden md:flex">
                   {user ? (
                     <div className="flex items-center gap-1">
                       {/* <span className="text-xs md:text-sm font-bold text-[#f5ebd0] max-w-[80px] truncate hidden md:block">
@@ -537,253 +539,242 @@ export const Navbar: React.FC = () => {
         {/* Login Modal */}
         {isLoginModalOpen && (
           <div className="fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setIsLoginModalOpen(false)}></div>
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start justify-center">
-                    <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                          {user ? 'User Profile' : (authMode === 'login' ? 'Welcome Back' : 'Create Account')}
-                        </h3>
+            <div className="flex items-center justify-center min-h-screen px-4 p-4 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300"
+                onClick={() => setIsLoginModalOpen(false)}
+              ></div>
+
+              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+              <div className="inline-block align-bottom bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full relative animate-scale-in">
+                {/* Modern Header Pattern */}
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-purple-600 to-indigo-800 opacity-10 pattern-grid-lg"></div>
+
+                <div className="absolute top-4 right-4 z-10">
+                  <button
+                    onClick={() => setIsLoginModalOpen(false)}
+                    className="p-2 bg-white/80 backdrop-blur-md rounded-full text-gray-400 hover:text-gray-600 hover:bg-white shadow-sm transition-all"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="px-6 pt-8 pb-6 relative z-0">
+                  <div className="text-center mb-6">
+                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4 animate-bounce-short">
+                      {authMode === 'login' ? <LogIn className="h-6 w-6 text-purple-600" /> : <UserPlus className="h-6 w-6 text-purple-600" />}
+                    </div>
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight" id="modal-title">
+                      {user ? 'Welcome Back!' : (authMode === 'login' ? 'Sign In' : 'Join the Galaxy')}
+                    </h3>
+                    {!user && (
+                      <p className="mt-1 text-sm text-gray-500 font-medium">
+                        {authMode === 'login'
+                          ? "Access your personalized dashboard"
+                          : "Create an account to start your journey"}
+                      </p>
+                    )}
+                  </div>
+
+                  {user ? (
+                    <div className="text-center py-4">
+                      <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-purple-600 mx-auto mb-3 relative">
+                        <img src={user.image} alt="User" className="w-full h-full rounded-full object-cover border-4 border-white" />
+                        {user.isAdmin && (
+                          <div className="absolute bottom-0 right-0 bg-red-500 text-white p-1 rounded-full border-2 border-white shadow-md" title="Admin">
+                            <ShieldCheck className="w-3 h-3" />
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="text-lg font-bold text-gray-900">{user.displayName || 'Galaxy User'}</h4>
+                      <p className="text-gray-500 font-medium mb-5">{user.email}</p>
+
+                      <div className="space-y-2.5">
                         <button
-                          onClick={() => setIsLoginModalOpen(false)}
-                          className="text-gray-400 hover:text-gray-600"
-                          title="Close modal"
+                          type="button"
+                          onClick={() => { setIsLoginModalOpen(false); navigate('/orders'); }}
+                          className="w-full py-2.5 px-4 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-gray-200"
                         >
-                          <X className="h-5 w-5" />
+                          <ClipboardCheck className="w-4 h-4 text-gray-500" /> My Orders
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => { setIsLoginModalOpen(false); navigate('/profile'); }}
+                          className="w-full py-2.5 px-4 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-gray-200"
+                        >
+                          <User className="w-4 h-4 text-gray-500" /> User Profile
+                        </button>
+
+                        {user.isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsLoginModalOpen(false);
+                              navigate('/admin');
+                            }}
+                            className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold transition-all hover:shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center gap-2"
+                          >
+                            <ShieldCheck className="w-4 h-4" /> Admin Dashboard
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full py-2.5 px-4 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-all flex items-center justify-center gap-2"
+                        >
+                          <LogOut className="w-4 h-4" /> Sign Out
                         </button>
                       </div>
-                      {user ? (
-                        <div className="text-center py-4">
-                          <div className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <img src={user.image} alt="User" className="rounded-full" />
-                          </div>
-                          <p className="text-gray-900 font-medium text-lg">{user.email}</p>
-                          {user.isAdmin && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-2">
-                              <ShieldCheck className="w-3 h-3 mr-1" />
-                              Administrator
-                            </span>
-                          )}
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <a
+                        href="http://localhost:5000/auth/google"
+                        className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-sm group"
+                      >
+                        <svg className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05" />
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                        Continue with Google
+                      </a>
+
+                      <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-200"></div>
                         </div>
-                      ) : (
-                        <div className="mt-2">
-                          <a
-                            href="http://localhost:5000/auth/google"
-                            className="w-full inline-flex justify-center items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
-                          >
-                            <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
-                              <path
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                fill="#4285F4"
-                              />
-                              <path
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                fill="#34A853"
-                              />
-                              <path
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z"
-                                fill="#FBBC05"
-                              />
-                              <path
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                fill="#EA4335"
-                              />
-                            </svg>
-                            Sign in with Google
-                          </a>
+                        <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold text-gray-400 bg-white px-4">
+                          Or via Email
+                        </div>
+                      </div>
 
-                          <div className="relative mb-4">
-                            <div className="absolute inset-0 flex items-center">
-                              <div className="w-full border-t border-gray-300"></div>
+                      <form onSubmit={handleLoginSubmit} className="space-y-4">
+                        {authError && (
+                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2 animate-head-shake">
+                            <div className="text-red-500 shrink-0 mt-0.5">
+                              <ShieldCheck className="w-4 h-4 text-red-500" />
                             </div>
-                            <div className="relative flex justify-center text-sm">
-                              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+                            <p className="text-xs font-medium text-red-600">{authError}</p>
+                          </div>
+                        )}
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">
+                              {authMode === 'login' ? 'Email or Mobile' : 'Email Address'}
+                            </label>
+                            <div className="relative group">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <User className="h-4 w-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
+                              </div>
+                              <input
+                                type={authMode === 'login' ? 'text' : 'email'}
+                                required
+                                className="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
+                                placeholder={authMode === 'login' ? "john@example.com" : "john@example.com"}
+                                value={emailInput}
+                                onChange={(e) => setEmailInput(e.target.value)}
+                              />
                             </div>
                           </div>
 
-                          <form onSubmit={handleLoginSubmit}>
-                            {/* Error Message */}
-                            {authError && (
-                              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                                <p className="text-sm text-red-600 text-center">{authError}</p>
-                              </div>
-                            )}
-
-                            <p className="text-sm text-gray-600 mb-4 text-center">
-                              {authMode === 'login'
-                                ? "Welcome back! Please enter your details to sign in. 👋"
-                                : "Create your account to start shopping! 🎉"
-                              }
-                            </p>
-
-                            {/* Email Field */}
-                            <div className="mb-4">
-                              <label htmlFor="email" className="block text-sm font-medium text-gray-700 text-left mb-1">
-                                {authMode === 'login' ? 'Email or Phone Number *' : 'Email Address *'}
-                              </label>
-                              <div className="relative rounded-md shadow-sm">
+                          {authMode === 'register' && (
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Mobile Number</label>
+                              <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                  </svg>
+                                  <Briefcase className="h-4 w-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
                                 </div>
                                 <input
-                                  type={authMode === 'login' ? 'text' : 'email'}
-                                  name="email"
-                                  id="email"
+                                  type="tel"
                                   required
-                                  className="focus:ring-primary focus:border-primary block w-full pl-10 pr-3 sm:text-sm border-gray-300 rounded-md py-2.5 border"
-                                  placeholder={authMode === 'login' ? 'you@example.com or +91 98765 43210' : 'you@example.com'}
-                                  value={emailInput}
-                                  onChange={(e) => setEmailInput(e.target.value)}
-                                  autoFocus
+                                  className="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
+                                  placeholder="+91 99999 99999"
+                                  value={phoneInput}
+                                  onChange={(e) => setPhoneInput(e.target.value)}
                                 />
                               </div>
                             </div>
+                          )}
 
-                            {/* Phone Number Field (Register only) */}
-                            {authMode === 'register' && (
-                              <div className="mb-4">
-                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 text-left mb-1">
-                                  Phone Number *
-                                </label>
-                                <div className="relative rounded-md shadow-sm">
-                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                  </div>
-                                  <input
-                                    type="tel"
-                                    name="phone"
-                                    id="phone"
-                                    required
-                                    className="focus:ring-primary focus:border-primary block w-full pl-10 pr-3 sm:text-sm border-gray-300 rounded-md py-2.5 border"
-                                    placeholder="+91 98765 43210"
-                                    pattern="[0-9+\s-]+"
-                                    value={phoneInput}
-                                    onChange={(e) => setPhoneInput(e.target.value)}
-                                  />
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500">We'll use this for order updates</p>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Password</label>
+                            <div className="relative group">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <ShieldCheck className="h-4 w-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
                               </div>
-                            )}
-
-                            {/* Password Field */}
-                            <div className="mb-4">
-                              <label htmlFor="password" className="block text-sm font-medium text-gray-700 text-left mb-1">
-                                Password *
-                              </label>
-                              <div className="relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                  </svg>
-                                </div>
-                                <input
-                                  type="password"
-                                  name="password"
-                                  id="password"
-                                  required
-                                  minLength={6}
-                                  className="focus:ring-primary focus:border-primary block w-full pl-10 pr-3 sm:text-sm border-gray-300 rounded-md py-2.5 border"
-                                  placeholder={authMode === 'login' ? "Enter your password" : "Create a password (min 6 characters)"}
-                                  value={passwordInput}
-                                  onChange={(e) => setPasswordInput(e.target.value)}
-                                />
-                              </div>
-                              {authMode === 'register' && (
-                                <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
-                              )}
-                            </div>
-
-                            {/* Remember Me / Forgot Password */}
-                            {authMode === 'login' && (
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center">
-                                  <input
-                                    id="remember-me"
-                                    name="remember-me"
-                                    type="checkbox"
-                                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                                  />
-                                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                                    Remember me
-                                  </label>
-                                </div>
-                                <div className="text-sm">
-                                  <a href="#" className="font-medium text-primary hover:text-purple-800">
-                                    Forgot password?
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Submit Button */}
-                            <div className="mt-5">
+                              <input
+                                type={showPassword ? "text" : "password"}
+                                required
+                                className="block w-full pl-9 pr-10 py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
+                                placeholder="••••••••"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                              />
                               <button
-                                type="submit"
-                                disabled={authLoading}
-                                className="w-full inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-base font-medium text-white hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-purple-600 focus:outline-none transition-colors"
                               >
-                                {authLoading ? (
-                                  <>
-                                    <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    {authMode === 'login' ? 'Signing In...' : 'Creating Account...'}
-                                  </>
+                                {showPassword ? (
+                                  <EyeOff className="h-4 w-4" aria-hidden="true" />
                                 ) : (
-                                  <>
-                                    {authMode === 'login' ? <LogIn className="w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                                    {authMode === 'login' ? 'Sign In' : 'Create Account'}
-                                  </>
+                                  <Eye className="h-4 w-4" aria-hidden="true" />
                                 )}
                               </button>
                             </div>
-
-                            {/* Toggle Auth Mode */}
-                            <div className="mt-4 text-center">
-                              <button
-                                type="button"
-                                onClick={toggleAuthMode}
-                                className="text-sm text-primary hover:text-purple-800 font-medium hover:underline focus:outline-none"
-                              >
-                                {authMode === 'login'
-                                  ? "Don't have an account? Register →"
-                                  : "Already have an account? Sign In →"
-                                }
-                              </button>
-                            </div>
-                          </form>
+                          </div>
                         </div>
-                      )}
+
+                        {authMode === 'login' && (
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center cursor-pointer">
+                              <input type="checkbox" className="h-3.5 w-3.5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer" />
+                              <span className="ml-2 text-xs text-gray-600 font-medium">Remember me</span>
+                            </label>
+                            <a href="#" className="text-xs font-bold text-purple-600 hover:text-purple-800 transition-colors">
+                              Forgot Password?
+                            </a>
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={authLoading}
+                          className="w-full flex justify-center items-center py-3.5 px-6 border border-transparent rounded-xl shadow-lg shadow-purple-500/30 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-4 focus:ring-purple-500/30 disabled:opacity-70 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                          {authLoading ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              <span>Processing...</span>
+                            </div>
+                          ) : (
+                            <span className="flex items-center gap-2">
+                              {authMode === 'login' ? 'Sign In' : 'Create Account'} <ArrowRight className="w-4 h-4" />
+                            </span>
+                          )}
+                        </button>
+
+                        <div className="text-center mt-4">
+                          <p className="text-xs text-gray-500 font-medium">
+                            {authMode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
+                            <button
+                              type="button"
+                              onClick={toggleAuthMode}
+                              className="text-purple-600 font-bold hover:underline transition-all"
+                            >
+                              {authMode === 'login' ? 'Register Now' : 'Sign In'}
+                            </button>
+                          </p>
+                        </div>
+                      </form>
                     </div>
-                  </div>
+                  )}
                 </div>
-                {user && (
-                  <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </button>
-                    <button
-                      type="button"
-                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                      onClick={() => setIsLoginModalOpen(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </div>

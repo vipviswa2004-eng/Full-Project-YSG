@@ -416,7 +416,7 @@ app.get("/api/user/:email", async (req, res) => {
       user = new User({ email: req.params.email, cart: [], wishlist: [] });
       await user.save();
     }
-    res.json({ cart: user.cart || [], wishlist: user.wishlist || [] });
+    res.json({ cart: user.cart || [], wishlist: user.wishlist || [], isAdmin: user.isAdmin });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

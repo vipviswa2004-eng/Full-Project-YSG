@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useCart } from '../context';
-import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus } from 'lucide-react';
+import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User } from 'lucide-react';
 import { WHATSAPP_NUMBERS, VariationOption } from '../types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
@@ -10,6 +10,8 @@ export const Cart: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isPaymentConfirmed, setIsPaymentConfirmed] = React.useState(false);
+  const [missingDetails, setMissingDetails] = React.useState<string[]>([]);
+  const [showMissingDetailsModal, setShowMissingDetailsModal] = React.useState(false);
 
   const total = cart.reduce((acc, item) => acc + (item.calculatedPrice * item.quantity), 0);
 
@@ -17,7 +19,7 @@ export const Cart: React.FC = () => {
   const UPI_ID = "Pos.11391465@indus";
   const PAYEE_NAME = "SIGN GALAXY";
 
-  const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`;
+
   // Use static QR code image instead of dynamically generated one
   const qrCodeUrl = "/upi-qr-code-only.jpg";
 
@@ -135,7 +137,19 @@ export const Cart: React.FC = () => {
     message += "✅ *Payment Status:* Paid via UPI\n";
     message += "--------------------------------\n\n";
     message += "📍 *Delivery Details:*\n";
-    message += "[Please type your Name & Address here]\n\n";
+    if (user) {
+      message += `Name: ${user.displayName || 'Guest User'}\n`;
+      message += `Phone: ${user.phone || 'N/A'}\n`;
+      message += `Address: ${user.address || 'N/A'}\n`;
+      const location = [user.city, user.state, user.pincode].filter(Boolean).join(', ');
+      if (location) message += `${location}\n`;
+      if (user.addressType) message += `Type: ${user.addressType}\n`;
+    } else {
+      message += "Name: [Type Name]\n";
+      message += "Address: [Type Address]\n";
+    }
+    message += "\n";
+
     message += "Please share the design preview for my approval.\n";
     message += "Thank you 😊";
 
@@ -160,6 +174,72 @@ export const Cart: React.FC = () => {
       <h1 className="text-3xl font-extrabold text-gray-900 mb-8 flex items-center gap-3">
         Shopping Cart <span className="text-lg font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{cart.length} items</span>
       </h1>
+
+      {/* Delivery Address Section */}
+      <div className="bg-white rounded-2xl p-5 mb-8 shadow-xl shadow-indigo-100/50 border border-indigo-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 animate-fade-in-up relative overflow-hidden group">
+
+        {/* Decorative background element */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-indigo-50 to-purple-50 rounded-bl-[100px] -z-10 opacity-50 transition-transform duration-700 group-hover:scale-110"></div>
+
+        <div className="flex items-start gap-5 w-full">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0 transform transition-transform group-hover:rotate-3">
+            <MapPin className="w-7 h-7" />
+          </div>
+
+          <div className="flex-1 min-w-0 pt-0.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Deliver To</p>
+              <div className="h-px w-8 bg-gray-200"></div>
+            </div>
+
+            {user ? (
+              <div>
+                <div className="flex flex-wrap items-center gap-3 mb-1">
+                  <h3 className="text-xl font-black text-gray-900 tracking-tight">{user.displayName || user.email.split('@')[0]}</h3>
+                  {user.addressType && (
+                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm ${user.addressType === 'Home'
+                      ? 'bg-purple-50 text-purple-700 border-purple-100'
+                      : 'bg-blue-50 text-blue-700 border-blue-100'
+                      }`}>
+                      {user.addressType}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-sm font-medium text-gray-500 leading-relaxed max-w-2xl">
+                  {(user.address || user.pincode) ? (
+                    <span className="flex flex-wrap gap-1">
+                      {user.address && <span className="text-gray-700">{user.address}</span>}
+                      {user.city && <span className="text-gray-500">, {user.city}</span>}
+                      {user.state && <span className="text-gray-500">, {user.state}</span>}
+                      {user.pincode && <span className="text-gray-900 font-bold"> - {user.pincode}</span>}
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1 font-semibold animate-pulse">
+                      Please add your full delivery address to proceed
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Please Sign In</h3>
+                <p className="text-sm text-gray-500">Login to manage your saved delivery addresses</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={() => navigate('/profile')}
+          className="group/btn relative px-6 py-2.5 bg-white text-indigo-600 font-bold text-sm rounded-xl border-2 border-indigo-100 hover:border-indigo-600 hover:text-indigo-700 transition-all shadow-sm hover:shadow-md shrink-0 self-start sm:self-center"
+        >
+          <span className="flex items-center gap-2">
+            <PenBox className="w-4 h-4Group-hover:text-indigo-600" />
+            {user ? 'Change' : 'Login'}
+          </span>
+        </button>
+      </div>
 
       <div className="lg:grid lg:grid-cols-12 lg:gap-x-12 lg:items-start">
         <section className="lg:col-span-7 space-y-4">
@@ -193,9 +273,11 @@ export const Cart: React.FC = () => {
                       <div className="space-y-2 mb-4">
                         {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {Object.values(item.selectedVariations).map((opt) => {
+                            {Object.entries(item.selectedVariations).map(([key, opt]) => {
                               const v = opt as VariationOption;
-                              return <span key={v.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">{v.label}</span>;
+                              const label = key.replace(/_variation$/i, '').replace(/_/g, ' ');
+                              const formattedKey = label.charAt(0).toUpperCase() + label.slice(1);
+                              return <span key={v.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100"><span className="opacity-60 mr-1">{formattedKey}:</span>{v.label}</span>;
                             })}
                           </div>
                         )}
@@ -283,66 +365,78 @@ export const Cart: React.FC = () => {
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <a
-                    href={`tez://upi/pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
-                    onClick={(e) => {
-                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        e.preventDefault();
-                        alert('This feature works on mobile devices with the Google Pay app installed. On desktop, please scan the QR code.');
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="font-bold text-blue-600">GPay</span>
-                  </a>
-                  <a
-                    href={`phonepe://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
-                    onClick={(e) => {
-                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        e.preventDefault();
-                        alert('This feature works on mobile devices with the PhonePe app installed. On desktop, please scan the QR code.');
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="font-bold text-[#5f259f]">PhonePe</span>
-                  </a>
-                  <a
-                    href={`paytmmp://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
-                    onClick={(e) => {
-                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        e.preventDefault();
-                        alert('This feature works on mobile devices with the Paytm app installed. On desktop, please scan the QR code.');
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="font-bold text-[#00b9f1]">Paytm</span>
-                  </a>
-                  <a
-                    href={`upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total}&cu=INR`}
-                    onClick={(e) => {
-                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        e.preventDefault();
-                        alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="font-bold text-[#FF9900]">Amazon Pay</span>
-                  </a>
-                  <a
-                    href={upiLink}
-                    onClick={(e) => {
-                      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        e.preventDefault();
-                        alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
-                      }
-                    }}
-                    className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
-                  >
-                    Other UPI Apps <ArrowRight className="w-4 h-4 ml-1" />
-                  </a>
+                  {(() => {
+                    // Generate a unique transaction ref
+                    const tr = `TRX${Date.now()}`;
+                    const tn = `Order Payment`;
+                    const amount = total.toFixed(2);
+                    const commonParams = `pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(tn)}&tr=${tr}`;
+
+                    return (
+                      <>
+                        <a
+                          href={`tez://upi/pay?${commonParams}`}
+                          onClick={(e) => {
+                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                              e.preventDefault();
+                              alert('This feature works on mobile devices with the Google Pay app installed. On desktop, please scan the QR code.');
+                            }
+                          }}
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="font-bold text-blue-600">GPay</span>
+                        </a>
+                        <a
+                          href={`phonepe://pay?${commonParams}`}
+                          onClick={(e) => {
+                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                              e.preventDefault();
+                              alert('This feature works on mobile devices with the PhonePe app installed. On desktop, please scan the QR code.');
+                            }
+                          }}
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="font-bold text-[#5f259f]">PhonePe</span>
+                        </a>
+                        <a
+                          href={`paytmmp://pay?${commonParams}`}
+                          onClick={(e) => {
+                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                              e.preventDefault();
+                              alert('This feature works on mobile devices with the Paytm app installed. On desktop, please scan the QR code.');
+                            }
+                          }}
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="font-bold text-[#00b9f1]">Paytm</span>
+                        </a>
+                        <a
+                          href={`upi://pay?${commonParams}`}
+                          onClick={(e) => {
+                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                              e.preventDefault();
+                              alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
+                            }
+                          }}
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="font-bold text-[#FF9900]">Amazon Pay</span>
+                        </a>
+                        <a
+                          href={`upi://pay?${commonParams}`}
+                          onClick={(e) => {
+                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                              e.preventDefault();
+                              alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
+                            }
+                          }}
+                          className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+                        >
+                          Other UPI Apps <ArrowRight className="w-4 h-4 ml-1" />
+                        </a>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -366,12 +460,92 @@ export const Cart: React.FC = () => {
                     id="payment-confirmed"
                     className="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300"
                     checked={isPaymentConfirmed}
-                    onChange={(e) => setIsPaymentConfirmed(e.target.checked)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        if (!user) {
+                          setMissingDetails(["Please login to proceed with your order"]);
+                          setShowMissingDetailsModal(true);
+                          return;
+                        }
+
+                        const missing = [];
+                        if (!user.displayName) missing.push("Display Name");
+                        if (!user.email) missing.push("Email Address");
+                        if (!user.phone) missing.push("Phone Number");
+                        if (!user.gender) missing.push("Gender");
+                        if (!user.address) missing.push("Street Address");
+                        if (!user.city) missing.push("City");
+                        if (!user.state) missing.push("State");
+                        if (!user.pincode) missing.push("Pincode");
+                        if (!user.addressType) missing.push("Address Type");
+
+                        if (missing.length > 0) {
+                          setMissingDetails(missing);
+                          setShowMissingDetailsModal(true);
+                          return;
+                        }
+                      }
+                      setIsPaymentConfirmed(e.target.checked);
+                    }}
                   />
                   <label htmlFor="payment-confirmed" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
                     I have completed the payment of <span className="font-bold text-gray-900">{formatPrice(total)}</span>
                   </label>
                 </div>
+
+                {/* Missing Details Modal */}
+                {showMissingDetailsModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in text-left">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden scale-100 animate-scale-in relative">
+                      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 to-pink-500"></div>
+
+                      <div className="p-6">
+                        <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                          <AlertTriangle className="w-8 h-8 text-red-500" />
+                        </div>
+
+                        <h3 className="text-xl font-black text-gray-900 text-center mb-2">Complete Your Profile</h3>
+                        <p className="text-center text-gray-500 text-sm mb-6">
+                          To ensure accurate delivery and updates, please provide the following missing details:
+                        </p>
+
+                        <div className="bg-red-50/50 rounded-xl p-4 mb-6 border border-red-100 max-h-[200px] overflow-y-auto custom-scrollbar">
+                          <ul className="space-y-2">
+                            {missingDetails.map((field, idx) => (
+                              <li key={idx} className="flex items-center gap-3 text-sm font-semibold text-gray-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+                                {field}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setShowMissingDetailsModal(false)}
+                            className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors text-sm"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowMissingDetailsModal(false);
+                              if (!user) {
+                                alert("Please use the login button in the navbar.");
+                              } else {
+                                navigate('/profile');
+                              }
+                            }}
+                            className="flex-1 px-4 py-3 bg-primary hover:bg-purple-700 text-white font-bold rounded-xl transition-colors text-sm shadow-lg shadow-purple-200 flex items-center justify-center gap-2"
+                          >
+                            <User className="w-4 h-4" /> Go to Profile
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
 
                 <button
                   onClick={handleCheckout}
@@ -384,12 +558,12 @@ export const Cart: React.FC = () => {
                   <Phone className={`w-5 h-5 mr-2 ${isPaymentConfirmed ? 'animate-bounce-subtle' : ''}`} />
                   <span>Confirm Payment & Order</span>
                 </button>
-                <p className="mt-3 text-[10px] text-gray-400">Order Ref: #{Date.now().toString().slice(-6)} • Secure & Encrypted</p>
+                <p className="mt-3 text-[10px] text-gray-400">Order Ref: #{Date.now().toString().slice(-6)} • Protected with Advanced Cyber Security & Secure Encryption</p>
               </div>
             </div>
           </div>
         </section>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };

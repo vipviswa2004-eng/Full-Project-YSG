@@ -58,7 +58,8 @@ export const Footer: React.FC = () => {
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-500">
-          <p>© 2025 SIGN GALAXY a unit of uc groups. All rights reserved.</p>
+          <p className="mb-2 text-xs font-semibold text-gray-400">Protected with Advanced Cyber Security & Secure Encryption</p>
+          <p>© 2026 SIGN GALAXY a unit of uc groups. All rights reserved.</p>
         </div>
       </div>
     </footer>

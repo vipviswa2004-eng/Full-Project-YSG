@@ -123,14 +123,14 @@ export const Shop: React.FC = () => {
 
     const activeSubCategories = useMemo(() => {
         if (!currentCategory) return [];
-        return subCategories.filter(s => s.categoryId === currentCategory.id);
+        return subCategories.filter(s => s.categoryId === currentCategory.id || s.categoryId === (currentCategory as any)._id);
     }, [currentCategory, subCategories]);
 
     const currentSubCategory = useMemo(() => {
         if (!subCategoryFilter || !currentCategory) return null;
         return subCategories.find(s =>
             s.name.toLowerCase() === subCategoryFilter.toLowerCase() &&
-            s.categoryId === currentCategory.id
+            (s.categoryId === currentCategory.id || s.categoryId === (currentCategory as any)._id)
         );
     }, [subCategoryFilter, subCategories, currentCategory]);
 
@@ -158,7 +158,7 @@ export const Shop: React.FC = () => {
             }
         } else if (filterType === 'trending') {
             result = result.filter(p => p.isTrending);
-        } else if (filterType === 'bestsellers') {
+        } else if (filterType === 'bestseller' || filterType === 'bestsellers') {
             result = result.filter(p => p.isBestseller);
         }
 
@@ -211,7 +211,7 @@ export const Shop: React.FC = () => {
         }
 
         if (subCategoryFilter && currentSubCategory) {
-            result = result.filter(p => p.subCategoryId === currentSubCategory.id);
+            result = result.filter(p => p.subCategoryId === currentSubCategory.id || p.subCategoryId === (currentSubCategory as any)._id);
         }
 
         if (minPrice || maxPrice) {
@@ -461,7 +461,9 @@ export const Shop: React.FC = () => {
                                                 (subCategoryFilter ? subCategoryFilter :
                                                     (categoryFilter ? categoryFilter :
                                                         (occasionFilter ? occasionFilter :
-                                                            (filterType === 'recent' ? 'Recently Viewed' : 'Shop All Gifts'))))}
+                                                            (filterType === 'recent' ? 'Recently Viewed' :
+                                                                (filterType === 'trending' ? 'Trending Gifts' :
+                                                                    (filterType === 'bestseller' || filterType === 'bestsellers' ? 'Bestsellers' : 'Shop All Gifts'))))))}
                                         {processedProducts.length > 0 && (
                                             <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-widest border border-primary/10">
                                                 {processedProducts.length} items

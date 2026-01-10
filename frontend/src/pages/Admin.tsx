@@ -55,12 +55,23 @@ export const Admin: React.FC = () => {
 
     useEffect(() => {
         if (isEditing) {
-            setEditedProduct(JSON.parse(JSON.stringify(isEditing)));
+            const editCopy = JSON.parse(JSON.stringify(isEditing));
+
+            // Sync category name from shopCategories to ensure consistency
+            if (editCopy.shopCategoryId && shopCategories.length > 0) {
+                const cat = shopCategories.find((c: any) => c.id === editCopy.shopCategoryId);
+                if (cat) {
+                    editCopy.category = cat.name;
+                    if (cat.sectionId) editCopy.sectionId = cat.sectionId;
+                }
+            }
+
+            setEditedProduct(editCopy);
             setEditTab('vital');
         } else {
             setEditedProduct(null);
         }
-    }, [isEditing]);
+    }, [isEditing, shopCategories]);
 
     // ... Database Sync Logic ...
     const fetchReviews = async () => {
@@ -483,11 +494,21 @@ export const Admin: React.FC = () => {
 
         console.log('💾 Saving product:', editedProduct.name, 'ID:', editedProduct.id, 'MongoID:', (editedProduct as any)._id);
 
+        // Force update category name from ID to ensure consistency
+        let finalProduct = { ...editedProduct };
+        if (finalProduct.shopCategoryId) {
+            const cat = shopCategories.find(c => c.id === finalProduct.shopCategoryId);
+            if (cat) {
+                finalProduct.category = cat.name;
+                if (cat.sectionId) finalProduct.sectionId = cat.sectionId;
+            }
+        }
+
         try {
             const response = await fetch('http://localhost:5000/api/products', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editedProduct),
+                body: JSON.stringify(finalProduct),
                 cache: 'no-store'
             });
 
@@ -1213,7 +1234,7 @@ export const Admin: React.FC = () => {
         </div>
     );
     const renderPayments = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Payments</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Txn ID</th><th className="px-6 py-3">Ref</th><th className="px-6 py-3">Type</th><th className="px-6 py-3">Amount</th><th className="px-6 py-3">Status</th></tr></thead><tbody className="divide-y divide-gray-200">{transactions.map(t => (<tr key={t.id}><td className="px-6 py-4 font-mono text-xs">{t.id}</td><td className="px-6 py-4">{t.orderId}</td><td className="px-6 py-4">{t.type}</td><td className="px-6 py-4 font-bold">₹{t.amount}</td><td className="px-6 py-4"><span className="text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t.status}</span></td></tr>))}</tbody></table></div></div>);
-    const renderLogistics = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Logistics</h2><div className="grid gap-4">{orders.filter(o => o.status === 'Shipped' || o.status === 'Processing').map(o => (<div key={o.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center"><div><p className="font-bold text-lg">{o.id}</p><p className="text-sm text-gray-500">To: {o.shippingAddress}</p><div className="mt-2 flex gap-2"><span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">{o.status}</span>{o.trackingNumber && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{o.courier}: {o.trackingNumber}</span>}</div></div><div className="flex flex-col gap-2"><button className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-100">Assign Courier</button></div></div>))}</div></div>);
+    const renderLogistics = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Logistics</h2><div className="grid gap-4">{orders.filter(o => o.status === 'Shipped' || o.status === 'Packed').map(o => (<div key={o.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center"><div><p className="font-bold text-lg">{o.id}</p><p className="text-sm text-gray-500">To: {o.shippingAddress}</p><div className="mt-2 flex gap-2"><span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">{o.status}</span>{o.trackingNumber && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{o.courier}: {o.trackingNumber}</span>}</div></div><div className="flex flex-col gap-2"><button className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-100">Assign Courier</button></div></div>))}</div></div>);
     const renderReturns = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Return Requests</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Return ID</th><th className="px-6 py-3">Product</th><th className="px-6 py-3">Reason</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{returns.map(r => (<tr key={r.id}><td className="px-6 py-4">{r.id}</td><td className="px-6 py-4">{r.productName}</td><td className="px-6 py-4 text-red-500">{r.reason}</td><td className="px-6 py-4 font-bold">{r.status}</td><td className="px-6 py-4 text-right space-x-2">{r.status === 'Pending' && (<><button className="text-green-600 hover:underline text-xs">Approve</button><button className="text-red-600 hover:underline text-xs">Reject</button></>)}</td></tr>))}</tbody></table></div></div>);
     const renderReviews = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Reviews Moderation</h2><div className="grid gap-4">{reviews.map(r => (<div key={r._id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex justify-between"><div className="flex items-center gap-2"><div className="flex text-yellow-400">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div><span className="font-bold text-gray-800">{r.productName}</span></div><span className={`text-xs px-2 py-0.5 rounded ${r.status === 'Flagged' || r.status === 'Rejected' ? 'bg-red-100 text-red-800' : r.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100'}`}>{r.status}</span></div><p className="text-gray-600 mt-2 text-sm">"{r.comment}"</p><div className="mt-3 flex justify-end gap-2"><button onClick={() => handleReviewAction(r._id, 'Delete')} className="text-gray-600 text-xs font-bold hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button></div></div>))}</div></div>);
     const renderCoupons = () => (<div className="space-y-4"><div className="flex justify-between"><h2 className="text-xl font-bold">Coupons</h2><button className="bg-primary text-white px-3 py-1 rounded text-sm font-bold">+ Add Coupon</button></div><div className="grid grid-cols-2 gap-4">{coupons.map(c => (<div key={c.id} className="bg-white p-4 rounded-lg border border-dashed border-primary flex justify-between items-center shadow-sm"><div><p className="font-mono font-bold text-xl">{c.code}</p><p className="text-sm text-gray-500">{c.discountType === 'PERCENTAGE' ? `${c.value}% OFF` : `₹${c.value} OFF`}</p></div><div className="text-right"><p className="text-xs text-gray-400">Used: {c.usedCount}</p><button className="text-xs text-blue-600 underline">Edit</button></div></div>))}</div></div>);
@@ -1383,7 +1404,7 @@ export const Admin: React.FC = () => {
                             >
                                 <option value="">All Categories</option>
                                 {shopCategories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    <option key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</option>
                                 ))}
                             </select>
                         </div>
@@ -1403,7 +1424,7 @@ export const Admin: React.FC = () => {
                                         <div className="flex-1">
                                             <h3 className="font-bold text-gray-900">{sub.name}</h3>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                Category: {shopCategories.find(c => c.id === sub.categoryId)?.name || 'Unknown'}
+                                                Category: {shopCategories.find(c => (c.id || c._id) === sub.categoryId)?.name || 'Unknown'}
                                             </p>
                                             <p className="text-xs text-gray-500">Order: {sub.order}</p>
                                         </div>
@@ -1683,7 +1704,7 @@ export const Admin: React.FC = () => {
                                         className="w-full border p-2 rounded"
                                     >
                                         <option value="">Select Category</option>
-                                        {shopCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        {shopCategories.map(c => <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -1972,7 +1993,7 @@ export const Admin: React.FC = () => {
                                             <select
                                                 value={editedProduct.shopCategoryId || ''}
                                                 onChange={e => {
-                                                    const cat = shopCategories.find(c => c.id === e.target.value);
+                                                    const cat = shopCategories.find(c => (c.id || c._id) === e.target.value);
                                                     setEditedProduct({
                                                         ...editedProduct,
                                                         shopCategoryId: e.target.value,
@@ -1985,7 +2006,7 @@ export const Admin: React.FC = () => {
                                             >
                                                 <option value="">-- Select Category --</option>
                                                 {shopCategories.map(cat => (
-                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                    <option key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1999,9 +2020,17 @@ export const Admin: React.FC = () => {
                                             >
                                                 <option value="">-- Select Sub-category --</option>
                                                 {subCategories
-                                                    .filter(sub => sub.categoryId === editedProduct.shopCategoryId)
+                                                    .filter(sub => {
+                                                        // Robust filtering: Match against selected ID or find the category and match against its alternative ID
+                                                        if (sub.categoryId === editedProduct.shopCategoryId) return true;
+                                                        const selectedCat = shopCategories.find(c => (c.id || c._id) === editedProduct.shopCategoryId);
+                                                        if (selectedCat) {
+                                                            return sub.categoryId === selectedCat.id || sub.categoryId === selectedCat._id;
+                                                        }
+                                                        return false;
+                                                    })
                                                     .map(sub => (
-                                                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                                        <option key={sub.id || sub._id} value={sub.id || sub._id}>{sub.name}</option>
                                                     ))
                                                 }
                                             </select>

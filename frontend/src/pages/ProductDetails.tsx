@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SEO } from '../components/SEO';
+import { RecentlyViewedDetails } from './RecentlyViewedDetails';
 import { useParams, useNavigate } from 'react-router-dom';
 import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { VariationOption, Review } from '../types';
-import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2 } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search } from 'lucide-react';
 
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -13,6 +14,7 @@ export const ProductDetails: React.FC = () => {
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
+    const relatedScrollRef = useRef<HTMLDivElement>(null);
 
     const scrollToReviews = () => {
         reviewsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,6 +41,21 @@ export const ProductDetails: React.FC = () => {
     // Receiver Location State
     const [receiverLocation, setReceiverLocation] = useState('');
     const [receiverCountry, setReceiverCountry] = useState('IND');
+    const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [locationMessage, setLocationMessage] = useState('');
+    const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+    const [countrySearchQuery, setCountrySearchQuery] = useState('');
+
+    const COUNTRIES = [
+        { code: 'IND', name: 'India', flag: '🇮🇳' },
+        { code: 'USA', name: 'United States', flag: '🇺🇸' },
+        { code: 'UK', name: 'United Kingdom', flag: '🇬🇧' },
+        { code: 'UAE', name: 'UAE', flag: '🇦🇪' },
+        { code: 'CAN', name: 'Canada', flag: '🇨🇦' },
+        { code: 'AUS', name: 'Australia', flag: '🇦🇺' },
+        { code: 'DEU', name: 'Germany', flag: '🇩🇪' },
+        { code: 'FRA', name: 'France', flag: '🇫🇷' },
+    ];
 
     // Image Gallery State
     const [activeImage, setActiveImage] = useState<string>('');
@@ -97,6 +114,30 @@ export const ProductDetails: React.FC = () => {
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleCheckLocation = () => {
+        if (!receiverLocation.trim()) {
+            setLocationStatus('error');
+            setLocationMessage('Please enter a valid pincode or area.');
+            return;
+        }
+
+        setLocationStatus('loading');
+        setLocationMessage('');
+
+        // Simulate API call
+        setTimeout(() => {
+            // Mock logic: 6 digits for success, else error (for IND)
+            if (receiverCountry === 'IND' && !/^\d{6}$/.test(receiverLocation.trim())) {
+                setLocationStatus('error');
+                setLocationMessage('Please enter a valid 6-digit Pincode.');
+            } else {
+                setLocationStatus('success');
+                setLocationMessage('Available for delivery');
+                showNotification("Delivery available at this location!", "success");
+            }
+        }, 1000);
+    };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -459,7 +500,7 @@ export const ProductDetails: React.FC = () => {
                 }}
             />
             {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-40 px-4 h-14 flex items-center justify-between border-b shadow-sm">
+            <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-40 px-4 h-16 flex items-center justify-between border-b shadow-sm">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600" title="Go Back"><ArrowLeft className="w-6 h-6" /></button>
                 <span className="font-bold text-gray-800 truncate max-w-[200px]">{product.name}</span>
                 <div className="flex gap-2">
@@ -468,10 +509,10 @@ export const ProductDetails: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto pt-16 md:pt-8 px-0 md:px-4 lg:px-8">
+            <div className="max-w-7xl mx-auto pt-[45px] md:pt-8 px-0 md:px-4 lg:px-8">
                 <div className="lg:grid lg:grid-cols-12 lg:gap-x-10 items-start">
                     {/* Left Column: Images & Buttons */}
-                    <div className="lg:col-span-5 space-y-6 sticky top-24">
+                    <div className="lg:col-span-5 space-y-6 sticky top-20">
                         <div className="flex gap-4">
                             {/* Thumbnails (Left Side) */}
                             <div className="hidden md:flex flex-col gap-3 w-16">
@@ -515,6 +556,14 @@ export const ProductDetails: React.FC = () => {
                                     )}
 
                                     <button
+                                        onClick={handleNativeShare}
+                                        className="absolute top-16 right-4 p-2 rounded-full shadow-md bg-white text-gray-400 hover:text-indigo-600 transition-colors z-10"
+                                        title="Share"
+                                    >
+                                        <Share2 className="w-6 h-6" />
+                                    </button>
+
+                                    <button
                                         onClick={handleWishlistToggle}
                                         className={`absolute top-4 right-4 p-2 rounded-full shadow-md transition-colors z-10 ${isInWishlist ? 'bg-red-50 text-red-500' : 'bg-white text-gray-400 hover:text-red-500'}`}
                                     >
@@ -527,7 +576,7 @@ export const ProductDetails: React.FC = () => {
                         </div>
 
                         {/* Mobile Thumbnails (Horizontal) */}
-                        <div className="flex md:hidden gap-3 overflow-x-auto pb-2 px-4 scrollbar-hide mb-6">
+                        <div className="flex md:hidden gap-3 overflow-x-auto pb-2 px-4 no-scrollbar mb-6">
                             {allImages.map((img, idx) => (
                                 <button
                                     key={idx}
@@ -546,10 +595,10 @@ export const ProductDetails: React.FC = () => {
                     <div className="h-12 md:hidden w-full bg-transparent shrink-0"></div>
 
                     {/* Right Column: Details & Reviews */}
-                    <div className="lg:col-span-7 flex flex-col lg:h-[calc(100vh-100px)] lg:sticky lg:top-24">
+                    <div className="lg:col-span-7 flex flex-col lg:h-[calc(100vh-100px)] lg:sticky lg:top-19">
                         <div
                             ref={detailsContainerRef}
-                            className="flex-1 overflow-y-auto p-4 md:p-0 space-y-8 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pr-2"
+                            className="flex-1 overflow-y-auto p-4 md:p-0 space-y-8 no-scrollbar"
                         >
                             {/* Product Info */}
                             <div className="border-b border-gray-100 pb-6">
@@ -823,29 +872,103 @@ export const ProductDetails: React.FC = () => {
 
 
                                 {/* Gift Receiver's Location */}
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-900 mb-2">Gift Receiver's Location</label>
-                                    <div className="flex rounded-md shadow-sm">
-                                        <div className="relative flex-shrink-0">
-                                            <select
-                                                value={receiverCountry}
-                                                onChange={(e) => setReceiverCountry(e.target.value)}
-                                                className="h-full py-2.5 pl-3 pr-8 border-gray-300 bg-gray-50 text-gray-900 rounded-l-lg border-r-0 focus:ring-primary focus:border-primary sm:text-sm font-medium"
+                                <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-3">
+                                        <MapPin className="w-4 h-4 text-orange-500" />
+                                        Gift Receiver's Location
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <div className="relative shrink-0 w-28">
+                                            <button
+                                                onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                                                className="w-full h-11 pl-3 pr-2 bg-white border border-gray-200 text-gray-900 rounded-lg focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-bold flex items-center justify-between hover:border-orange-300 transition-colors"
                                             >
-                                                <option value="IND">🇮🇳 IND</option>
-                                                <option value="USA">🇺🇸 USA</option>
-                                                <option value="UK">🇬🇧 UK</option>
-                                                <option value="UAE">🇦🇪 UAE</option>
-                                            </select>
+                                                <span className="truncate flex items-center gap-1">
+                                                    <span>{COUNTRIES.find(c => c.code === receiverCountry)?.flag}</span>
+                                                    <span>{receiverCountry}</span>
+                                                </span>
+                                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isCountryDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {isCountryDropdownOpen && (
+                                                <>
+                                                    <div className="fixed inset-0 z-10" onClick={() => setIsCountryDropdownOpen(false)}></div>
+                                                    <div className="models-dropdown absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-xl border border-gray-100 z-20 overflow-hidden animate-slide-down">
+                                                        <div className="p-2 border-b border-gray-50 bg-gray-50/50 sticky top-0">
+                                                            <div className="relative">
+                                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                                                <input
+                                                                    type="text"
+                                                                    value={countrySearchQuery}
+                                                                    onChange={(e) => setCountrySearchQuery(e.target.value)}
+                                                                    placeholder="Search country..."
+                                                                    className="w-full text-xs pl-8 pr-3 py-1.5 rounded-md border border-gray-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                                                                    autoFocus
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                                                            {COUNTRIES
+                                                                .filter(c => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) || c.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
+                                                                .map(country => (
+                                                                    <button
+                                                                        key={country.code}
+                                                                        onClick={() => {
+                                                                            setReceiverCountry(country.code);
+                                                                            setIsCountryDropdownOpen(false);
+                                                                            setCountrySearchQuery('');
+                                                                        }}
+                                                                        className={`w-full text-left px-3 py-2 text-sm rounded-md flex items-center justify-between hover:bg-orange-50 transition-colors ${receiverCountry === country.code ? 'bg-orange-50 text-orange-700 font-bold' : 'text-gray-700'}`}
+                                                                    >
+                                                                        <span className="flex items-center gap-2">
+                                                                            <span>{country.flag}</span>
+                                                                            <span>{country.name}</span>
+                                                                        </span>
+                                                                        {receiverCountry === country.code && <CheckCircle className="w-3.5 h-3.5 text-orange-600" />}
+                                                                    </button>
+                                                                ))
+                                                            }
+                                                            {COUNTRIES.filter(c => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) || c.code.toLowerCase().includes(countrySearchQuery.toLowerCase())).length === 0 && (
+                                                                <div className="p-3 text-center text-xs text-gray-400">
+                                                                    No country found
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
-                                        <input
-                                            type="text"
-                                            value={receiverLocation}
-                                            onChange={(e) => setReceiverLocation(e.target.value)}
-                                            placeholder="Enter Receiver's pincode, location, area"
-                                            className="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-r-lg border-gray-300 focus:ring-primary focus:border-primary sm:text-sm border"
-                                        />
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                value={receiverLocation}
+                                                onChange={(e) => setReceiverLocation(e.target.value)}
+                                                placeholder="Enter Pincode or Area"
+                                                className="w-full h-11 pl-4 pr-24 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm transition-all placeholder:text-gray-400"
+                                            />
+                                            <button
+                                                onClick={handleCheckLocation}
+                                                disabled={locationStatus === 'loading'}
+                                                className="absolute right-1 top-1 bottom-1 px-4 bg-gray-900 text-white text-xs font-bold uppercase tracking-wider rounded-md hover:bg-orange-500 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[70px]"
+                                            >
+                                                {locationStatus === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Check'}
+                                            </button>
+                                        </div>
                                     </div>
+
+                                    {locationStatus === 'success' && (
+                                        <p className="text-[10px] text-green-600 mt-2 flex items-center gap-1.5 ml-1 font-bold animate-fade-in">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                            {locationMessage}
+                                        </p>
+                                    )}
+
+                                    {locationStatus === 'error' && (
+                                        <p className="text-[10px] text-red-500 mt-2 flex items-center gap-1.5 ml-1 font-bold animate-fade-in">
+                                            <X className="w-3 h-3" />
+                                            {locationMessage}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Trust Badges */}
@@ -999,9 +1122,9 @@ export const ProductDetails: React.FC = () => {
                         </div>
 
                         {/* Action Buttons - Fixed at bottom for mobile, docked at bottom for desktop */}
-                        <div className="fixed bottom-0 left-0 right-0 lg:relative lg:bottom-auto p-4 bg-white border-t border-gray-100 z-50 flex gap-4 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] lg:shadow-none lg:bg-transparent lg:border-none lg:pt-6">
-                            <button onClick={handleAddToCartClick} className="flex-1 bg-white border-2 border-primary text-primary py-4 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 text-base shadow-sm">Customize & Add to Cart</button>
-                            <button onClick={handleBuyNowClick} className="flex-1 bg-primary text-white py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all active:scale-95 text-base">Buy Now</button>
+                        <div className="fixed bottom-0 left-0 right-0 lg:relative lg:bottom-auto p-3 md:p-4 bg-white border-t border-gray-100 z-50 flex gap-3 md:gap-4 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] lg:shadow-none lg:bg-transparent lg:border-none lg:pt-6">
+                            <button onClick={handleAddToCartClick} className="flex-1 bg-white border-2 border-primary text-primary py-3 md:py-4 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 text-xs md:text-base shadow-sm">Customize & Add to Cart</button>
+                            <button onClick={handleBuyNowClick} className="flex-1 bg-primary text-white py-3 md:py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all active:scale-95 text-xs md:text-base">Buy Now</button>
                         </div>
                     </div>
                 </div>
@@ -1256,9 +1379,9 @@ export const ProductDetails: React.FC = () => {
                     </div>
 
                     {/* Reviews Grid (FNP Style) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x">
                         {productReviews.length === 0 ? (
-                            <div className="col-span-full text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                            <div className="w-full text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200 shrink-0">
                                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-gray-400">
                                     <MessageCircle className="w-8 h-8" />
                                 </div>
@@ -1266,16 +1389,16 @@ export const ProductDetails: React.FC = () => {
                                 <p className="text-gray-500 text-sm mt-1">Be the first to share your experience!</p>
                             </div>
                         ) : (
-                            productReviews.slice(0, showAllReviews ? productReviews.length : 4).map((review, idx) => (
-                                <div key={idx} className="bg-white border border-gray-100 rounded-xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md transition-all flex flex-col h-full">
+                            productReviews.slice(0, showAllReviews ? undefined : 10).map((review, idx) => (
+                                <div key={idx} className="min-w-[280px] md:min-w-[320px] lg:min-w-[calc(20%-16px)] snap-start bg-white border border-gray-100 rounded-xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md transition-all flex flex-col h-full">
 
                                     {/* Card Header */}
                                     <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold uppercase tracking-wider">
+                                        <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold uppercase tracking-wider shrink-0">
                                             {review.userName ? review.userName.substring(0, 2) : 'CU'}
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-gray-900 text-sm leading-tight">{review.userName || 'Customer'}</h4>
+                                            <h4 className="font-bold text-gray-900 text-sm leading-tight truncate max-w-[140px]">{review.userName || 'Customer'}</h4>
                                             <span className="text-[11px] text-gray-400 font-medium">
                                                 {/* Mock "time ago" for demo, or real date */}
                                                 {new Date(review.date || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
@@ -1300,10 +1423,10 @@ export const ProductDetails: React.FC = () => {
                                     {/* Card Footer tags */}
                                     <div className="pt-3 border-t border-gray-50 flex flex-wrap gap-2 mt-auto">
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px] font-medium text-gray-500">
-                                            Occasion: {product.category || 'Gift'}
+                                            {product.category || 'Gift'}
                                         </span>
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px] font-medium text-gray-500">
-                                            City: {review.location || 'India'}
+                                            {review.location || 'India'}
                                         </span>
                                     </div>
                                 </div>
@@ -1324,46 +1447,78 @@ export const ProductDetails: React.FC = () => {
                     )}
                 </div>
 
-                <div className="bg-white py-12 border-t border-gray-100 mt-8">
+                <RecentlyViewedDetails />
+
+                <div className="py-12 mt-8">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex justify-between items-end mb-6">
+                        <div className="flex justify-between items-center mb-8">
                             <div>
-                                <span className="text-secondary font-bold text-xs uppercase tracking-wider mb-1 block">You May Also Like</span>
-                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Related Products</h2>
+                                <span className="text-gray-400 font-bold text-xs uppercase tracking-wider mb-2 block animate-fade-in">You May Also Like</span>
+                                <h2 className="text-3xl font-black text-gray-900 tracking-tight">Related Products</h2>
                             </div>
-                            <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="hidden md:flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all">
-                                View All <ArrowRight className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-4">
+                                <div className="hidden md:flex gap-2">
+                                    <button
+                                        onClick={() => relatedScrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' })}
+                                        className="p-3 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors shadow-sm"
+                                        aria-label="Scroll Left"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => relatedScrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' })}
+                                        className="p-3 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors shadow-sm"
+                                        aria-label="Scroll Right"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="hidden md:flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all text-sm">
+                                    View All <ArrowRight className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
+                        <div
+                            ref={relatedScrollRef}
+                            className="flex gap-6 overflow-x-auto pb-8 no-scrollbar snap-x -mx-4 px-4 md:mx-0 md:px-0"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
                             {products
                                 .filter(p => p.category === product.category && p.id !== product.id)
-                                .slice(0, 6)
+                                .slice(0, 8)
                                 .map(related => {
                                     const relatedPrices = calculatePrice(related);
                                     return (
-                                        <div key={related.id} className="min-w-[160px] md:min-w-[220px] snap-start group cursor-pointer" onClick={() => { navigate(`/product/${related.id}`); window.scrollTo(0, 0); }}>
-                                            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                                                <div className="relative aspect-square overflow-hidden bg-gray-50">
+                                        <div key={related.id} className="w-[180px] md:w-[220px] shrink-0 snap-start group cursor-pointer" onClick={() => { navigate(`/product/${related.id}`); window.scrollTo(0, 0); }}>
+                                            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-gray-200 transition-all duration-300 h-full flex flex-col relative">
+                                                <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
                                                     <img
                                                         src={related.image}
                                                         alt={related.name}
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                                                         loading="lazy"
                                                     />
                                                     {related.discount && (
-                                                        <div className="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
-                                                            {related.discount}% OFF
+                                                        <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                                                            -{related.discount}%
                                                         </div>
                                                     )}
+
+                                                    {/* Quick Action Overlay */}
+                                                    <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex justify-center pb-6 bg-gradient-to-t from-black/60 to-transparent">
+                                                        <button className="bg-white text-gray-900 px-4 py-2 rounded-full text-xs font-bold shadow-lg hover:bg-primary hover:text-white transition-colors flex items-center gap-2">
+                                                            <Eye className="w-3.5 h-3.5" /> View Details
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div className="p-3 flex flex-col flex-1">
-                                                    <h3 className="font-bold text-gray-900 text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors">{related.name}</h3>
+
+                                                <div className="p-4 flex flex-col flex-1">
+                                                    <h3 className="font-bold text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-relaxed">{related.name}</h3>
                                                     <div className="mt-auto">
                                                         <div className="flex items-baseline gap-2">
-                                                            <span className="font-bold text-gray-900">{formatPrice(relatedPrices.final)}</span>
-                                                            {related.discount && <span className="text-xs text-gray-400 line-through">{formatPrice(relatedPrices.original)}</span>}
+                                                            <span className="font-black text-gray-900 text-lg mobile:text-base">{formatPrice(relatedPrices.final)}</span>
+                                                            {related.discount && <span className="text-xs text-gray-400 line-through font-medium">{formatPrice(relatedPrices.original)}</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1374,7 +1529,7 @@ export const ProductDetails: React.FC = () => {
                             }
                         </div>
 
-                        <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="w-full md:hidden flex justify-center items-center gap-2 text-primary font-bold py-3 bg-gray-50 rounded-lg mt-2">
+                        <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="w-full md:hidden flex justify-center items-center gap-2 text-primary font-bold py-3 bg-gray-50 rounded-xl mt-4 border border-gray-100">
                             View All Products <ArrowRight className="w-4 h-4" />
                         </button>
                     </div>
@@ -1435,6 +1590,6 @@ export const ProductDetails: React.FC = () => {
                     )
                 }
             </div>
-        </div >
+        </div>
     );
 };

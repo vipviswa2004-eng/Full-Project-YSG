@@ -114,6 +114,12 @@ export interface User {
   displayName?: string;
   image?: string;
   phone?: string;
+  address?: string; // Added address field
+  pincode?: string; // Added pincode field
+  state?: string;
+  city?: string; // City / District / Town
+  addressType?: 'Home' | 'Office';
+  gender?: 'Male' | 'Female' | 'Other';
 }
 
 export interface Customer {

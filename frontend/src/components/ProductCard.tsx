@@ -116,20 +116,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
 
                 <div className="p-4 bg-white flex-1 border-t border-gray-50 flex flex-col justify-between">
                     <div>
-                        <p className="text-[9px] font-black text-gray-400 h-3 uppercase tracking-tighter mb-1">
+                        <p className="text-[9px] font-black text-gray-400 min-h-[12px] uppercase tracking-tighter mb-1 line-clamp-2">
                             {product.category}
                         </p>
                         <h3 className="text-xs font-bold text-gray-900 line-clamp-2 h-9 mb-2 transition-colors group-hover:text-primary leading-tight">
                             {product.name}
                         </h3>
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm shadow-green-600/10">
-                                {product.rating || 4.5} <Star className="w-2.5 h-2.5 fill-current" />
+                        {/* Conditionally render rating only if there are reviews */}
+                        {(product.reviewsCount || 0) > 0 ? (
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm shadow-green-600/10">
+                                    {product.rating} <Star className="w-2.5 h-2.5 fill-current" />
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                                    ({product.reviewsCount} reviews)
+                                </span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                                ({product.reviewsCount || 12} reviews)
-                            </span>
-                        </div>
+                        ) : (
+                            <div className="mb-3 h-[18px]"></div> // Placeholder to maintain vertical consistent spacing or leave empty
+                        )}
                     </div>
                     <div className="flex items-end justify-between mt-auto">
                         <div className="flex flex-col">
@@ -142,9 +147,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                                 </span>
                             )}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
-                            <Star className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
-                        </div>
+
                     </div>
                 </div>
             </Link>
