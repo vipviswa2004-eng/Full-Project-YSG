@@ -146,6 +146,7 @@ export interface Review {
 }
 
 export interface Coupon {
+  _id?: string;
   id: string;
   code: string;
   discountType: 'PERCENTAGE' | 'FIXED';

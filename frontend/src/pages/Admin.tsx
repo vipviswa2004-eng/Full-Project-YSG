@@ -27,6 +27,11 @@ export const Admin: React.FC = () => {
     const [reviews, setReviews] = useState<Review[]>([]);
     const [coupons, setCoupons] = useState<Coupon[]>([]);
 
+    // Coupon Management State
+    const [showCouponModal, setShowCouponModal] = useState(false);
+    const [isEditingCoupon, setIsEditingCoupon] = useState<Coupon | null>(null);
+    const [newCouponData, setNewCouponData] = useState<Partial<Coupon>>({});
+
     // Seller Management State
     const [isEditingSeller, setIsEditingSeller] = useState<Seller | null>(null);
     const [showSellerModal, setShowSellerModal] = useState(false);
@@ -132,13 +137,14 @@ export const Admin: React.FC = () => {
 
     const fetchShopData = async () => {
         try {
-            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes, recipientsRes] = await Promise.all([
+            const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes, recipientsRes, couponsRes] = await Promise.all([
                 fetch('http://localhost:5000/api/sections'),
                 fetch('http://localhost:5000/api/shop-categories'),
                 fetch('http://localhost:5000/api/sub-categories'),
                 fetch('http://localhost:5000/api/special-occasions'),
                 fetch('http://localhost:5000/api/shop-occasions'),
-                fetch('http://localhost:5000/api/shop-recipients')
+                fetch('http://localhost:5000/api/shop-recipients'),
+                fetch('http://localhost:5000/api/coupons')
             ]);
             setSections(await sectionsRes.json());
             setShopCategories(await categoriesRes.json());
@@ -146,10 +152,25 @@ export const Admin: React.FC = () => {
             setSpecialOccasions(await occasionsRes.json());
             setShopOccasions(await shopOccasionsRes.json());
             setShopRecipients(await recipientsRes.json());
+            setCoupons(await couponsRes.json());
         } catch (error) {
             console.error("Failed to fetch shop data", error);
         }
     };
+
+    const fetchSellerList = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/sellers');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setSellers(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch sellers", error);
+        }
+    };
+
+
 
 
 
@@ -216,6 +237,58 @@ export const Admin: React.FC = () => {
         }
     };
 
+    const handleSaveCoupon = async () => {
+        if (!newCouponData.code || !newCouponData.value || !newCouponData.expiryDate) {
+            alert("Code, Value, and Expiry Date are required.");
+            return;
+        }
+
+        try {
+            const method = isEditingCoupon ? 'PUT' : 'POST';
+            const url = isEditingCoupon
+                ? `http://localhost:5000/api/coupons/${isEditingCoupon._id || isEditingCoupon.id}`
+                : 'http://localhost:5000/api/coupons';
+
+            const payload = {
+                ...newCouponData,
+                id: isEditingCoupon ? isEditingCoupon.id : `coup_${Date.now()}`,
+                status: isEditingCoupon ? isEditingCoupon.status : 'Active',
+                usedCount: isEditingCoupon ? isEditingCoupon.usedCount : 0,
+                discountType: newCouponData.discountType || 'FIXED',
+                usageLimit: newCouponData.usageLimit || 1
+            };
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                setShowCouponModal(false);
+                setIsEditingCoupon(null);
+                setNewCouponData({});
+                // Refresh list
+                const refreshed = await fetch('http://localhost:5000/api/coupons').then(r => r.json());
+                setCoupons(refreshed);
+                alert('Coupon saved successfully!');
+            } else {
+                alert('Failed to save coupon');
+            }
+        } catch (error) {
+            console.error("Error saving coupon", error);
+            alert("Error saving coupon");
+        }
+    };
+
+    const handleDeleteCoupon = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this coupon?")) return;
+        try {
+            await fetch(`http://localhost:5000/api/coupons/${id}`, { method: 'DELETE' });
+            setCoupons(prev => prev.filter(c => c.id !== id));
+        } catch (e) { console.error(e); alert("Failed to delete coupon"); }
+    };
+
     useEffect(() => {
         console.log('🔄 Loading products from database...');
         fetch(`http://localhost:5000/api/products?t=${Date.now()}`, {
@@ -231,6 +304,7 @@ export const Admin: React.FC = () => {
 
         fetchReviews();
         fetchShopData();
+        fetchSellerList();
     }, []);
 
     const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions' | 'shop-recipients', data: any) => {
@@ -671,6 +745,80 @@ export const Admin: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                {/* Coupon Modal */}
+                {showCouponModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-scale-up">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                <h3 className="font-bold text-gray-800">{isEditingCoupon ? 'Edit Coupon' : 'Add New Coupon'}</h3>
+                                <button onClick={() => setShowCouponModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Coupon Code</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border rounded-lg p-2 uppercase"
+                                        value={newCouponData.code || ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, code: e.target.value.toUpperCase() })}
+                                        placeholder="e.g. SUMMER50"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Discount Type</label>
+                                        <select
+                                            className="w-full border rounded-lg p-2"
+                                            value={newCouponData.discountType || 'FIXED'}
+                                            onChange={e => setNewCouponData({ ...newCouponData, discountType: e.target.value as any })}
+                                        >
+                                            <option value="FIXED">Flat Amount (₹)</option>
+                                            <option value="PERCENTAGE">Percentage (%)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Value</label>
+                                        <input
+                                            type="number"
+                                            className="w-full border rounded-lg p-2"
+                                            value={newCouponData.value || ''}
+                                            onChange={e => setNewCouponData({ ...newCouponData, value: parseFloat(e.target.value) })}
+                                            placeholder="e.g. 100"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Expiry Date</label>
+                                        <input
+                                            type="date"
+                                            className="w-full border rounded-lg p-2"
+                                            value={newCouponData.expiryDate ? new Date(newCouponData.expiryDate).toISOString().split('T')[0] : ''}
+                                            onChange={e => setNewCouponData({ ...newCouponData, expiryDate: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Usage Limit</label>
+                                        <input
+                                            type="number"
+                                            className="w-full border rounded-lg p-2"
+                                            value={newCouponData.usageLimit || ''}
+                                            onChange={e => setNewCouponData({ ...newCouponData, usageLimit: parseInt(e.target.value) })}
+                                            placeholder="e.g. 1000"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleSaveCoupon}
+                                    className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                                >
+                                    {isEditingCoupon ? 'Update Coupon' : 'Create Coupon'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
@@ -969,17 +1117,7 @@ export const Admin: React.FC = () => {
         }
     };
 
-    const fetchSellerList = async () => {
-        try {
-            const res = await fetch('http://localhost:5000/api/sellers');
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setSellers(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch sellers", error);
-        }
-    };
+
 
     const fetchTransactions = async () => {
         try {
@@ -1237,7 +1375,69 @@ export const Admin: React.FC = () => {
     const renderLogistics = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Logistics</h2><div className="grid gap-4">{orders.filter(o => o.status === 'Shipped' || o.status === 'Packed').map(o => (<div key={o.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center"><div><p className="font-bold text-lg">{o.id}</p><p className="text-sm text-gray-500">To: {o.shippingAddress}</p><div className="mt-2 flex gap-2"><span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">{o.status}</span>{o.trackingNumber && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{o.courier}: {o.trackingNumber}</span>}</div></div><div className="flex flex-col gap-2"><button className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-100">Assign Courier</button></div></div>))}</div></div>);
     const renderReturns = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Return Requests</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Return ID</th><th className="px-6 py-3">Product</th><th className="px-6 py-3">Reason</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{returns.map(r => (<tr key={r.id}><td className="px-6 py-4">{r.id}</td><td className="px-6 py-4">{r.productName}</td><td className="px-6 py-4 text-red-500">{r.reason}</td><td className="px-6 py-4 font-bold">{r.status}</td><td className="px-6 py-4 text-right space-x-2">{r.status === 'Pending' && (<><button className="text-green-600 hover:underline text-xs">Approve</button><button className="text-red-600 hover:underline text-xs">Reject</button></>)}</td></tr>))}</tbody></table></div></div>);
     const renderReviews = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Reviews Moderation</h2><div className="grid gap-4">{reviews.map(r => (<div key={r._id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex justify-between"><div className="flex items-center gap-2"><div className="flex text-yellow-400">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div><span className="font-bold text-gray-800">{r.productName}</span></div><span className={`text-xs px-2 py-0.5 rounded ${r.status === 'Flagged' || r.status === 'Rejected' ? 'bg-red-100 text-red-800' : r.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100'}`}>{r.status}</span></div><p className="text-gray-600 mt-2 text-sm">"{r.comment}"</p><div className="mt-3 flex justify-end gap-2"><button onClick={() => handleReviewAction(r._id, 'Delete')} className="text-gray-600 text-xs font-bold hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button></div></div>))}</div></div>);
-    const renderCoupons = () => (<div className="space-y-4"><div className="flex justify-between"><h2 className="text-xl font-bold">Coupons</h2><button className="bg-primary text-white px-3 py-1 rounded text-sm font-bold">+ Add Coupon</button></div><div className="grid grid-cols-2 gap-4">{coupons.map(c => (<div key={c.id} className="bg-white p-4 rounded-lg border border-dashed border-primary flex justify-between items-center shadow-sm"><div><p className="font-mono font-bold text-xl">{c.code}</p><p className="text-sm text-gray-500">{c.discountType === 'PERCENTAGE' ? `${c.value}% OFF` : `₹${c.value} OFF`}</p></div><div className="text-right"><p className="text-xs text-gray-400">Used: {c.usedCount}</p><button className="text-xs text-blue-600 underline">Edit</button></div></div>))}</div></div>);
+    const renderCoupons = () => (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold flex items-center gap-2"><Ticket className="w-5 h-5" /> Coupons</h2>
+                <button
+                    onClick={() => {
+                        setIsEditingCoupon(null);
+                        setNewCouponData({});
+                        setShowCouponModal(true);
+                    }}
+                    className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-purple-700 transition"
+                >
+                    <Plus className="w-4 h-4" /> Add Coupon
+                </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {coupons.map(c => (
+                    <div key={c._id || c.id} className="bg-white p-4 rounded-xl border border-dashed border-primary/50 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                        <div className="absolute right-0 top-0 w-20 h-20 bg-primary/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+                        <div className="z-10">
+                            <p className="font-mono font-black text-xl text-primary tracking-wider">{c.code}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${c.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {c.status}
+                                </span>
+                                <span className="text-xs text-gray-500 font-medium">
+                                    {c.discountType === 'PERCENTAGE' ? `${c.value}% OFF` : `₹${c.value} OFF`}
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-2">Expires: {new Date(c.expiryDate).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-right z-10 flex flex-col items-end gap-2">
+                            <p className="text-xs text-gray-400 font-medium">Used: <span className="text-gray-900 font-bold">{c.usedCount}</span>/{c.usageLimit}</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsEditingCoupon(c);
+                                        setNewCouponData(c);
+                                        setShowCouponModal(true);
+                                    }}
+                                    className="p-1.5 hover:bg-blue-50 text-blue-600 rounded"
+                                >
+                                    <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteCoupon(c._id || c.id)}
+                                    className="p-1.5 hover:bg-red-50 text-red-600 rounded"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {coupons.length === 0 && (
+                    <div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <Ticket className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <p>No coupons created yet.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
     const renderSecurity = () => (<div className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm"><h2 className="text-xl font-bold">Security & Permissions</h2><div className="space-y-4">{['Super Admin', 'Product Manager', 'Order Manager', 'Support Agent'].map(role => (<div key={role} className="flex items-center justify-between p-3 bg-gray-50 rounded border"><span className="font-medium">{role}</span><button className="text-xs bg-white border px-2 py-1 rounded hover:bg-gray-100">Manage</button></div>))}</div></div>);
 
     // Shop Sections Management
@@ -3500,6 +3700,81 @@ export const Admin: React.FC = () => {
                             <button onClick={() => setShowSellerModal(false)} className="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
                             <button onClick={handleSaveSeller} className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-purple-700">
                                 {isEditingSeller ? 'Update Seller' : 'Onboard Seller'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Coupon Modal */}
+            {showCouponModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-scale-up">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-gray-800">{isEditingCoupon ? 'Edit Coupon' : 'Add New Coupon'}</h3>
+                            <button onClick={() => setShowCouponModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1">Coupon Code</label>
+                                <input
+                                    type="text"
+                                    className="w-full border rounded-lg p-2 uppercase"
+                                    value={newCouponData.code || ''}
+                                    onChange={e => setNewCouponData({ ...newCouponData, code: e.target.value.toUpperCase() })}
+                                    placeholder="e.g. SUMMER50"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Discount Type</label>
+                                    <select
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.discountType || 'FIXED'}
+                                        onChange={e => setNewCouponData({ ...newCouponData, discountType: e.target.value as any })}
+                                    >
+                                        <option value="FIXED">Flat Amount (₹)</option>
+                                        <option value="PERCENTAGE">Percentage (%)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Value</label>
+                                    <input
+                                        type="number"
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.value || ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, value: parseFloat(e.target.value) })}
+                                        placeholder="e.g. 100"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Expiry Date</label>
+                                    <input
+                                        type="date"
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.expiryDate ? new Date(newCouponData.expiryDate).toISOString().split('T')[0] : ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, expiryDate: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Usage Limit</label>
+                                    <input
+                                        type="number"
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.usageLimit || ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, usageLimit: parseInt(e.target.value) })}
+                                        placeholder="e.g. 1000"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleSaveCoupon}
+                                className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                            >
+                                {isEditingCoupon ? 'Update Coupon' : 'Create Coupon'}
                             </button>
                         </div>
                     </div>

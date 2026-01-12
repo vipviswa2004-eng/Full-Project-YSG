@@ -115,6 +115,8 @@ export const ProductDetails: React.FC = () => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+
+
     const handleCheckLocation = () => {
         if (!receiverLocation.trim()) {
             setLocationStatus('error');
@@ -512,7 +514,7 @@ export const ProductDetails: React.FC = () => {
             <div className="max-w-7xl mx-auto pt-[45px] md:pt-8 px-0 md:px-4 lg:px-8">
                 <div className="lg:grid lg:grid-cols-12 lg:gap-x-10 items-start">
                     {/* Left Column: Images & Buttons */}
-                    <div className="lg:col-span-5 space-y-6 sticky top-20">
+                    <div className="lg:col-span-5 space-y-6 sticky top-20 mt-10">
                         <div className="flex gap-4">
                             {/* Thumbnails (Left Side) */}
                             <div className="hidden md:flex flex-col gap-3 w-16">
@@ -632,22 +634,23 @@ export const ProductDetails: React.FC = () => {
                                     v.name.toLowerCase() !== 'size' &&
                                     !v.name.toLowerCase().includes('light base') &&
                                     v.name.toLowerCase() !== 'shape' &&
-                                    v.name.toLowerCase() !== 'color'
+                                    v.name.toLowerCase() !== 'color' &&
+                                    v.options && v.options.length > 0
                                 ).map((v) => (
                                     <div key={v.id}>
                                         <h3 className="text-sm font-medium text-gray-900 mb-2">{v.name}</h3>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                             {v.options.map((opt) => (
                                                 <button
                                                     key={opt.id}
                                                     onClick={() => handleVariationChange(v.id, opt, v.name)}
-                                                    className={`px-3 py-2 text-sm rounded-md border transition-all flex items-center gap-2 ${selectedVariations[v.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-1 ring-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                                    className={`shrink-0 w-32 md:w-36 p-3 text-sm rounded-xl border-2 transition-all flex flex-col items-center justify-start gap-2 text-center ${selectedVariations[v.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-1 ring-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
                                                 >
-                                                    {opt.image && <img src={opt.image} className="w-6 h-6 rounded object-cover" alt="" />}
-                                                    <div className="flex flex-col items-start leading-none gap-0.5">
-                                                        <span className="font-medium">{opt.label}</span>
+                                                    {opt.image ? <img src={opt.image} className="w-16 h-16 rounded-lg object-cover shadow-sm bg-white" alt="" /> : <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400">No Img</div>}
+                                                    <div className="flex flex-col items-center gap-0.5 w-full">
+                                                        <span className="font-bold leading-tight">{opt.label}</span>
                                                         {opt.size && <span className="text-[10px] text-gray-500">{opt.size}</span>}
-                                                        {opt.description && <span className="text-[10px] text-gray-400">{opt.description}</span>}
+                                                        {opt.description && <span className="text-[10px] text-gray-400 line-clamp-1">{opt.description}</span>}
                                                     </div>
                                                 </button>
                                             ))}
@@ -718,18 +721,20 @@ export const ProductDetails: React.FC = () => {
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">Select Size</h3>
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                                 {sizeVariation.options.map((opt) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(sizeVariation.id, opt, sizeVariation.name)}
-                                                        className={`px-4 py-3 text-sm rounded-lg border-2 transition-all ${selectedVariations[sizeVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
+                                                        className={`shrink-0 w-36 md:w-44 p-3 text-sm rounded-xl border-2 transition-all flex flex-col items-center justify-start gap-3 text-center ${selectedVariations[sizeVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1 shadow-md' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
                                                     >
-                                                        <div className="flex flex-col items-center gap-1">
-                                                            {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover mb-1" alt="" />}
-                                                            <span className="font-bold">{opt.label}</span>
-                                                            {opt.size && <span className="text-[10px] text-gray-500 font-medium">{opt.size}</span>}
-                                                            {opt.description && <span className="text-[10px] text-gray-500">{opt.description}</span>}
+                                                        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-gray-100 bg-white">
+                                                            {opt.image ? <img src={opt.image} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300 text-xs">No Image</div>}
+                                                        </div>
+                                                        <div className="flex flex-col items-center gap-0.5 w-full">
+                                                            <span className="font-bold text-base leading-tight">{opt.label}</span>
+                                                            {opt.size && <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full mt-1">{opt.size}</span>}
+                                                            {opt.description && <span className="text-[10px] text-gray-400 mt-1 line-clamp-2">{opt.description}</span>}
                                                         </div>
                                                     </button>
                                                 ))}
@@ -746,18 +751,20 @@ export const ProductDetails: React.FC = () => {
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">Select Shape</h3>
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                                 {shapeVariation.options.map((opt) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(shapeVariation.id, opt, shapeVariation.name)}
-                                                        className={`px-4 py-3 text-sm rounded-lg border-2 transition-all ${selectedVariations[shapeVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
+                                                        className={`shrink-0 w-36 md:w-44 p-3 text-sm rounded-xl border-2 transition-all flex flex-col items-center justify-start gap-3 text-center ${selectedVariations[shapeVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1 shadow-md' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
                                                     >
-                                                        <div className="flex flex-col items-center gap-1">
-                                                            {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover mb-1" alt="" />}
-                                                            <span className="font-bold">{opt.label}</span>
+                                                        <div className="w-full aspect-square rounded-lg overflow-hidden border border-gray-100 bg-white p-2">
+                                                            {opt.image ? <img src={opt.image} className="w-full h-full object-contain" alt="" /> : <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300 text-xs">No Image</div>}
+                                                        </div>
+                                                        <div className="flex flex-col items-center gap-0.5 w-full">
+                                                            <span className="font-bold text-sm leading-tight">{opt.label}</span>
                                                             {opt.size && <span className="text-[10px] text-gray-500 font-medium">{opt.size}</span>}
-                                                            {opt.description && <span className="text-[10px] text-gray-400 font-medium">{opt.description}</span>}
+                                                            {opt.description && <span className="text-[10px] text-gray-400 mt-0.5 line-clamp-2">{opt.description}</span>}
                                                         </div>
                                                     </button>
                                                 ))}
@@ -769,17 +776,17 @@ export const ProductDetails: React.FC = () => {
                                 {/* Color Variation */}
                                 {(() => {
                                     const colorVariation = product.variations?.find(v => v.name.toLowerCase() === 'color');
-                                    if (!colorVariation) return null;
+                                    if (!colorVariation || !colorVariation.options || colorVariation.options.length === 0) return null;
 
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">Select Color</h3>
-                                            <div className="flex flex-wrap gap-3">
+                                            <div className="flex flex-nowrap md:flex-wrap gap-3 overflow-x-auto pb-2 scrollbar-hide">
                                                 {colorVariation.options.map((opt) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(colorVariation.id, opt, colorVariation.name)}
-                                                        className={`relative group p-1.5 rounded-xl border-2 transition-all ${selectedVariations[colorVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 ring-2 ring-primary ring-offset-1' : 'border-gray-200 hover:border-primary bg-white'}`}
+                                                        className={`shrink-0 relative group p-1.5 rounded-xl border-2 transition-all ${selectedVariations[colorVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 ring-2 ring-primary ring-offset-1' : 'border-gray-200 hover:border-primary bg-white'}`}
                                                     >
                                                         <div className="flex flex-col items-center gap-2 min-w-[60px]">
                                                             {opt.image ? (
@@ -810,23 +817,25 @@ export const ProductDetails: React.FC = () => {
                                 {/* Light Base Variation - Displayed under Size */}
                                 {(() => {
                                     const lightBaseVariation = product.variations?.find(v => v.name.toLowerCase().includes('light base'));
-                                    if (!lightBaseVariation) return null;
+                                    if (!lightBaseVariation || !lightBaseVariation.options || lightBaseVariation.options.length === 0) return null;
 
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">{lightBaseVariation.name}</h3>
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                                 {lightBaseVariation.options.map((opt) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(lightBaseVariation.id, opt, lightBaseVariation.name)}
-                                                        className={`px-3 py-2 text-sm rounded-md border transition-all flex items-center gap-3 ${selectedVariations[lightBaseVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-1 ring-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                                                        className={`shrink-0 w-32 md:w-40 p-3 text-sm rounded-xl border-2 transition-all flex flex-col items-center justify-start gap-2 text-center ${selectedVariations[lightBaseVariation.id]?.id === opt.id ? 'border-primary bg-purple-50 text-primary ring-2 ring-primary ring-offset-1 shadow-md' : 'border-gray-200 text-gray-700 hover:border-primary hover:bg-gray-50'}`}
                                                     >
-                                                        {opt.image && <img src={opt.image} className="w-10 h-10 rounded object-cover" alt="" />}
-                                                        <div className="flex flex-col items-start leading-none gap-1">
-                                                            <span className="font-medium">{opt.label}</span>
+                                                        <div className="w-full aspect-video rounded-lg overflow-hidden border border-gray-100 bg-white">
+                                                            {opt.image ? <img src={opt.image} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300 text-xs">No Image</div>}
+                                                        </div>
+                                                        <div className="flex flex-col items-center gap-0.5 w-full">
+                                                            <span className="font-bold text-xs leading-tight">{opt.label}</span>
                                                             {opt.size && <span className="text-[10px] text-gray-500 font-medium">{opt.size}</span>}
-                                                            {opt.description && <span className="text-[10px] text-gray-400 font-medium">{opt.description}</span>}
+                                                            {opt.description && <span className="text-[10px] text-gray-400 line-clamp-2">{opt.description}</span>}
                                                         </div>
                                                     </button>
                                                 ))}
@@ -970,6 +979,8 @@ export const ProductDetails: React.FC = () => {
                                         </p>
                                     )}
                                 </div>
+
+
 
                                 {/* Trust Badges */}
                                 <div className="grid grid-cols-3 gap-4 py-6 border-t border-b border-gray-100 bg-gray-50/50 rounded-xl px-4">

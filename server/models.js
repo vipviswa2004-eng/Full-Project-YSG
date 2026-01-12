@@ -212,12 +212,13 @@ const ReturnRequestSchema = new mongoose.Schema({
 
 // Coupon Schema
 const CouponSchema = new mongoose.Schema({
+  id: String,
   code: String,
-  type: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+  discountType: { type: String, enum: ['PERCENTAGE', 'FIXED'], default: 'FIXED' },
   value: Number,
   minPurchase: Number,
-  expiryDate: Date,
-  usageLimit: Number,
+  expiryDate: { type: Date, required: true }, // Changed from String to Date, added required
+  usageLimit: { type: Number, default: 1 }, // Added default
   usedCount: { type: Number, default: 0 },
   status: { type: String, default: 'Active' }
 });
@@ -241,6 +242,16 @@ const Transaction = mongoose.model('Transaction', TransactionSchema);
 const ReturnRequest = mongoose.model('ReturnRequest', ReturnRequestSchema);
 const Coupon = mongoose.model('Coupon', CouponSchema);
 
+// Gift Genie Query Schema
+const GiftGenieQuerySchema = new mongoose.Schema({
+  userId: String, // Optional, can be anonymous
+  answers: Object,
+  recommendedProducts: [String], // Store product IDs
+  timestamp: { type: Date, default: Date.now }
+});
+
+const GiftGenieQuery = mongoose.model('GiftGenieQuery', GiftGenieQuerySchema);
+
 module.exports = {
   Product,
   User,
@@ -258,5 +269,6 @@ module.exports = {
   Seller,
   Transaction,
   ReturnRequest,
-  Coupon
+  Coupon,
+  GiftGenieQuery
 };

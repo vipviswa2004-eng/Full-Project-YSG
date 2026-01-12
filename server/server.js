@@ -1231,9 +1231,42 @@ app.post("/api/coupons", async (req, res) => {
   }
 });
 
+app.put("/api/coupons/:id", async (req, res) => {
+  try {
+    let query = { _id: req.params.id };
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { id: req.params.id };
+    }
+    const coupon = await Coupon.findOneAndUpdate(query, req.body, { new: true });
+    res.json(coupon);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/coupons/:id", async (req, res) => {
+  try {
+    let query = { _id: req.params.id };
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { id: req.params.id };
+    }
+    await Coupon.findOneAndDelete(query);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- ADMIN HD EXPORT ----------
 const fs = require('fs');
-const { Canvas, Image } = require('canvas'); // node-canvas
+let Canvas, Image;
+try {
+  const canvasModule = require('canvas');
+  Canvas = canvasModule.Canvas;
+  Image = canvasModule.Image;
+} catch (e) {
+  console.warn("Canvas module not found or failed to load. HD generation will be disabled.");
+}
 // Fabric v6 node setup might differ, assuming standard or v5-like for now, 
 // but v6 usually requires specific node setup. 
 // If fabric v6 is strictly browser-focused or requires jsdom, we'll use jsdom.
@@ -1535,6 +1568,30 @@ app.delete("/api/sellers/:id", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ---------- GIFT GENIE ----------
+const { GiftGenieQuery } = require('./models');
+
+app.post('/api/gift-genie', async (req, res) => {
+  try {
+    const { answers, recommendedProducts } = req.body;
+    const userId = req.user ? req.user._id : 'guest';
+
+    const query = new GiftGenieQuery({
+      userId,
+      answers,
+      recommendedProducts
+    });
+
+    await query.save();
+    console.log(`🧞‍♂️ Gift Genie query saved! (User: ${userId})`);
+    res.json({ success: true, id: query._id });
+  } catch (e) {
+    console.error('Error saving Gift Genie query:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 // ---------- MISC ROUTES ----------
 app.listen(PORT, () => {

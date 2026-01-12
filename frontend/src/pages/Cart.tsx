@@ -1,9 +1,10 @@
 
 import React, { useEffect } from 'react';
 import { useCart } from '../context';
-import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User } from 'lucide-react';
-import { WHATSAPP_NUMBERS, VariationOption } from '../types';
+import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User, Loader2, Upload, Percent, Tag } from 'lucide-react';
+import { VariationOption } from '../types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { verifyPaymentAmount } from '../services/gemini';
 
 export const Cart: React.FC = () => {
   const { cart, removeFromCart, updateCartItemQuantity, currency, user, clearCart } = useCart();
@@ -12,8 +13,98 @@ export const Cart: React.FC = () => {
   const [isPaymentConfirmed, setIsPaymentConfirmed] = React.useState(false);
   const [missingDetails, setMissingDetails] = React.useState<string[]>([]);
   const [showMissingDetailsModal, setShowMissingDetailsModal] = React.useState(false);
+  const [paymentScreenshot, setPaymentScreenshot] = React.useState<string | null>(null);
+  const [isUploadingPayment, setIsUploadingPayment] = React.useState(false);
+  const [isVerifying, setIsVerifying] = React.useState(false);
+  const [verificationAlert, setVerificationAlert] = React.useState<{ title: string; message: string; details?: string } | null>(null);
 
-  const total = cart.reduce((acc, item) => acc + (item.calculatedPrice * item.quantity), 0);
+  // Coupon State
+  const [couponCode, setCouponCode] = React.useState('');
+  const [appliedCoupon, setAppliedCoupon] = React.useState<{ code: string; discount: number; type: 'flat' | 'percentage' } | null>(null);
+  const [couponMessage, setCouponMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) return;
+
+    setCouponMessage(null);
+    const code = couponCode.toUpperCase();
+
+    if (code === 'WELCOME15') {
+      // Logic from screenshot: Flat ₹20 off
+      setAppliedCoupon({ code: 'WELCOME15', discount: 20, type: 'flat' });
+      setCouponMessage({ type: 'success', text: "'WELCOME15' applied! Savings will be visible at checkout." });
+    } else if (code === 'SAVE10') {
+      setAppliedCoupon({ code: 'SAVE10', discount: 10, type: 'percentage' });
+      setCouponMessage({ type: 'success', text: "'SAVE10' applied! 10% discount applied." });
+    } else {
+      setAppliedCoupon(null);
+      setCouponMessage({ type: 'error', text: "Invalid coupon code" });
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponMessage(null);
+  };
+
+
+  const handlePaymentScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert("Invalid file type. Please upload a valid image screenshot (JPG, PNG) of your payment.");
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (e.g., max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large. Please upload an image smaller than 10MB.");
+      e.target.value = '';
+      return;
+    }
+
+    setIsUploadingPayment(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        setPaymentScreenshot(data.url);
+        setIsPaymentConfirmed(false); // Reset confirmation if they change image
+      } else {
+        alert('Failed to upload screenshot. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error uploading payment screenshot:', error);
+      alert('Error uploading screenshot.');
+    } finally {
+      setIsUploadingPayment(false);
+    }
+  };
+
+  const subtotal = cart.reduce((acc, item) => acc + (item.calculatedPrice * item.quantity), 0);
+
+  // Calculate Discount
+  let discountAmount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'flat') {
+      discountAmount = appliedCoupon.discount;
+    } else {
+      discountAmount = (subtotal * appliedCoupon.discount) / 100;
+    }
+  }
+
+  const total = Math.max(0, subtotal - discountAmount);
 
   // UPI Configuration
   const UPI_ID = "Pos.11391465@indus";
@@ -21,7 +112,7 @@ export const Cart: React.FC = () => {
 
 
   // Use static QR code image instead of dynamically generated one
-  const qrCodeUrl = "/upi-qr-code-only.jpg";
+  const qrCodeUrl = "/upi-qr-code-updated.jpg";
 
   const formatPrice = (price: number) => {
     return currency === 'INR'
@@ -67,6 +158,7 @@ export const Cart: React.FC = () => {
         total: total,
         status: 'Design Pending',
         paymentMethod: 'UPI',
+        paymentScreenshot: paymentScreenshot,
         orderId: `ORD-${Date.now()}`,
         date: new Date()
       };
@@ -79,11 +171,8 @@ export const Cart: React.FC = () => {
 
       if (!response.ok) {
         console.error("Failed to save order to database");
-        // Check if we should proceed anyway? 
-        // Yes, user priority is WhatsApp. But we should log it.
       } else {
         console.log("Order saved to database");
-        // Only clear cart if order saved successfully
         clearCart();
       }
 
@@ -91,7 +180,9 @@ export const Cart: React.FC = () => {
       console.error("Error creating order:", error);
     }
 
-    // 2. Send Details via WhatsApp (Original Logic)
+    // 2. Send Details via WhatsApp to MULTIPLE numbers
+    const adminNumbers = ['9342310194', '6380016798']; // Admin phone numbers
+
     let message = "Hello Sign Galaxy 👋\n";
     message += "I’ve placed an order successfully.\n\n";
     message += "*ORDER DETAILS*\n";
@@ -124,7 +215,6 @@ export const Cart: React.FC = () => {
       const imgUrl = item.customImage || item.image;
       if (imgUrl && !imgUrl.startsWith('data:')) {
         const fullImgUrl = imgUrl.startsWith('http') ? imgUrl : `${window.location.origin}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
-        // Custom image logic: if customImage exists, it's an uploaded photo
         const imageLabel = item.customImage ? "Uploaded Photo" : "Product Image";
         message += `• ${imageLabel}: ${fullImgUrl}\n`;
       }
@@ -133,13 +223,27 @@ export const Cart: React.FC = () => {
     });
 
     message += "--------------------------------\n";
+    message += `*Subtotal: ${formatPrice(subtotal)}*\n`;
+
+    if (appliedCoupon && discountAmount > 0) {
+      const couponLabel = appliedCoupon.type === 'percentage'
+        ? `${appliedCoupon.code} (${appliedCoupon.discount}%)`
+        : appliedCoupon.code;
+      message += `*Coupon Applied:* ${couponLabel}\n`;
+      message += `*Discount:* -${formatPrice(discountAmount)}\n`;
+    }
+
     message += `*💰 Grand Total: ${formatPrice(total)}*\n`;
     message += "✅ *Payment Status:* Paid via UPI\n";
+    if (paymentScreenshot) {
+      message += `📄 *Payment Proof:* ${paymentScreenshot}\n`;
+    }
     message += "--------------------------------\n\n";
     message += "📍 *Delivery Details:*\n";
     if (user) {
       message += `Name: ${user.displayName || 'Guest User'}\n`;
       message += `Phone: ${user.phone || 'N/A'}\n`;
+      message += `Email: ${user.email || 'N/A'}\n`; // Added Email
       message += `Address: ${user.address || 'N/A'}\n`;
       const location = [user.city, user.state, user.pincode].filter(Boolean).join(', ');
       if (location) message += `${location}\n`;
@@ -154,9 +258,12 @@ export const Cart: React.FC = () => {
     message += "Thank you 😊";
 
     const encodedMsg = encodeURIComponent(message);
-    const waLink = `https://wa.me/${WHATSAPP_NUMBERS[0]}?text=${encodedMsg}`;
 
-    window.open(waLink, '_blank');
+    // Open WhatsApp for each admin number
+    adminNumbers.forEach(num => {
+      window.open(`https://wa.me/${num}?text=${encodedMsg}`, '_blank');
+    });
+
     navigate('/orders');
   };
 
@@ -354,9 +461,122 @@ export const Cart: React.FC = () => {
                   <img src={qrCodeUrl} alt="Payment QR Code" className="w-40 h-40 object-contain mx-auto" />
                 </div>
 
+                {/* Coupon Section */}
+                <div className="mb-6 text-left border-b border-gray-200 pb-6">
+                  <div className="bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7] rounded-xl p-5 border border-green-100 relative overflow-hidden">
+                    {/* Decorative Background */}
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-green-200/40 rounded-bl-full -mr-4 -mt-4 transition-transform hover:scale-110 duration-700"></div>
+
+                    <div className="flex items-center gap-2 mb-4 relative z-10">
+                      <div className="bg-white p-1.5 rounded-lg shadow-sm">
+                        <Percent className="w-4 h-4 text-green-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-900">Offers & Coupons</h3>
+                    </div>
+
+                    {!appliedCoupon ? (
+                      <>
+                        <div className="flex gap-2 mb-4 relative z-10">
+                          <div className="relative flex-1 group">
+                            <input
+                              type="text"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              placeholder="Enter Coupon Code"
+                              className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none uppercase font-bold placeholder:font-normal placeholder:capitalize transition-all shadow-sm group-hover:border-green-300"
+                            />
+                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-green-500 transition-colors" />
+                          </div>
+                          <button
+                            onClick={handleApplyCoupon}
+                            className="bg-gray-900 text-white font-bold text-xs px-5 rounded-lg hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-95"
+                          >
+                            APPLY
+                          </button>
+                        </div>
+
+                        {/* Available Coupons List */}
+                        <div className="space-y-2.5 relative z-10">
+                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-2">Available Coupons</p>
+
+                          {/* WELCOME15 */}
+                          <div
+                            onClick={() => setCouponCode('WELCOME15')}
+                            className="flex items-start gap-3 bg-white/80 p-3 rounded-xl border border-green-100 hover:border-green-300 hover:bg-white transition-all cursor-pointer group shadow-sm"
+                          >
+                            <div className="mt-0.5 bg-green-50 p-1.5 rounded-lg group-hover:bg-green-100 transition-colors">
+                              <Tag className="w-3.5 h-3.5 text-green-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-black text-xs text-gray-800 bg-gray-100 px-2 py-0.5 rounded border border-gray-200 border-dashed">WELCOME15</span>
+                                <span className="text-[10px] text-green-700 font-bold bg-green-100 px-2 py-0.5 rounded-full">₹20 OFF</span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 font-medium leading-tight">
+                                Flat ₹20 off on your purchase.
+                              </p>
+                            </div>
+                          </div>
+
+
+                        </div>
+                      </>
+                    ) : (
+                      <div className="bg-white p-4 rounded-xl border border-green-200 shadow-sm relative overflow-hidden">
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-green-500"></div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center border border-green-100">
+                              <Percent className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-black text-gray-900 block">{appliedCoupon.code}</span>
+                              <span className="text-xs text-green-600 font-bold">
+                                Coupon Applied Successfully!
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleRemoveCoupon}
+                            className="text-xs font-bold text-red-500 hover:text-red-700 underline decoration-red-200 hover:decoration-red-500 underline-offset-2 transition-all"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {couponMessage && (
+                      <div className={`mt-3 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-2 animate-fade-in ${couponMessage.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                        {couponMessage.type === 'success' ? (
+                          <div className="w-4 h-4 rounded-full bg-green-200 flex items-center justify-center shrink-0">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-600"></div>
+                          </div>
+                        ) : (
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        {couponMessage.text}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+
                 <div className="mb-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-bold mb-1">Total Amount</p>
-                  <p className="text-3xl font-extrabold text-primary">{formatPrice(total)}</p>
+                  <div className="flex justify-between items-center mb-1 text-sm">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span className="font-bold text-gray-900">{formatPrice(subtotal)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between items-center mb-2 text-sm">
+                      <span className="text-green-600 font-medium">Coupon Discount</span>
+                      <span className="font-bold text-green-600">-{formatPrice(discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center border-t border-gray-200 pt-3">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Total Amount</p>
+                    <p className="text-3xl font-extrabold text-primary">{formatPrice(total)}</p>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-center gap-2 text-xs text-gray-500 bg-white px-3 py-2 rounded-lg border border-gray-200 max-w-[240px] mx-auto">
@@ -364,7 +584,7 @@ export const Cart: React.FC = () => {
                   <span className="font-mono select-all truncate">{UPI_ID}</span>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="mt-4 grid grid-cols-2 gap-3 lg:hidden">
                   {(() => {
                     // Generate a unique transaction ref
                     const tr = `TRX${Date.now()}`;
@@ -382,9 +602,13 @@ export const Cart: React.FC = () => {
                               alert('This feature works on mobile devices with the Google Pay app installed. On desktop, please scan the QR code.');
                             }
                           }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
                         >
-                          <span className="font-bold text-blue-600">GPay</span>
+                          <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png"
+                            alt="Google Pay"
+                            className="h-6 object-contain"
+                          />
                         </a>
                         <a
                           href={`phonepe://pay?${commonParams}`}
@@ -394,9 +618,13 @@ export const Cart: React.FC = () => {
                               alert('This feature works on mobile devices with the PhonePe app installed. On desktop, please scan the QR code.');
                             }
                           }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
                         >
-                          <span className="font-bold text-[#5f259f]">PhonePe</span>
+                          <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1280px-PhonePe_Logo.svg.png"
+                            alt="PhonePe"
+                            className="h-6 object-contain"
+                          />
                         </a>
                         <a
                           href={`paytmmp://pay?${commonParams}`}
@@ -406,9 +634,13 @@ export const Cart: React.FC = () => {
                               alert('This feature works on mobile devices with the Paytm app installed. On desktop, please scan the QR code.');
                             }
                           }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
                         >
-                          <span className="font-bold text-[#00b9f1]">Paytm</span>
+                          <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/512px-Paytm_Logo_%28standalone%29.svg.png"
+                            alt="Paytm"
+                            className="h-5 object-contain"
+                          />
                         </a>
                         <a
                           href={`upi://pay?${commonParams}`}
@@ -418,9 +650,13 @@ export const Cart: React.FC = () => {
                               alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
                             }
                           }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
                         >
-                          <span className="font-bold text-[#FF9900]">Amazon Pay</span>
+                          <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Amazon_Pay_logo.svg/1024px-Amazon_Pay_logo.svg.png"
+                            alt="Amazon Pay"
+                            className="h-4 object-contain" // Adjusted height for Amazon Pay's wide logo
+                          />
                         </a>
                         <a
                           href={`upi://pay?${commonParams}`}
@@ -430,9 +666,14 @@ export const Cart: React.FC = () => {
                               alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
                             }
                           }}
-                          className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+                          className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-gray-800 transition-colors shadow-md gap-2"
                         >
-                          Other UPI Apps <ArrowRight className="w-4 h-4 ml-1" />
+                          <span>Other UPI Apps</span>
+                          <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/512px-UPI-Logo-vector.svg.png"
+                            alt="UPI"
+                            className="h-4 bg-white rounded p-0.5"
+                          />
                         </a>
                       </>
                     );
@@ -454,14 +695,57 @@ export const Cart: React.FC = () => {
                   <span className="bg-green-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-green-600/20">2</span>
                   <h3 className="font-bold text-gray-900">Confirm Order</h3>
                 </div>
-                <div className="flex items-center justify-center gap-2 mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+
+                {/* Payment Screenshot Upload */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Upload Payment Screenshot <span className="text-red-500">*</span></label>
+                  <div className="flex items-center justify-center w-full">
+                    <label htmlFor="payment-screenshot" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${paymentScreenshot ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}`}>
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        {isUploadingPayment ? (
+                          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                        ) : paymentScreenshot ? (
+                          <>
+                            <img src={paymentScreenshot} alt="Payment Proof" className="h-20 object-contain mb-1 rounded shadow-sm" />
+                            <p className="text-xs text-green-600 font-semibold">Screenshot Uploaded!</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                            <p className="text-xs text-gray-500"><span className="font-semibold">Click to upload</span> payment proof</p>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        id="payment-screenshot"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePaymentScreenshotUpload}
+                        disabled={isUploadingPayment}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100 relative">
+                  {isVerifying && (
+                    <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center gap-2 rounded-lg">
+                      <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                      <span className="text-sm font-bold text-indigo-600">Verifying Amount...</span>
+                    </div>
+                  )}
                   <input
                     type="checkbox"
                     id="payment-confirmed"
                     className="w-4 h-4 text-green-600 rounded focus:ring-green-500 border-gray-300"
                     checked={isPaymentConfirmed}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       if (e.target.checked) {
+                        if (!paymentScreenshot) {
+                          alert("Please upload the payment screenshot first!");
+                          return;
+                        }
                         if (!user) {
                           setMissingDetails(["Please login to proceed with your order"]);
                           setShowMissingDetailsModal(true);
@@ -482,6 +766,21 @@ export const Cart: React.FC = () => {
                         if (missing.length > 0) {
                           setMissingDetails(missing);
                           setShowMissingDetailsModal(true);
+                          return;
+                        }
+
+                        // Verify Payment Amount
+                        setIsVerifying(true);
+                        const result = await verifyPaymentAmount(paymentScreenshot, total);
+                        setIsVerifying(false);
+
+                        if (!result.verified) {
+                          setVerificationAlert({
+                            title: "Payment couldn't be verified yet",
+                            message: "Don't worry— sometimes this happens if the screenshot isn't clear.",
+                            details: "Please upload a screenshot where:\n1. The paid amount matches your order total.\n2. The recipient name 'YATHES SIGN GALAXY' is visible.\n3. The payment details are not blurred or cropped."
+                          });
+                          e.target.checked = false; // Uncheck
                           return;
                         }
                       }
@@ -541,6 +840,39 @@ export const Cart: React.FC = () => {
                             <User className="w-4 h-4" /> Go to Profile
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verification Alert Modal */}
+                {verificationAlert && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in text-left">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden scale-100 animate-scale-in relative">
+                      <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500"></div>
+                      <div className="p-6 text-center">
+                        <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                          <AlertTriangle className="w-6 h-6 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{verificationAlert.title}</h3>
+                        <p className="text-gray-600 text-sm mb-4 leading-relaxed">
+                          {verificationAlert.message}
+                        </p>
+                        {verificationAlert.details && (
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-500 text-left mb-5 whitespace-pre-wrap">
+                            {verificationAlert.details}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            setVerificationAlert(null);
+                            setPaymentScreenshot(null); // Clear previous screenshot to encourage re-upload
+                            setIsPaymentConfirmed(false);
+                          }}
+                          className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors text-sm shadow-lg"
+                        >
+                          Upload Again
+                        </button>
                       </div>
                     </div>
                   </div>

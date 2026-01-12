@@ -552,9 +552,49 @@ Output ONLY the final composite image.` }
         return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
-    return null;
   } catch (error) {
     console.error("Swap Preview Error:", error);
     return null;
+  }
+};
+
+export const verifyPaymentAmount = async (imageSrc: string, expectedAmount: number) => {
+  try {
+    const imageData = await getImageInput(imageSrc);
+    if (!imageData) return { verified: false, extractedAmount: 0, message: "Could not read image" };
+
+    const prompt = `Review this payment screenshot. 
+    1. Identify the total amount paid/transferred. Look for valid currency formats (e.g., ₹1,499, 1499.00). 
+    2. Compare it with the expected amount: ${expectedAmount}.
+    3. CHECK PAYEE NAME: Look for the recipient name "YATHES SIGN GALAXY".
+    
+    4. JSON Output strictly: { "verified": boolean, "extractedAmount": number, "extractedPayee": string, "message": "reasoning" }
+    
+    Rule: verified is true ONLY if:
+    a) The extracted amount exactly matches ${expectedAmount} (allow minor formatting differences like .00).
+    AND
+    b) The payee name explicitly contains "YATHES SIGN GALAXY" (case-insensitive is okay, but partial matches like "Sign Galaxy" are NOT allowed).`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          imageData,
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: 'application/json'
+      }
+    });
+
+    // Access text property directly as it is a getter
+    const responseText = response.text;
+    const result = JSON.parse(responseText || '{}');
+    return result;
+
+  } catch (error) {
+    console.error("Payment Verification Error:", error);
+    return { verified: false, extractedAmount: 0, message: "AI Analysis failed" };
   }
 };
