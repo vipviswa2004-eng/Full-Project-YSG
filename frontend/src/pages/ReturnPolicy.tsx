@@ -3,31 +3,32 @@ import React from 'react';
 export const ReturnPolicy: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
-            <h1 className="text-3xl font-bold mb-8 text-gray-900">Return & Refund Policy</h1>
+            <h1 className="text-3xl font-bold mb-8 text-gray-900">Replacement Policy</h1>
 
             <div className="prose prose-purple max-w-none text-gray-700 space-y-6">
                 <section>
                     <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
                         <p className="font-medium text-yellow-800">
-                            <strong>Note:</strong> Personalized items cannot be returned or exchanged unless they arrive damaged or defective.
+                            <strong>Note:</strong> Personalized items are not eligible for return or refund. Replacement is applicable only if the product arrives damaged or defective.
                             <br /><br />
-                            <strong>Important:</strong> You must attach a clear unboxing video (opening the package) to claim a return or replacement for damage.
+                            <strong>Important:</strong> You must attach a clear unboxing video (opening the package) to claim a replacement for damage.
                         </p>
                     </div>
                 </section>
 
                 <section>
-                    <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Eligibility for Returns</h2>
-                    <p>We accept returns/replacements only under the following conditions:</p>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Eligibility for Replacement</h2>
+                    <p>We accept replacements only under the following conditions:</p>
                     <ul className="list-disc ml-5 mb-2">
                         <li>Product arrived damaged or broken.</li>
                         <li>Wrong product was delivered.</li>
-                        <li>Printing/engraving error caused by us (e.g., spelling mistake different from what you provided).</li>
+                        <li>Printing/engraving error caused by us (i.e., mismatch with the approved content provided by you).</li>
+                        <li>No replacement will be provided for errors in text, photos, or details approved by the customer.</li>
                     </ul>
                 </section>
 
                 <section>
-                    <h2 className="text-xl font-semibold text-gray-900 mb-3">2. How to Request a Return</h2>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-3">2. How to Request a Replacement</h2>
                     <p>Please email us at support@signgalaxy.com within 48 hours of delivery. Include your order number, clear photos of the issue, and the <strong>mandatory unboxing video</strong>.</p>
                 </section>
 

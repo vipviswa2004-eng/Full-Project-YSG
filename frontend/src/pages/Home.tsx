@@ -12,7 +12,7 @@ import personalizedProduct from '../assets/personalized_product.png';
 import specialBg from '../assets/special_bg.png';
 import specialProduct from '../assets/special_product.png';
 import occasionBg from '../assets/occasion_bg.png';
-import occasionProduct from '../assets/occasion_product.png';
+
 
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion } from '../types';
@@ -67,7 +67,7 @@ const HERO_SLIDES = [
   {
     id: 'occasion',
     image: occasionBg,
-    productImage: occasionProduct,
+    productImage: birthdayImg,
     title: 'Shop by Occasion',
     subtitle: 'Find the perfect gift for every celebration.',
     cta: 'Browse Occasions',
@@ -225,6 +225,97 @@ const FadeInSection = ({ children }: { children: React.ReactNode }) => {
         }`}
     >
       {children}
+    </div>
+  );
+};
+
+const ScrollableProductSection: React.FC<{
+  title: string;
+  subtitle: string;
+  icon?: React.ReactNode;
+  products: any[];
+  viewAllLink: string;
+  currency: string;
+  isInWishlist: (id: string) => boolean;
+  onWishlistToggle: (e: React.MouseEvent, product: any) => void;
+  formatPrice: (price: number) => string;
+}> = ({ title, subtitle, icon, products, viewAllLink, isInWishlist, onWishlistToggle, formatPrice }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { current } = scrollRef;
+      const scrollAmount = direction === 'left' ? -800 : 800;
+      current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  if (products.length === 0) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto py-8 px-4 relative group/section">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+            {icon} {title}
+          </h2>
+          <p className="text-xs md:text-sm text-gray-500 mt-1">{subtitle}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex gap-2 opacity-0 group-hover/section:opacity-100 transition-opacity">
+            <button onClick={() => scroll('left')} className="p-2 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-600 hover:text-primary"><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => scroll('right')} className="p-2 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-600 hover:text-primary"><ChevronRight className="w-5 h-5" /></button>
+          </div>
+          <Link to={viewAllLink} className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-1"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {products.map((product) => {
+          const prices = calculatePrice(product);
+          return (
+            <div key={product.id} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
+              <Link to={`/product/${product.id}`} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full overflow-hidden">
+                <div className="relative aspect-square bg-white overflow-hidden">
+                  <img className="w-full h-full object-contain p-0 md:p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
+                  {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+
+                  <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
+                    <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
+                  </div>
+                </div>
+
+                <div className="p-1.5 md:p-3 flex flex-col flex-grow">
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 line-clamp-1">{product.category}</p>
+                    <h3 className="text-[10px] md:text-sm font-semibold text-gray-800 line-clamp-2 h-7 md:h-9 leading-tight group-hover:text-primary transition-colors">{product.name}</h3>
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
+                      <span className="text-[10px] text-gray-400 hidden md:inline">(1.2k)</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-1 border-t border-gray-50 pt-1">
+                    <span className="text-xs md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span>
+                    {(product.discount !== undefined && product.discount > 0) && (
+                      <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+              <button
+                onClick={(e) => onWishlistToggle(e, product)}
+                className={`absolute top-1 right-1 p-1 md:p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
+              >
+                <Heart className={`w-3 h-3 md:w-4 md:h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -671,105 +762,30 @@ export const Home: React.FC = () => {
 
       {/* Trending Gifts - NEW SECTION */}
       <FadeInSection>
-        <div className="max-w-7xl mx-auto py-6 md:py-8 px-4">
-          <div className="flex justify-between items-center mb-4 md:mb-6">
-            <div><h2 className="text-xl md:text-3xl font-bold text-gray-900">Trending Gifts 🔥</h2><p className="text-xs md:text-sm text-gray-500 mt-1">Latest favorites everyone is talking about</p></div>
-            <Link to="/products?filter=trending" className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-            {displayProducts.filter(p => p.isTrending).map((product) => {
-              const prices = calculatePrice(product);
-              return (
-                <div key={product.id} className="relative group">
-                  <Link to={`/product/${product.id}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-                    <div className="relative aspect-square bg-white overflow-hidden">
-                      <img className="w-full h-full object-contain p-2 md:p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                      {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
-
-                      <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
-                        <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2 md:p-3 flex flex-col flex-grow">
-                      <div className="flex-1">
-                        <p className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5 md:mb-1">{product.category}</p>
-                        <h3 className="text-xs md:text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-8 md:h-10 leading-4 md:leading-5">{product.name}</h3>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.9 <Star className="w-2 h-2 fill-current" /></div>
-                          <span className="text-[10px] text-gray-400 hidden md:inline">(850+)</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 md:mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
-                        <div><span className="text-sm md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-[10px] md:text-xs text-gray-400 line-through ml-1 md:ml-2">{formatPrice(prices.original)}</span></div>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <button
-                    onClick={(e) => handleWishlistToggle(e, product)}
-                    className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                  >
-                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <ScrollableProductSection
+          title="Trending Gifts 🔥"
+          subtitle="Latest favorites everyone is talking about"
+          products={displayProducts.filter(p => p.isTrending)}
+          viewAllLink="/products?filter=trending"
+          currency={currency}
+          isInWishlist={isInWishlist}
+          onWishlistToggle={handleWishlistToggle}
+          formatPrice={formatPrice}
+        />
       </FadeInSection>
 
-      {/* Best Sellers Grid (Trending & Best Sellers) */}
-
+      {/* Best Sellers - NEW SCROLLABLE SECTION */}
       <FadeInSection>
-        <div className="max-w-7xl mx-auto py-6 md:py-8 px-4">
-          <div className="flex justify-between items-center mb-4 md:mb-6">
-            <div><h2 className="text-xl md:text-3xl font-bold text-gray-900">Best Sellers 🏆</h2><p className="text-xs md:text-sm text-gray-500 mt-1">Our most popular products loved by everyone</p></div>
-            <Link to="/products?filter=bestseller" className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-            {displayProducts.filter(p => p.isBestseller).map((product) => {
-              const prices = calculatePrice(product);
-              return (
-                <div key={product.id} className="relative group">
-                  <Link to={`/product/${product.id}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-                    <div className="relative aspect-square bg-white overflow-hidden">
-                      <img className="w-full h-full object-contain p-2 md:p-4 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                      {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
-
-                      <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
-                        <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2 md:p-3 flex flex-col flex-grow">
-                      <div className="flex-1">
-                        <p className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5 md:mb-1">{product.category}</p>
-                        <h3 className="text-xs md:text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-colors h-8 md:h-10 leading-4 md:leading-5">{product.name}</h3>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
-                          <span className="text-[10px] text-gray-400 hidden md:inline">(1.2k)</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 md:mt-3 pt-2 border-t border-gray-50 flex justify-between items-center">
-                        <div><span className="text-sm md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span><span className="text-[10px] md:text-xs text-gray-400 line-through ml-1 md:ml-2">{formatPrice(prices.original)}</span></div>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <button
-                    onClick={(e) => handleWishlistToggle(e, product)}
-                    className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                  >
-                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <ScrollableProductSection
+          title="Best Sellers 🏆"
+          subtitle="Our most popular products loved by everyone"
+          products={displayProducts.filter(p => p.isBestseller)}
+          viewAllLink="/products?filter=bestseller"
+          currency={currency}
+          isInWishlist={isInWishlist}
+          onWishlistToggle={handleWishlistToggle}
+          formatPrice={formatPrice}
+        />
       </FadeInSection>
 
       {/* Gifts by Budget - Quick Access */}

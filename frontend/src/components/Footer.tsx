@@ -36,7 +36,7 @@ export const Footer: React.FC = () => {
               <li><Link to="/terms" className="hover:text-[#f5ebd0]">Terms & Conditions</Link></li>
               <li><Link to="/privacy" className="hover:text-[#f5ebd0]">Privacy Policy</Link></li>
               <li><Link to="/shipping" className="hover:text-[#f5ebd0]">Shipping Info</Link></li>
-              <li><Link to="/returns" className="hover:text-[#f5ebd0]">Return Policy</Link></li>
+              <li><Link to="/returns" className="hover:text-[#f5ebd0]">Replacement Policy</Link></li>
             </ul>
           </div>
           <div>
