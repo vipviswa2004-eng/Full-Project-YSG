@@ -122,7 +122,7 @@ export const Navbar: React.FC = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/auth/register', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -152,7 +152,7 @@ export const Navbar: React.FC = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -189,7 +189,7 @@ export const Navbar: React.FC = () => {
     setIsLoginModalOpen(false);
 
     // Redirect to backend logout to clear session
-    window.location.href = "http://localhost:5000/api/logout";
+    window.location.href = `${import.meta.env.VITE_API_URL}/api/logout`;
   };
 
   const openLoginModal = () => {
@@ -631,7 +631,7 @@ export const Navbar: React.FC = () => {
                   ) : (
                     <div className="mt-2">
                       <a
-                        href="http://localhost:5000/auth/google"
+                        href={`${import.meta.env.VITE_API_URL}/auth/google`}
                         className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-sm group"
                       >
                         <svg className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">

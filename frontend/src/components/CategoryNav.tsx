@@ -78,10 +78,10 @@ export const CategoryNav: React.FC = () => {
         const fetchData = async () => {
             try {
                 const [secRes, catRes, subRes, occRes] = await Promise.all([
-                    fetch('http://localhost:5000/api/sections'),
-                    fetch('http://localhost:5000/api/shop-categories'),
-                    fetch('http://localhost:5000/api/sub-categories'),
-                    fetch('http://localhost:5000/api/special-occasions')
+                    fetch(`${import.meta.env.VITE_API_URL}/api/sections`),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/special-occasions`)
                 ]);
 
                 const secData = await secRes.json();

@@ -54,7 +54,7 @@ const AppContent: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('login') === 'success') {
       // Fetch current user from backend
-      fetch('http://localhost:5000/api/current_user', { credentials: 'include' })
+      fetch(`${import.meta.env.VITE_API_URL}/api/current_user`, { credentials: 'include' })
         .then(res => res.json())
         .then(userData => {
           if (userData && userData.email) {

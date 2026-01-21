@@ -71,7 +71,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // API Base URL
-  const API_URL = 'http://localhost:5000/api';
+  // API Base URL
+  const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
   // Fetch Products from DB on Mount // Initial Data Load
   // Fetch Products and User sequentially to ensure hydration works

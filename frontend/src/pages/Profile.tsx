@@ -99,7 +99,7 @@ export const Profile: React.FC = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('cart');
         localStorage.removeItem('wishlist');
-        window.location.href = "http://localhost:5000/api/logout";
+        window.location.href = `${import.meta.env.VITE_API_URL}/api/logout`;
     };
 
     if (!user) {

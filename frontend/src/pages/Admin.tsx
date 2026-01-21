@@ -81,7 +81,7 @@ export const Admin: React.FC = () => {
     // ... Database Sync Logic ...
     const fetchReviews = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/reviews', { cache: 'no-store' });
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, { cache: 'no-store' });
             const data = await res.json();
             setReviews(data);
         } catch (error) {
@@ -93,7 +93,7 @@ export const Admin: React.FC = () => {
         try {
             if (action === 'Delete') {
                 const reviewToDelete = reviews.find(r => r._id === id || r.id === id);
-                await fetch(`http://localhost:5000/api/reviews/${id}`, { method: 'DELETE' });
+                await fetch(`${import.meta.env.VITE_API_URL}/api/reviews/${id}`, { method: 'DELETE' });
                 if (reviewToDelete && reviewToDelete.productId) {
                     const remainingReviews = reviews.filter(r =>
                         (r.productId === reviewToDelete.productId) &&
@@ -108,7 +108,7 @@ export const Admin: React.FC = () => {
                     const product = productList.find(p => p.id === reviewToDelete.productId || (p as any)._id === reviewToDelete.productId);
                     if (product) {
                         const prodId = (product as any)._id || product.id;
-                        await fetch(`http://localhost:5000/api/products/${prodId}`, {
+                        await fetch(`${import.meta.env.VITE_API_URL}/api/products/${prodId}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -123,7 +123,7 @@ export const Admin: React.FC = () => {
                     }
                 }
             } else {
-                await fetch(`http://localhost:5000/api/reviews/${id}`, {
+                await fetch(`${import.meta.env.VITE_API_URL}/api/reviews/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: action === 'Approve' ? 'Approved' : 'Rejected' })
@@ -138,13 +138,13 @@ export const Admin: React.FC = () => {
     const fetchShopData = async () => {
         try {
             const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes, recipientsRes, couponsRes] = await Promise.all([
-                fetch('http://localhost:5000/api/sections'),
-                fetch('http://localhost:5000/api/shop-categories'),
-                fetch('http://localhost:5000/api/sub-categories'),
-                fetch('http://localhost:5000/api/special-occasions'),
-                fetch('http://localhost:5000/api/shop-occasions'),
-                fetch('http://localhost:5000/api/shop-recipients'),
-                fetch('http://localhost:5000/api/coupons')
+                fetch(`${import.meta.env.VITE_API_URL}/api/sections`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/special-occasions`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/shop-occasions`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/shop-recipients`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/coupons`)
             ]);
             setSections(await sectionsRes.json());
             setShopCategories(await categoriesRes.json());
@@ -160,7 +160,7 @@ export const Admin: React.FC = () => {
 
     const fetchSellerList = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/sellers');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/sellers`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setSellers(data);
@@ -183,8 +183,8 @@ export const Admin: React.FC = () => {
         try {
             const method = isEditingSeller ? 'PUT' : 'POST';
             const url = isEditingSeller
-                ? `http://localhost:5000/api/sellers/${isEditingSeller.id}`
-                : 'http://localhost:5000/api/sellers';
+                ? `${import.meta.env.VITE_API_URL}/api/sellers/${isEditingSeller.id}`
+                : `${import.meta.env.VITE_API_URL}/api/sellers`;
 
             const payload = {
                 ...newSellerData,
@@ -221,11 +221,11 @@ export const Admin: React.FC = () => {
         try {
             if (action === 'Delete') {
                 if (confirm('Are you sure you want to delete this seller?')) {
-                    await fetch(`http://localhost:5000/api/sellers/${id}`, { method: 'DELETE' });
+                    await fetch(`${import.meta.env.VITE_API_URL}/api/sellers/${id}`, { method: 'DELETE' });
                 }
             } else {
                 const statusMap = { 'Approve': 'Active', 'Suspend': 'Suspended', 'Activate': 'Active' };
-                await fetch(`http://localhost:5000/api/sellers/${id}`, {
+                await fetch(`${import.meta.env.VITE_API_URL}/api/sellers/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: statusMap[action] })
@@ -246,8 +246,8 @@ export const Admin: React.FC = () => {
         try {
             const method = isEditingCoupon ? 'PUT' : 'POST';
             const url = isEditingCoupon
-                ? `http://localhost:5000/api/coupons/${isEditingCoupon._id || isEditingCoupon.id}`
-                : 'http://localhost:5000/api/coupons';
+                ? `${import.meta.env.VITE_API_URL}/api/coupons/${isEditingCoupon._id || isEditingCoupon.id}`
+                : `${import.meta.env.VITE_API_URL}/api/coupons`;
 
             const payload = {
                 ...newCouponData,
@@ -269,7 +269,7 @@ export const Admin: React.FC = () => {
                 setIsEditingCoupon(null);
                 setNewCouponData({});
                 // Refresh list
-                const refreshed = await fetch('http://localhost:5000/api/coupons').then(r => r.json());
+                const refreshed = await fetch(`${import.meta.env.VITE_API_URL}/api/coupons`).then(r => r.json());
                 setCoupons(refreshed);
                 alert('Coupon saved successfully!');
             } else {
@@ -284,14 +284,14 @@ export const Admin: React.FC = () => {
     const handleDeleteCoupon = async (id: string) => {
         if (!confirm("Are you sure you want to delete this coupon?")) return;
         try {
-            await fetch(`http://localhost:5000/api/coupons/${id}`, { method: 'DELETE' });
+            await fetch(`${import.meta.env.VITE_API_URL}/api/coupons/${id}`, { method: 'DELETE' });
             setCoupons(prev => prev.filter(c => c.id !== id));
         } catch (e) { console.error(e); alert("Failed to delete coupon"); }
     };
 
     useEffect(() => {
         console.log('🔄 Loading products from database...');
-        fetch(`http://localhost:5000/api/products?t=${Date.now()}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/products?t=${Date.now()}`, {
             headers: { 'Cache-Control': 'no-cache' }
         })
             .then(res => res.json())
@@ -311,7 +311,7 @@ export const Admin: React.FC = () => {
         try {
             const method = data._id ? 'PUT' : 'POST';
             const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : type === 'shop-recipients' ? 'shop-recipients' : 'shop-occasions';
-            const url = `http://localhost:5000/api/${apiPath}${data._id ? `/${data._id}` : ''}`;
+            const url = `${import.meta.env.VITE_API_URL}/api/${apiPath}${data._id ? `/${data._id}` : ''}`;
 
             const res = await fetch(url, {
                 method,
@@ -337,7 +337,7 @@ export const Admin: React.FC = () => {
         if (!window.confirm("Are you sure?")) return;
         try {
             const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : type === 'shop-recipients' ? 'shop-recipients' : 'shop-occasions';
-            const res = await fetch(`http://localhost:5000/api/${apiPath}/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/${apiPath}/${id}`, { method: 'DELETE' });
 
             if (!res.ok) throw new Error(`Failed to delete ${type}`);
 
@@ -351,7 +351,7 @@ export const Admin: React.FC = () => {
 
     const handleCategoryConvert = async (categoryId: string, parentCategoryId: string) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/shop-categories/${categoryId}/convert`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories/${categoryId}/convert`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ parentCategoryId })
@@ -388,7 +388,7 @@ export const Admin: React.FC = () => {
             try {
                 const product = productList.find(p => p.id === id);
                 if (product && (product as any)._id) {
-                    await fetch(`http://localhost:5000/api/products/${(product as any)._id}`, {
+                    await fetch(`${import.meta.env.VITE_API_URL}/api/products/${(product as any)._id}`, {
                         method: 'DELETE',
                         cache: 'no-store'
                     });
@@ -402,7 +402,7 @@ export const Admin: React.FC = () => {
     const handleActivateAllProducts = async () => {
         if (window.confirm("Are you sure you want to set ALL products to Active status? This action cannot be undone.")) {
             try {
-                const response = await fetch('http://localhost:5000/api/products/activate-all', {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products/activate-all`, {
                     method: 'POST',
                     cache: 'no-store'
                 });
@@ -426,7 +426,7 @@ export const Admin: React.FC = () => {
         try {
             const product = updatedList.find(p => p.id === id);
             if (product && (product as any)._id) {
-                await fetch(`http://localhost:5000/api/products/${(product as any)._id}`, {
+                await fetch(`${import.meta.env.VITE_API_URL}/api/products/${(product as any)._id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(product),
@@ -454,7 +454,7 @@ export const Admin: React.FC = () => {
             const newStatus = customer.status === 'Active' ? 'Blocked' : 'Active';
 
             // For now, I'll try to use 'id' directly as it might be _id if I updated types
-            await fetch(`http://localhost:5000/api/customers/${id}`, {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/customers/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
@@ -470,7 +470,7 @@ export const Admin: React.FC = () => {
             const order = orders.find(o => o.id === id);
             if (!order || !(order as any)._id) return; // Need _id for API
 
-            await fetch(`http://localhost:5000/api/orders/${(order as any)._id}`, {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/orders/${(order as any)._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
@@ -502,7 +502,7 @@ export const Admin: React.FC = () => {
             formData.append('image', file);
 
             try {
-                const response = await fetch('http://localhost:5000/api/upload', {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                     method: 'POST',
                     body: formData
                 });
@@ -579,7 +579,7 @@ export const Admin: React.FC = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:5000/api/products', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(finalProduct),
@@ -1083,7 +1083,7 @@ export const Admin: React.FC = () => {
     };
     const fetchProducts = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/products');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setProductList(data);
@@ -1095,7 +1095,7 @@ export const Admin: React.FC = () => {
 
     const fetchOrders = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/orders');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setOrders(data);
@@ -1107,7 +1107,7 @@ export const Admin: React.FC = () => {
 
     const fetchCustomers = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/customers');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/customers`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setCustomers(data);
@@ -1121,7 +1121,7 @@ export const Admin: React.FC = () => {
 
     const fetchTransactions = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/transactions');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setTransactions(data);
@@ -1133,7 +1133,7 @@ export const Admin: React.FC = () => {
 
     const fetchReturns = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/returns');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/returns`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setReturns(data);
@@ -1145,7 +1145,7 @@ export const Admin: React.FC = () => {
 
     const fetchCoupons = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/coupons');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/coupons`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setCoupons(data);
@@ -1173,7 +1173,7 @@ export const Admin: React.FC = () => {
         if (!confirmGen) return;
 
         try {
-            const res = await fetch('http://localhost:5000/api/admin/generate-hd', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/generate-hd`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2413,7 +2413,7 @@ export const Admin: React.FC = () => {
                                                         const formData = new FormData();
                                                         formData.append('image', file);
                                                         try {
-                                                            const response = await fetch('http://localhost:5000/api/upload', {
+                                                            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                                                                 method: 'POST',
                                                                 body: formData
                                                             });

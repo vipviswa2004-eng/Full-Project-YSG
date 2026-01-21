@@ -171,7 +171,7 @@ export const ProductDetails: React.FC = () => {
                 const formData = new FormData();
                 formData.append('image', customImageFile);
 
-                const response = await fetch('http://localhost:5000/api/upload', {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -231,7 +231,7 @@ export const ProductDetails: React.FC = () => {
             setActiveImage(product.image);
 
             // Fetch reviews
-            fetch('http://localhost:5000/api/reviews')
+            fetch(`${import.meta.env.VITE_API_URL}/api/reviews`)
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
@@ -424,7 +424,7 @@ export const ProductDetails: React.FC = () => {
                 date: new Date().toISOString()
             };
 
-            await fetch('http://localhost:5000/api/reviews', {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newReview)
@@ -441,7 +441,7 @@ export const ProductDetails: React.FC = () => {
 
             // Update product rating and count in database
             if (product && (product as any)._id) {
-                await fetch(`http://localhost:5000/api/products/${(product as any)._id}`, {
+                await fetch(`${import.meta.env.VITE_API_URL}/api/products/${(product as any)._id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

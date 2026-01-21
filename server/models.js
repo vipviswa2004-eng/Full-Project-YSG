@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 // Product Schema
 const ProductSchema = new mongoose.Schema({
+  // ... (content same as before)
   id: String,
   code: String,
   name: String,
@@ -39,7 +40,7 @@ const ProductSchema = new mongoose.Schema({
     title: { type: String, default: 'Symbol Number' },
     image: String
   }
-}, { id: false });
+}, { id: false, collection: 'products' });
 
 // User Schema
 const UserSchema = new mongoose.Schema({
@@ -59,7 +60,7 @@ const UserSchema = new mongoose.Schema({
     fullProduct: Object // Store full product snapshot for safety
   }],
   wishlist: [String] // Array of product IDs
-}, { timestamps: true });
+}, { timestamps: true, collection: 'users' });
 
 // Order Schema
 const OrderSchema = new mongoose.Schema({
@@ -81,7 +82,7 @@ const OrderSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   orderId: String,
   paymentId: String
-});
+}, { collection: 'orders' });
 
 // Review Schema
 const ReviewSchema = new mongoose.Schema({
@@ -93,7 +94,7 @@ const ReviewSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   status: { type: String, default: 'Pending' }, // Pending, Approved, Rejected
   images: [String]
-});
+}, { collection: 'reviews' });
 
 // Category Schema (Legacy - keep for now)
 const CategorySchema = new mongoose.Schema({
@@ -101,7 +102,7 @@ const CategorySchema = new mongoose.Schema({
   name: String,
   image: String,
   subCategories: [String]
-});
+}, { collection: 'categories' });
 
 // Shape Schema
 const ShapeSchema = new mongoose.Schema({
@@ -109,7 +110,7 @@ const ShapeSchema = new mongoose.Schema({
   name: String,
   image: String,
   priceMultiplier: { type: Number, default: 1 }
-});
+}, { collection: 'shapes' });
 
 // Size Schema
 const SizeSchema = new mongoose.Schema({
@@ -117,7 +118,7 @@ const SizeSchema = new mongoose.Schema({
   name: String,
   dimensions: String,
   priceMultiplier: { type: Number, default: 1 }
-});
+}, { collection: 'sizes' });
 
 // Shop Sections Hierarchy
 const SectionSchema = new mongoose.Schema({
@@ -125,7 +126,7 @@ const SectionSchema = new mongoose.Schema({
   title: String,
   image: String,
   order: { type: Number, default: 0 }
-});
+}, { collection: 'sections' });
 
 const ShopCategorySchema = new mongoose.Schema({
   id: String,
@@ -135,13 +136,13 @@ const ShopCategorySchema = new mongoose.Schema({
   sectionIds: [String], // References Section.id (multiple parents support)
   order: { type: Number, default: 0 },
   isFeatured: { type: Boolean, default: false }
-});
+}, { collection: 'shopcategories' });
 
 const SubCategorySchema = new mongoose.Schema({
   id: String,
   name: String,
   categoryId: String // References ShopCategory.id
-});
+}, { collection: 'subcategories' });
 
 // Special Occasions (Seasonal/Events like Mother's Day)
 const SpecialOccasionSchema = new mongoose.Schema({
@@ -151,7 +152,7 @@ const SpecialOccasionSchema = new mongoose.Schema({
   description: String,
   link: String,
   order: { type: Number, default: 0 }
-});
+}, { collection: 'specialoccasions' });
 
 // Shop By Occasion (Standard like Birthday, Wedding)
 const ShopOccasionSchema = new mongoose.Schema({
@@ -162,7 +163,7 @@ const ShopOccasionSchema = new mongoose.Schema({
   link: String,
   order: { type: Number, default: 0 },
   color: { type: String, default: 'from-gray-500 to-gray-700' }
-});
+}, { collection: 'shopoccasions' });
 
 // Shop By Recipient
 const ShopRecipientSchema = new mongoose.Schema({
@@ -171,7 +172,7 @@ const ShopRecipientSchema = new mongoose.Schema({
   image: String,
   link: String,
   order: { type: Number, default: 0 }
-});
+}, { collection: 'shoprecipients' });
 
 // Seller Schema
 const SellerSchema = new mongoose.Schema({
@@ -186,7 +187,7 @@ const SellerSchema = new mongoose.Schema({
   rating: { type: Number, default: 0 },
   balance: { type: Number, default: 0 },
   returnRate: { type: Number, default: 0 }
-});
+}, { collection: 'sellers' });
 
 // Transaction Schema
 const TransactionSchema = new mongoose.Schema({
@@ -197,7 +198,7 @@ const TransactionSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   method: String,
   customerName: String
-});
+}, { collection: 'transactions' });
 
 // Return Request Schema
 const ReturnRequestSchema = new mongoose.Schema({
@@ -208,7 +209,7 @@ const ReturnRequestSchema = new mongoose.Schema({
   reason: String,
   status: { type: String, default: 'Pending' },
   date: { type: Date, default: Date.now }
-});
+}, { collection: 'returnrequests' });
 
 // Coupon Schema
 const CouponSchema = new mongoose.Schema({
@@ -221,7 +222,7 @@ const CouponSchema = new mongoose.Schema({
   usageLimit: { type: Number, default: 1 }, // Added default
   usedCount: { type: Number, default: 0 },
   status: { type: String, default: 'Active' }
-});
+}, { collection: 'coupons' });
 
 // Export Models
 const Product = mongoose.model('Product', ProductSchema);

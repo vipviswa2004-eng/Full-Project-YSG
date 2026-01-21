@@ -61,9 +61,9 @@ export const Shop: React.FC = () => {
         const fetchData = async () => {
             try {
                 const [productsRes, categoriesRes, subCategoriesRes] = await Promise.all([
-                    fetch('http://localhost:5000/api/products'),
-                    fetch('http://localhost:5000/api/shop-categories'),
-                    fetch('http://localhost:5000/api/sub-categories')
+                    fetch(`${import.meta.env.VITE_API_URL}/api/products`),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`)
                 ]);
                 setProducts(await productsRes.json());
                 setShopCategories(await categoriesRes.json());

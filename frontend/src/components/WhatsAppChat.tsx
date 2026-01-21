@@ -49,7 +49,7 @@ export const WhatsAppChat: React.FC = () => {
 
         // Save to database
         try {
-            await fetch('http://localhost:5000/api/whatsapp-leads', {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/whatsapp-leads`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

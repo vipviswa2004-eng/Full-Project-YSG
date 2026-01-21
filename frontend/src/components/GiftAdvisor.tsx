@@ -474,7 +474,7 @@ export const GiftAdvisor: React.FC = () => {
 
   const saveGiftGenieData = async (answers: Record<string, string>, recommended: GiftAdvisorProduct[]) => {
     try {
-      await fetch('http://localhost:5000/api/gift-genie', {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/gift-genie`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

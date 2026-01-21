@@ -9,8 +9,12 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient } = require('./models');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/sign_galaxy";
+console.log("---------------------------------------------------");
+console.log("DEBUG: process.env.MONGO_URI:", process.env.MONGO_URI ? "DEFINED" : "UNDEFINED");
+console.log("DEBUG: Connecting to:", MONGO_URI);
+console.log("---------------------------------------------------");
 
 // Seed Shop Recipients
 const seedRecipients = async () => {
@@ -36,10 +40,18 @@ const seedRecipients = async () => {
 // ---------- MIDDLEWARE ----------
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
+        "https://ucgoc.com",
+        "https://www.ucgoc.com",
+        "http://localhost:5173",
+        "http://localhost:5174"
+      ]
+    ],
     credentials: true,
   })
 );
+
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -111,7 +123,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:5000/auth/google/callback",
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -157,10 +169,12 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // ---------- DATABASE ----------
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.error("MongoDB Error:", err));
+// ---------- DATABASE ----------
+// Connection logic moved to app.listen
+// mongoose
+//   .connect(MONGO_URI)
+//   .then(() => console.log("MongoDB Connected"))
+//   .catch((err) => console.error("MongoDB Error:", err));
 
 // ---------- AUTH ROUTES ----------
 // Test endpoint to verify server is working
@@ -249,12 +263,12 @@ app.get(
     passport.authenticate("google", (err, user, info) => {
       if (err) {
         console.error("❌ Google Auth Error:", err);
-        return res.redirect("http://localhost:5173?error=auth_failed");
+        return res.redirect(`${process.env.CLIENT_URL}?error=auth_failed`);
       }
       if (!user) {
         console.error("❌ Google Auth Failed: No user returned");
         console.log("Info:", info);
-        return res.redirect("http://localhost:5173?error=no_user");
+        return res.redirect(`${process.env.CLIENT_URL}?error=no_user`);
       }
 
       console.log("✅ User authenticated:", user.email);
@@ -270,7 +284,7 @@ app.get(
         console.log("👤 User in session:", req.user ? req.user.email : 'No user');
 
         // Redirect with success flag to trigger frontend refresh
-        return res.redirect("http://localhost:5173?login=success");
+        return res.redirect(`${process.env.CLIENT_URL}?login=success`);
       });
     })(req, res, next);
   }
@@ -287,7 +301,7 @@ app.get("/api/logout", (req, res) => {
   req.logout(() => {
     req.session.destroy(() => {
       res.clearCookie("connect.sid");
-      res.redirect("http://localhost:5173");
+      res.redirect(`${process.env.CLIENT_URL}`);
     });
   });
 });
@@ -345,6 +359,7 @@ app.get("/api/products", async (req, res) => {
     const products = await Product.find();
     res.json(products);
   } catch (e) {
+    console.error("GET /api/products Error:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -631,6 +646,7 @@ app.get("/api/reviews", async (req, res) => {
     const reviews = await Review.find();
     res.json(reviews);
   } catch (e) {
+    console.error("GET /api/reviews Error:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -805,6 +821,7 @@ app.get("/api/sections", async (req, res) => {
     memoryCache.set('sections', sections);
     res.json(sections);
   } catch (e) {
+    console.error("GET /api/sections Error:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -1593,8 +1610,48 @@ app.post('/api/gift-genie', async (req, res) => {
 });
 
 
-// ---------- MISC ROUTES ----------
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  seedRecipients();
+// ---------- ERROR HANDLING ----------
+// 404 Handler - Ensure JSON response for everything
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Endpoint not found' });
 });
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("❌ Global Error:", err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message || 'Something went wrong'
+  });
+});
+
+// ---------- MISC ROUTES ----------
+// ---------- STARTUP ----------
+console.log("⏳ Initializing Server...");
+
+// Define connection options - helpful for stable connections
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+};
+
+mongoose.connect(MONGO_URI, mongooseOptions)
+  .then(() => {
+    console.log("✅ MongoDB Connected Successfully");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
+
+      // Run seed scripts safely after connection
+      seedRecipients().catch(err => console.error("❌ Seed Error:", err));
+
+      // Diagnostic check on startup
+      Product.countDocuments()
+        .then(count => console.log(`📊 Current Products in DB: ${count}`))
+        .catch(err => console.error("❌ Failed to count products:", err));
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB Connection Error:", err);
+    // process.exit(1); // Optional: Exit if DB fails, but maybe keep running for debugging
+  });

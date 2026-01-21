@@ -163,14 +163,14 @@ const RecentlyViewed: React.FC = () => {
 
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x"
+        className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-1"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {recentProducts.map((product) => {
           const prices = calculatePrice(product);
           const productId = product.id || (product as any)._id;
           return (
-            <div key={productId} className="min-w-[160px] md:min-w-[220px] snap-start relative group">
+            <div key={productId} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
               <Link to={`/product/${productId}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
                 <div className="relative aspect-square bg-white overflow-hidden">
                   <img className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
@@ -356,12 +356,12 @@ export const Home: React.FC = () => {
     const fetchShopData = async () => {
       try {
         const [sectionsRes, categoriesRes, occasionsRes, shopOccasionsRes, subRes, recipientsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/sections'),
-          fetch('http://localhost:5000/api/shop-categories'),
-          fetch('http://localhost:5000/api/special-occasions'),
-          fetch('http://localhost:5000/api/shop-occasions'),
-          fetch('http://localhost:5000/api/sub-categories'),
-          fetch('http://localhost:5000/api/shop-recipients')
+          fetch(`${import.meta.env.VITE_API_URL}/api/sections`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/special-occasions`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/shop-occasions`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/shop-recipients`)
         ]);
 
         const sectionsData = await sectionsRes.json();

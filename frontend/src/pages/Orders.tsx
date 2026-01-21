@@ -51,7 +51,7 @@ export const Orders: React.FC = () => {
 
         const fetchOrders = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/my-orders?email=${encodeURIComponent(user.email)}`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/my-orders?email=${encodeURIComponent(user.email)}`, {
                     credentials: 'include'
                 });
                 if (response.ok) {
@@ -112,7 +112,7 @@ export const Orders: React.FC = () => {
                 status: 'Pending' // Auto-approved? Or pending. Schema says Pending default.
             };
 
-            const response = await fetch('http://localhost:5000/api/reviews', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reviewData)
