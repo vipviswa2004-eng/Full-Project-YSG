@@ -89,8 +89,10 @@ export const CategoryNav: React.FC = () => {
                 const subData = await subRes.json();
                 const occData = await occRes.json();
 
-                // Standardize sections
-                const processedSections = secData.map((s: any) => {
+                // Safely handle potentially non-array responses (e.g. error objects)
+                const safeMap = (data: any) => Array.isArray(data) ? data : [];
+
+                const processedSections = safeMap(secData).map((s: any) => {
                     const title = s.title || s.name;
                     let fallbackImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=150&auto=format&fit=crop';
                     if (title.toLowerCase().includes('personal')) {
@@ -111,20 +113,20 @@ export const CategoryNav: React.FC = () => {
                     s.title.toLowerCase().includes('personal') ||
                     s.title.toLowerCase().includes('corporate')
                 ));
-                setOccasions(occData.map((o: any) => ({
+                setOccasions(safeMap(occData).map((o: any) => ({
                     id: o.id || o._id,
                     name: o.name,
                     image: o.image || 'https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=150&auto=format&fit=crop',
                     description: o.description,
                     link: o.link
                 })));
-                setCategories(catData.map((c: any) => ({
+                setCategories(safeMap(catData).map((c: any) => ({
                     id: c.id || c._id,
                     name: c.name,
                     sectionIds: c.sectionIds || (c.sectionId ? [c.sectionId] : []),
                     image: c.image
                 })));
-                setSubCategories(subData.map((s: any) => ({
+                setSubCategories(safeMap(subData).map((s: any) => ({
                     id: s.id || s._id,
                     name: s.name,
                     categoryId: s.categoryId

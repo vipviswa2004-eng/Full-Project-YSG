@@ -290,7 +290,7 @@ import { GoogleGenAI } from "@google/genai";
 import { products } from '../data/products';
 import { Shape } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: 'AIzaSyD011kG-woY8DaxzFX2ckZYmDSslTj0rp8' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 // Create a rich string representation of the catalog for the AI
 const productCatalogContext = products.map(p => {

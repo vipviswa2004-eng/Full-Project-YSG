@@ -146,13 +146,24 @@ export const Admin: React.FC = () => {
                 fetch(`${import.meta.env.VITE_API_URL}/api/shop-recipients`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/coupons`)
             ]);
-            setSections(await sectionsRes.json());
-            setShopCategories(await categoriesRes.json());
-            setSubCategories(await subCategoriesRes.json());
-            setSpecialOccasions(await occasionsRes.json());
-            setShopOccasions(await shopOccasionsRes.json());
-            setShopRecipients(await recipientsRes.json());
-            setCoupons(await couponsRes.json());
+
+            const parseSafe = async (res: Response) => {
+                try {
+                    const data = await res.json();
+                    return Array.isArray(data) ? data : [];
+                } catch (e) {
+                    console.error("Error parsing response:", e);
+                    return [];
+                }
+            };
+
+            setSections(await parseSafe(sectionsRes));
+            setShopCategories(await parseSafe(categoriesRes));
+            setSubCategories(await parseSafe(subCategoriesRes));
+            setSpecialOccasions(await parseSafe(occasionsRes));
+            setShopOccasions(await parseSafe(shopOccasionsRes));
+            setShopRecipients(await parseSafe(recipientsRes));
+            setCoupons(await parseSafe(couponsRes));
         } catch (error) {
             console.error("Failed to fetch shop data", error);
         }

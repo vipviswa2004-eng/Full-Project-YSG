@@ -164,7 +164,7 @@ export const ProductDetails: React.FC = () => {
     const handleModalAddToCart = async () => {
         let uploadedImageUrl = null;
 
-        // If a new file is selected, upload it
+        // If a new file is selected, try to upload it
         if (customImageFile) {
             setIsUploading(true);
             try {
@@ -176,15 +176,21 @@ export const ProductDetails: React.FC = () => {
                     body: formData,
                 });
 
-                if (!response.ok) throw new Error('Upload failed');
-
-                const data = await response.json();
-                uploadedImageUrl = data.url;
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.warn("Cloudinary upload failed:", errorData.error);
+                    console.warn("Falling back to base64 image storage");
+                    // Fall back to base64 if Cloudinary fails
+                    uploadedImageUrl = customImage; // This is already base64 from handleImageUpload
+                } else {
+                    const data = await response.json();
+                    uploadedImageUrl = data.url;
+                }
             } catch (error) {
                 console.error("Image upload failed", error);
-                showNotification("Failed to upload image. Please try again.", "error");
-                setIsUploading(false);
-                return;
+                console.warn("Falling back to base64 image storage");
+                // Fall back to base64 if network error
+                uploadedImageUrl = customImage;
             }
             setIsUploading(false);
         } else if (customImage && !customImage.startsWith('data:')) {
@@ -192,7 +198,7 @@ export const ProductDetails: React.FC = () => {
             uploadedImageUrl = customImage;
         }
 
-        executeAddToCart(false, uploadedImageUrl || customImage, customText); // Fallback to customImage (base64) if upload skipped or failed but we proceed? No, if upload fails we return. If no file, we pass null or existing.
+        executeAddToCart(false, uploadedImageUrl || customImage, customText);
         setIsCustomizeModalOpen(false);
     };
 
@@ -1492,48 +1498,58 @@ export const ProductDetails: React.FC = () => {
 
                         <div
                             ref={relatedScrollRef}
-                            className="flex gap-6 overflow-x-auto pb-8 no-scrollbar snap-x -mx-4 px-4 md:mx-0 md:px-0"
+                            className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0"
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                         >
                             {products
                                 .filter(p => p.category === product.category && p.id !== product.id)
-                                .slice(0, 8)
+                                .slice(0, 10)
                                 .map(related => {
                                     const relatedPrices = calculatePrice(related);
                                     return (
-                                        <div key={related.id} className="w-[180px] md:w-[220px] shrink-0 snap-start group cursor-pointer" onClick={() => { navigate(`/product/${related.id}`); window.scrollTo(0, 0); }}>
-                                            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-gray-200 transition-all duration-300 h-full flex flex-col relative">
-                                                <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
+                                        <div key={related.id} className="min-w-[160px] md:min-w-[220px] snap-start relative group">
+                                            <div
+                                                onClick={() => { navigate(`/product/${related.id}`); window.scrollTo(0, 0); }}
+                                                className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer"
+                                            >
+                                                <div className="relative aspect-square bg-white overflow-hidden">
                                                     <img
+                                                        className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
                                                         src={related.image}
                                                         alt={related.name}
-                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                                                         loading="lazy"
                                                     />
                                                     {related.discount && (
-                                                        <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
-                                                            -{related.discount}%
+                                                        <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">
+                                                            {related.discount}% OFF
                                                         </div>
                                                     )}
-
-                                                    {/* Quick Action Overlay */}
-                                                    <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex justify-center pb-6 bg-gradient-to-t from-black/60 to-transparent">
-                                                        <button className="bg-white text-gray-900 px-4 py-2 rounded-full text-xs font-bold shadow-lg hover:bg-primary hover:text-white transition-colors flex items-center gap-2">
-                                                            <Eye className="w-3.5 h-3.5" /> View Details
-                                                        </button>
-                                                    </div>
                                                 </div>
 
-                                                <div className="p-4 flex flex-col flex-1">
-                                                    <h3 className="font-bold text-gray-900 text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-relaxed">{related.name}</h3>
-                                                    <div className="mt-auto">
-                                                        <div className="flex items-baseline gap-2">
-                                                            <span className="font-black text-gray-900 text-lg mobile:text-base">{formatPrice(relatedPrices.final)}</span>
-                                                            {related.discount && <span className="text-xs text-gray-400 line-through font-medium">{formatPrice(relatedPrices.original)}</span>}
-                                                        </div>
+                                                <div className="p-2.5 flex flex-col flex-grow">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-xs font-semibold text-gray-800 line-clamp-2 h-8 leading-4 group-hover:text-primary transition-colors">{related.name}</h3>
+                                                    </div>
+                                                    <div className="mt-2 flex items-baseline gap-1.5">
+                                                        <span className="text-sm font-bold text-gray-900">{formatPrice(relatedPrices.final)}</span>
+                                                        {(related.discount !== undefined && related.discount > 0) && (
+                                                            <span className="text-[10px] text-gray-400 line-through">{formatPrice(relatedPrices.original)}</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleWishlist(related);
+                                                    const isAdded = !wishlist.some(p => p.id === related.id);
+                                                    showNotification(isAdded ? "❤️ Added to Wishlist" : "💔 Removed from Wishlist", isAdded ? "success" : "info");
+                                                }}
+                                                className={`absolute top-1.5 right-1.5 p-1 bg-white rounded-full shadow-sm transition-all hover:scale-110 z-20 ${wishlist.some(p => p.id === related.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
+                                            >
+                                                <Heart className={`w-3.5 h-3.5 ${wishlist.some(p => p.id === related.id) ? 'fill-current' : ''}`} />
+                                            </button>
                                         </div>
                                     );
                                 })

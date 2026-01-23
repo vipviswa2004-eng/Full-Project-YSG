@@ -6,11 +6,11 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient } = require('./models');
+const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient, GiftGenieQuery, WhatsAppLead } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/sign_galaxy";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://viswakumar2004_db_user:yathes2026@cluster0.5r4mxg9.mongodb.net/yathes_sign_galaxy?retryWrites=true&w=majority&appName=Cluster0";
 console.log("---------------------------------------------------");
 console.log("DEBUG: process.env.MONGO_URI:", process.env.MONGO_URI ? "DEFINED" : "UNDEFINED");
 console.log("DEBUG: Connecting to:", MONGO_URI);
@@ -37,24 +37,21 @@ const seedRecipients = async () => {
   }
 };
 
-// ---------- MIDDLEWARE ----------
-app.use(
-  cors({
-    origin: [
-      process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [
-        "https://ucgoc.com",
-        "https://www.ucgoc.com",
-        "http://localhost:5173",
-        "http://localhost:5174"
-      ]
-    ],
-    credentials: true,
-  })
-);
+// -------- MIDDLEWARE --------
+const corsOptions = {
+  origin: true, // Allow all origins (reflects request origin) to fix CORS issues in dev
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin", "Cache-Control"]
+};
 
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+
+
 
 // Cloudinary is used for all image uploads. No local storage used.
 
@@ -73,13 +70,26 @@ const upload = multer({
 });
 
 app.post('/api/upload', upload.single('image'), async (req, res) => {
+  console.log('📤 [UPLOAD] Request received');
+  console.log('📤 [UPLOAD] File present:', !!req.file);
+  console.log('📤 [UPLOAD] File details:', req.file ? {
+    originalname: req.file.originalname,
+    mimetype: req.file.mimetype,
+    size: req.file.size
+  } : 'No file');
+
   try {
     if (!req.file) {
+      console.error('❌ [UPLOAD] No file in request');
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     // Check if Cloudinary is configured
-    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+    const cloudinaryConfigured = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+    console.log('📤 [UPLOAD] Cloudinary configured:', cloudinaryConfigured);
+
+    if (cloudinaryConfigured) {
+      console.log('📤 [UPLOAD] Starting Cloudinary upload...');
       // Upload to Cloudinary
       const result = await uploadImage(
         req.file.buffer,
@@ -87,15 +97,19 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         'product-images'
       );
 
-      console.log('✅ Image uploaded to Cloudinary:', result.url);
+      console.log('✅ [UPLOAD] Success! URL:', result.url);
       res.json({ url: result.url, public_id: result.public_id });
     } else {
-      console.error('❌ Cloudinary configuration missing');
+      console.error('❌ [UPLOAD] Cloudinary configuration missing');
+      console.error('❌ [UPLOAD] CLOUD_NAME:', !!process.env.CLOUDINARY_CLOUD_NAME);
+      console.error('❌ [UPLOAD] API_KEY:', !!process.env.CLOUDINARY_API_KEY);
+      console.error('❌ [UPLOAD] API_SECRET:', !!process.env.CLOUDINARY_API_SECRET);
       res.status(500).json({ error: 'Cloudinary configuration missing on server.' });
     }
   } catch (error) {
-    console.error('Error uploading image:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ [UPLOAD] Error:', error.message);
+    console.error('❌ [UPLOAD] Stack:', error.stack);
+    res.status(500).json({ error: error.message || 'Upload failed' });
   }
 });
 
@@ -354,12 +368,48 @@ app.put("/api/orders/:id", async (req, res) => {
 });
 
 // ---------- PRODUCTS ----------
+const compression = require('compression');
+
+// In-memory Cache
+let productCache = null;
+let lastCacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 Minutes
+
+// Enable Gzip Compression
+app.use(compression());
+
+// ---------- PRODUCTS ----------
 app.get("/api/products", async (req, res) => {
+  console.log("📥 GET /api/products requested");
   try {
-    const products = await Product.find();
+    // Browser Caching (5 minutes)
+    res.set("Cache-Control", "public, max-age=300");
+
+    // Server-Side In-Memory Cache
+    if (productCache && (Date.now() - lastCacheTime < CACHE_DURATION)) {
+      console.log("✅ Serving Products from Cache");
+      return res.json(productCache);
+    }
+
+    console.log("...Fetching Products from DB...");
+    const products = await Product.find()
+      .limit(500) // Increase limit to cover full catalog
+      .select('id name pdfPrice image gallery variations discount category subCategoryId shopCategoryId sectionId description isTrending isBestseller rating reviewsCount occasions')
+      .lean()
+      .maxTimeMS(10000); // 10s timeout
+
+    console.log(`✅ Fetched ${products.length} products`);
+
+    // Update Cache
+    productCache = products;
+    lastCacheTime = Date.now();
+
     res.json(products);
   } catch (e) {
-    console.error("GET /api/products Error:", e);
+    console.error("❌ GET /api/products Error:", e);
+
+    // Fallback: If DB fails, return empty array to prevent frontend crash
+    // but typically we want the error. frontend is handled now though.
     res.status(500).json({ error: e.message });
   }
 });
@@ -381,6 +431,7 @@ app.post("/api/products", async (req, res) => {
       // Create new product
       const product = new Product(productData);
       await product.save();
+      productCache = null; // Invalidate cache
       res.json(product);
     }
   } catch (e) {
@@ -439,19 +490,28 @@ app.get("/api/user/:email", async (req, res) => {
 
 // Update user's cart
 app.post("/api/cart", async (req, res) => {
+  console.log("📥 POST /api/cart called for email:", req.body.email);
   try {
     const { email, cart } = req.body;
+    if (!email) {
+      console.error("❌ No email provided in cart update request");
+      return res.status(400).json({ error: "Email is required" });
+    }
     let user = await User.findOne({ email });
 
     if (!user) {
+      console.log("...creating new user record for:", email);
       user = new User({ email, cart, wishlist: [] });
     } else {
+      console.log("...updating existing user record for:", email);
       user.cart = cart;
     }
 
     await user.save();
+    console.log("✅ Cart updated successfully for:", email);
     res.json({ success: true, cart: user.cart });
   } catch (e) {
+    console.error("❌ POST /api/cart Error:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -861,17 +921,48 @@ app.delete("/api/sections/:id", async (req, res) => {
 });
 
 // ---------- SHOP CATEGORIES ----------
+// Basic In-Memory Cache for Categories
+let categoryCache = null;
+let lastCategoryCacheTime = 0;
+const CATEGORY_CACHE_DURATION = 2 * 60 * 1000; // Reduced to 2 minutes
+
 app.get("/api/shop-categories", async (req, res) => {
+  console.log("📥 GET /api/shop-categories requested");
   try {
-    const categories = await ShopCategory.find().sort({ order: 1 });
+    // Return cache if valid
+    if (categoryCache && (Date.now() - lastCategoryCacheTime < CATEGORY_CACHE_DURATION)) {
+      console.log("✅ Serving Categories from Cache");
+      return res.json(categoryCache);
+    }
+
+    // Fetch from DB: Remove .sort from query to avoid Atlas hangs
+    console.log("...Fetching Categories from DB...");
+    let categories = await ShopCategory.find()
+      .limit(100)
+      .lean();
+
+    // Sort in memory
+    categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Update Cache
+    categoryCache = categories;
+    lastCategoryCacheTime = Date.now();
+
+    console.log(`✅ Served & Cached ${categories.length} Categories`);
     res.json(categories);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error("❌ Error fetching categories:", e);
+    // Explicitly log the cause if available
+    if (e.cause) console.error("Caused by:", e.cause);
+    res.status(500).json({ error: e.message, stack: e.stack });
   }
 });
 
+
 app.post("/api/shop-categories", async (req, res) => {
   try {
+    // Invalidate Cache on Update
+    categoryCache = null;
     const category = new ShopCategory(req.body);
     await category.save();
     res.json(category);
@@ -882,6 +973,7 @@ app.post("/api/shop-categories", async (req, res) => {
 
 app.put("/api/shop-categories/:id", async (req, res) => {
   try {
+    categoryCache = null; // Invalidate cache
     const category = await ShopCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(category);
   } catch (e) {
@@ -891,11 +983,66 @@ app.put("/api/shop-categories/:id", async (req, res) => {
 
 app.delete("/api/shop-categories/:id", async (req, res) => {
   try {
+    categoryCache = null; // Invalidate cache
     await ShopCategory.findByIdAndDelete(req.params.id);
     // Also delete all sub-categories in this category
     await SubCategory.deleteMany({ categoryId: req.params.id });
     res.json({ success: true });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/admin/fix-images", async (req, res) => {
+  try {
+    const CAT_IMAGE_MAP = {
+      'PHOTO FRAME': '/categories/photo_frame.png',
+      '3D CRYSTAL': '/categories/3d_crystal.png',
+      'MUGS': '/categories/mugs.png',
+      'NEON LIGHTS': '/categories/neon_lights.png',
+      'PILLOWS': '/categories/pillows.png',
+      'WALLETS': '/categories/wallets.png',
+      'WOODEN ENGRAVING & COLOR PRINTING': '/categories/wooden_engraving.png'
+    };
+
+    const cats = await ShopCategory.find();
+    console.log(`[FixImages] Found ${cats.length} categories.`);
+    let updatedCats = 0;
+    for (const cat of cats) {
+      const normalizedName = cat.name.trim().toUpperCase();
+      console.log(`[FixImages] Name: "${cat.name}", Normalized: "${normalizedName}"`);
+      let image = cat.image;
+
+      if (CAT_IMAGE_MAP[normalizedName]) {
+        console.log(`[FixImages] >> MATCH: ${normalizedName}`);
+        image = CAT_IMAGE_MAP[normalizedName];
+      } else if (!image || image === "" || image === null || image.includes('placehold.co')) {
+        image = `https://placehold.co/600x400/f3f4f6/374151?text=${encodeURIComponent(cat.name.trim())}`;
+      }
+
+      if (image !== cat.image) {
+        console.log(`[FixImages] >> UPDATING: ${cat.name} -> ${image}`);
+        await ShopCategory.updateOne({ _id: cat._id }, { $set: { image: image } });
+        updatedCats++;
+      }
+    }
+
+    const subs = await SubCategory.find();
+    let updatedSubs = 0;
+    for (const sub of subs) {
+      if (!sub.image || sub.image === "" || sub.image === null || sub.image.includes('placehold.co')) {
+        sub.image = `https://placehold.co/400x300/f8fafc/64748b?text=${encodeURIComponent(sub.name.trim())}`;
+        await SubCategory.updateOne({ _id: sub._id }, { $set: { image: sub.image } });
+        updatedSubs++;
+      }
+    }
+
+    // Invalidate Cache
+    categoryCache = null;
+
+    res.json({ success: true, updatedCats, updatedSubs });
+  } catch (e) {
+    console.error("[FixImages] Error:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -1587,7 +1734,7 @@ app.delete("/api/sellers/:id", async (req, res) => {
 });
 
 // ---------- GIFT GENIE ----------
-const { GiftGenieQuery } = require('./models');
+
 
 app.post('/api/gift-genie', async (req, res) => {
   try {
@@ -1631,8 +1778,49 @@ console.log("⏳ Initializing Server...");
 
 // Define connection options - helpful for stable connections
 const mongooseOptions = {
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 20000,
+  socketTimeoutMS: 40000,
+};
+
+// Cache Warming Function
+// Cache Warming Function (Comprehensive)
+// Cache Warming Function (Comprehensive)
+const warmUpCaches = async () => {
+  console.log("🔥 Warming up ALL caches...");
+  try {
+    const opts = { maxTimeMS: 60000 };
+
+    // 1. Fetch Categories (Critical & Lightweight) - Do this FIRST
+    const startCat = Date.now();
+    // Fetch without DB sort to prevent potential Atlas hangs on unindexed fields
+    console.log("...Fetching Categories...");
+    let categories = await ShopCategory.find().limit(50).lean().setOptions(opts);
+    // Sort in memory (robust & fast for small datasets)
+    categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    categoryCache = categories;
+    lastCategoryCacheTime = Date.now();
+    console.log(`✅ [WarmUp] ShopCategories: ${categories.length} (took ${Date.now() - startCat}ms)`);
+
+    // 2. Fetch Sections & SubCategories (Critical structure)
+    const startSec = Date.now();
+    let sections = await Section.find().lean().setOptions(opts);
+    sections.sort((a, b) => (a.order || 0) - (b.order || 0)); // In-memory sort
+
+    const subCategories = await SubCategory.find().lean().setOptions(opts);
+    memoryCache.put('sections', sections);
+    console.log(`✅ [WarmUp] Sections: ${sections.length}, Subs: ${subCategories.length} (took ${Date.now() - startSec}ms)`);
+
+    // 3. Fetch Products (Heaviest Payload) - Do this LAST
+    const startProd = Date.now();
+    const products = await Product.find().limit(50).lean().maxTimeMS(5000);
+    productCache = products;
+    lastCacheTime = Date.now();
+    console.log(`✅ [WarmUp] Products: ${products.length} (took ${Date.now() - startProd}ms)`);
+
+  } catch (e) {
+    console.error("⚠️ Cache warming failed (partial?):", e.message);
+  }
 };
 
 mongoose.connect(MONGO_URI, mongooseOptions)
@@ -1644,6 +1832,9 @@ mongoose.connect(MONGO_URI, mongooseOptions)
 
       // Run seed scripts safely after connection
       seedRecipients().catch(err => console.error("❌ Seed Error:", err));
+      // warmUpCaches(); // Start fetching data immediately
+
+      app.get('/api/health', (req, res) => res.send('OK')); // Simple health check
 
       // Diagnostic check on startup
       Product.countDocuments()

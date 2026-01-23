@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 // Product Schema
 const ProductSchema = new mongoose.Schema({
-  // ... (content same as before)
   id: String,
   code: String,
   name: String,
@@ -51,14 +50,7 @@ const UserSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   phone: String,
   password: { type: String, select: false },
-  cart: [{
-    productId: String,
-    quantity: { type: Number, default: 1 },
-    selectedStr: String,
-    price: Number,
-    customization: Object, // For custom images/text
-    fullProduct: Object // Store full product snapshot for safety
-  }],
+  cart: [Object], // Flexible to store productId, quantity, customization, etc. without strict schema validation for now
   wishlist: [String] // Array of product IDs
 }, { timestamps: true, collection: 'users' });
 
@@ -141,7 +133,9 @@ const ShopCategorySchema = new mongoose.Schema({
 const SubCategorySchema = new mongoose.Schema({
   id: String,
   name: String,
-  categoryId: String // References ShopCategory.id
+  image: String,
+  categoryId: String, // References ShopCategory.id
+  order: { type: Number, default: 0 }
 }, { collection: 'subcategories' });
 
 // Special Occasions (Seasonal/Events like Mother's Day)
@@ -218,11 +212,26 @@ const CouponSchema = new mongoose.Schema({
   discountType: { type: String, enum: ['PERCENTAGE', 'FIXED'], default: 'FIXED' },
   value: Number,
   minPurchase: Number,
-  expiryDate: { type: Date, required: true }, // Changed from String to Date, added required
-  usageLimit: { type: Number, default: 1 }, // Added default
+  expiryDate: { type: Date, required: true },
+  usageLimit: { type: Number, default: 1 },
   usedCount: { type: Number, default: 0 },
   status: { type: String, default: 'Active' }
 }, { collection: 'coupons' });
+
+// Gift Genie Query Schema
+const GiftGenieQuerySchema = new mongoose.Schema({
+  userId: String,
+  answers: Object,
+  recommendedProducts: [String],
+  timestamp: { type: Date, default: Date.now }
+});
+
+// WhatsApp Lead Schema
+const WhatsAppLeadSchema = new mongoose.Schema({
+  phoneNumber: String,
+  message: String,
+  date: { type: Date, default: Date.now }
+}, { collection: 'whatsapp_leads' });
 
 // Export Models
 const Product = mongoose.model('Product', ProductSchema);
@@ -242,16 +251,8 @@ const Seller = mongoose.model('Seller', SellerSchema);
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 const ReturnRequest = mongoose.model('ReturnRequest', ReturnRequestSchema);
 const Coupon = mongoose.model('Coupon', CouponSchema);
-
-// Gift Genie Query Schema
-const GiftGenieQuerySchema = new mongoose.Schema({
-  userId: String, // Optional, can be anonymous
-  answers: Object,
-  recommendedProducts: [String], // Store product IDs
-  timestamp: { type: Date, default: Date.now }
-});
-
 const GiftGenieQuery = mongoose.model('GiftGenieQuery', GiftGenieQuerySchema);
+const WhatsAppLead = mongoose.model('WhatsAppLead', WhatsAppLeadSchema);
 
 module.exports = {
   Product,
@@ -271,5 +272,6 @@ module.exports = {
   Transaction,
   ReturnRequest,
   Coupon,
-  GiftGenieQuery
+  GiftGenieQuery,
+  WhatsAppLead
 };

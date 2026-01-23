@@ -65,9 +65,13 @@ export const Shop: React.FC = () => {
                     fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
                     fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`)
                 ]);
-                setProducts(await productsRes.json());
-                setShopCategories(await categoriesRes.json());
-                setSubCategories(await subCategoriesRes.json());
+                const productsData = await productsRes.json();
+                const categoriesData = await categoriesRes.json();
+                const subCategoriesData = await subCategoriesRes.json();
+
+                setProducts(Array.isArray(productsData) ? productsData : []);
+                setShopCategories(Array.isArray(categoriesData) ? categoriesData : []);
+                setSubCategories(Array.isArray(subCategoriesData) ? subCategoriesData : []);
             } catch (error) {
                 console.error('Failed to fetch shop data:', error);
             } finally {

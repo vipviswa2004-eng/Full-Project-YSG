@@ -112,7 +112,7 @@ export const ShopSection: React.FC<ShopSectionProps> = ({ section, categories })
                     >
                         {sectionCategories.map((category) => (
                             <Link
-                                key={category.id}
+                                key={category._id || category.id}
                                 to={`/products?category=${encodeURIComponent(category.name)}`}
                                 className="flex flex-col items-center w-[120px] md:w-[200px] group cursor-pointer snap-start"
                             >

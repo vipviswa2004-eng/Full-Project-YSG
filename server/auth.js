@@ -55,7 +55,7 @@ async function loginUser(identifier, password) {
                 { email: identifier.toLowerCase() },
                 { phone: identifier }
             ]
-        });
+        }).select('+password');
 
         if (!user) {
             throw new Error('Invalid email/phone or password');

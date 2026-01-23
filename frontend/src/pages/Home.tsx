@@ -3,7 +3,7 @@ import { SEO } from '../components/SEO';
 import { calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context';
-import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Sparkles, History, ArrowRight, Wallet } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Sparkles, ArrowRight, Wallet } from 'lucide-react';
 import birthdayImg from '../assets/birthday.png';
 import corporateBg from '../assets/corporate_bg.png';
 import corporateProduct from '../assets/corporate_gift_product.png';
@@ -13,16 +13,12 @@ import specialBg from '../assets/special_bg.png';
 import specialProduct from '../assets/special_product.png';
 import occasionBg from '../assets/occasion_bg.png';
 
-
 import { ShopSection } from '../components/ShopSection';
-import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion } from '../types';
-
-// CATEGORIES removed
-// products import removed previously
+import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion, SubCategory } from '../types';
+import { RecentlyViewedDetails } from './RecentlyViewedDetails';
 
 const OCCASIONS = [
   { id: 'birthday', name: 'Birthday', image: birthdayImg, color: 'from-pink-500 to-rose-500' },
-
   { id: 'anniversary', name: 'Wedding & Anniversary', image: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=400&auto=format&fit=crop', color: 'from-red-500 to-pink-600' },
   { id: 'love', name: 'Love & Romance', image: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?q=80&w=400&auto=format&fit=crop', color: 'from-purple-500 to-indigo-500' },
   { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', color: 'from-yellow-400 to-orange-500' },
@@ -85,125 +81,6 @@ const BUDGET_OPTIONS = [
   { label: 'Luxury Gifts', value: '2000-max', color: 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-600 hover:text-white hover:border-amber-600' }
 ];
 
-
-
-
-
-const RecentlyViewed: React.FC = () => {
-  const { products: allProducts, currency, wishlist, toggleWishlist } = useCart();
-  const [recentProducts, setRecentProducts] = useState<any[]>([]);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('recentlyViewed');
-      if (stored) {
-        const ids = JSON.parse(stored);
-        // Map IDs to products, maintaining order
-        const viewed = ids
-          .map((id: string) => allProducts.find(p => p.id === id || (p as any)._id === id))
-          .filter(Boolean);
-        setRecentProducts(viewed);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [allProducts]);
-
-  if (recentProducts.length === 0) return null;
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const { current } = scrollRef;
-      const scrollAmount = direction === 'left' ? -300 : 300;
-      current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return currency === 'INR'
-      ? `₹${price.toLocaleString('en-IN')}`
-      : `$${(price * 0.012).toFixed(2)}`;
-  };
-
-  const isInWishlist = (id: string) => wishlist.some(p => p.id === id);
-
-  const handleWishlistToggle = (e: React.MouseEvent, product: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleWishlist(product);
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto py-8 px-4 border-t border-gray-100 relative group/section">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <History className="w-6 h-6 text-gray-700" /> Recently Viewed
-        </h2>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex gap-2">
-            <button
-              onClick={() => scroll('left')}
-              className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 bg-white transition-colors"
-              aria-label="Scroll Left"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 bg-white transition-colors"
-              aria-label="Scroll Right"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-          <Link to="/products?filter=recent" className="text-primary font-bold text-sm hover:underline flex items-center gap-1 ml-2">View All <ChevronRight className="w-4 h-4" /></Link>
-        </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {recentProducts.map((product) => {
-          const prices = calculatePrice(product);
-          const productId = product.id || (product as any)._id;
-          return (
-            <div key={productId} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
-              <Link to={`/product/${productId}`} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
-                <div className="relative aspect-square bg-white overflow-hidden">
-                  <img className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                  {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
-                </div>
-
-                <div className="p-2.5 flex flex-col flex-grow">
-                  <div className="flex-1">
-                    <h3 className="text-xs font-semibold text-gray-800 line-clamp-2 h-8 leading-4 group-hover:text-primary transition-colors">{product.name}</h3>
-                  </div>
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-gray-900">{formatPrice(prices.final)}</span>
-                    {(product.discount !== undefined && product.discount > 0) && (
-                      <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-
-              <button
-                onClick={(e) => handleWishlistToggle(e, product)}
-                className={`absolute top-1.5 right-1.5 p-1 bg-white rounded-full shadow-sm transition-all hover:scale-110 z-20 ${isInWishlist(productId) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
-              >
-                <Heart className={`w-3.5 h-3.5 ${isInWishlist(productId) ? 'fill-current' : ''}`} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 // Simple Fade-in Observer Component
 const FadeInSection = ({ children }: { children: React.ReactNode }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -250,7 +127,7 @@ const ScrollableProductSection: React.FC<{
     }
   };
 
-  if (products.length === 0) return null;
+  if (!products || products.length === 0) return null;
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 relative group/section">
@@ -323,39 +200,36 @@ const ScrollableProductSection: React.FC<{
 export const Home: React.FC = () => {
   const { currency, wishlist, toggleWishlist, setIsGiftAdvisorOpen, products: contextProducts } = useCart();
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Shop Data State - No LocalStorage
   const [sections, setSections] = useState<Section[]>([]);
   const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
   const [shopRecipients, setShopRecipients] = useState<ShopRecipient[]>([]);
-
-  // Use context products (from DB)
-  const displayProducts = contextProducts;
   const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasion[]>([]);
   const [shopOccasions, setShopOccasions] = useState<ShopOccasion[]>([]);
-  const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+
   const [activeHeroView, setActiveHeroView] = useState<string | null>(null);
 
+
+  // Use context products (from DB)
+  const displayProducts = contextProducts || [];
+
+  // Centralized Data Fetching
   useEffect(() => {
-    // 1. Try to load from cache first for instant display
-    try {
-      const cachedSections = localStorage.getItem('cache_sections');
-      const cachedCategories = localStorage.getItem('cache_shopCategories');
-      const cachedSpecial = localStorage.getItem('cache_specialOccasions');
-      const cachedShopOccasions = localStorage.getItem('cache_shopOccasions');
-      const cachedRecipients = localStorage.getItem('cache_shopRecipients');
+    let isMounted = true;
 
-      if (cachedSections) setSections(JSON.parse(cachedSections));
-      if (cachedCategories) setShopCategories(JSON.parse(cachedCategories));
-      if (cachedSpecial) setSpecialOccasions(JSON.parse(cachedSpecial));
-      if (cachedShopOccasions) setShopOccasions(JSON.parse(cachedShopOccasions));
-      if (cachedRecipients) setShopRecipients(JSON.parse(cachedRecipients));
-    } catch (e) {
-      console.warn("Error reading from cache", e);
-    }
-
-    // 2. Fetch fresh data
-    const fetchShopData = async () => {
+    const fetchHomeData = async () => {
       try {
-        const [sectionsRes, categoriesRes, occasionsRes, shopOccasionsRes, subRes, recipientsRes] = await Promise.all([
+
+        const [
+          sectionsRes,
+          categoriesRes,
+          occasionsRes,
+          shopOccasionsRes,
+          subRes,
+          recipientsRes
+        ] = await Promise.all([
           fetch(`${import.meta.env.VITE_API_URL}/api/sections`),
           fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
           fetch(`${import.meta.env.VITE_API_URL}/api/special-occasions`),
@@ -364,39 +238,24 @@ export const Home: React.FC = () => {
           fetch(`${import.meta.env.VITE_API_URL}/api/shop-recipients`)
         ]);
 
-        const sectionsData = await sectionsRes.json();
-        const categoriesData = await categoriesRes.json();
-        const occasionsData = await occasionsRes.json();
-        const shopOccasionsData = await shopOccasionsRes.json();
-        const subCategoriesData = await subRes.json();
-        const recipientsData = await recipientsRes.json();
-
-        // Update state
-        setSections(sectionsData);
-        setShopCategories(categoriesData);
-        setSpecialOccasions(occasionsData);
-        setShopOccasions(shopOccasionsData);
-        setSubCategories(subCategoriesData);
-        setShopRecipients(recipientsData);
-
-        // Update cache
-        try {
-          localStorage.setItem('cache_sections', JSON.stringify(sectionsData));
-          localStorage.setItem('cache_shopCategories', JSON.stringify(categoriesData));
-          localStorage.setItem('cache_specialOccasions', JSON.stringify(occasionsData));
-          localStorage.setItem('cache_shopOccasions', JSON.stringify(shopOccasionsData));
-          localStorage.setItem('cache_shopRecipients', JSON.stringify(recipientsData));
-        } catch (e) {
-          console.warn("Cache quota exceeded, skipping cache update", e);
-          // Optional: clear old cache to free space
-          // localStorage.clear(); 
+        if (isMounted) {
+          if (sectionsRes.ok) setSections(await sectionsRes.json());
+          if (categoriesRes.ok) setShopCategories(await categoriesRes.json());
+          if (occasionsRes.ok) setSpecialOccasions(await occasionsRes.json());
+          if (shopOccasionsRes.ok) setShopOccasions(await shopOccasionsRes.json());
+          if (subRes.ok) setSubCategories(await subRes.json());
+          if (recipientsRes.ok) setShopRecipients(await recipientsRes.json());
         }
-
       } catch (error) {
-        console.error('Failed to fetch shop data:', error);
+        console.error('Failed to fetch home shop data:', error);
       }
     };
-    fetchShopData();
+
+    fetchHomeData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -568,11 +427,7 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-
-
-
-
-      {/* Special Occasions - NEW SECTION */}
+      {/* Special Occasions */}
       <FadeInSection>
         <div id="special-occasions-section" className="max-w-7xl mx-auto py-8 md:py-12 px-4">
           <div className="text-center mb-6 md:mb-10">
@@ -639,7 +494,7 @@ export const Home: React.FC = () => {
         </div>
       </FadeInSection>
 
-      {/* Shop By Recipient Section - HIGH CONVERSION */}
+      {/* Shop By Recipient Section */}
       {!activeHeroView && (
         <FadeInSection>
           <div className="max-w-7xl mx-auto py-8 md:py-12 px-4">
@@ -663,7 +518,6 @@ export const Home: React.FC = () => {
                         alt={recipient.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         onError={(e) => {
-                          // Fallback to placeholder if image fails
                           (e.target as HTMLImageElement).src = 'https://placehold.co/400x500/e2e8f0/1e293b?text=' + recipient.name;
                         }}
                       />
@@ -694,10 +548,6 @@ export const Home: React.FC = () => {
           </div>
         </FadeInSection>
       )}
-
-
-
-
 
       {/* Trust Strip */}
       <FadeInSection>
@@ -758,9 +608,7 @@ export const Home: React.FC = () => {
         </div>
       </FadeInSection>
 
-
-
-      {/* Trending Gifts - NEW SECTION */}
+      {/* Trending Gifts */}
       <FadeInSection>
         <ScrollableProductSection
           title="Trending Gifts 🔥"
@@ -774,7 +622,7 @@ export const Home: React.FC = () => {
         />
       </FadeInSection>
 
-      {/* Best Sellers - NEW SCROLLABLE SECTION */}
+      {/* Best Sellers */}
       <FadeInSection>
         <ScrollableProductSection
           title="Best Sellers 🏆"
@@ -788,7 +636,7 @@ export const Home: React.FC = () => {
         />
       </FadeInSection>
 
-      {/* Gifts by Budget - Quick Access */}
+      {/* Gifts by Budget */}
       {!activeHeroView && (
         <div className="max-w-7xl mx-auto px-4 mt-8 md:mt-16 mb-8 md:mb-12 text-center">
           <div className="mb-6 md:mb-10 animate-fade-in-up">
@@ -815,16 +663,11 @@ export const Home: React.FC = () => {
       )}
 
       {/* Dynamic Shop Sections */}
-      {
-        sections.map(section => (
-          <FadeInSection key={section.id}>
-            <ShopSection section={section} categories={shopCategories} />
-          </FadeInSection>
-        ))
-      }
-
-
-
+      {sections.map(section => (
+        <FadeInSection key={section.id}>
+          <ShopSection section={section} categories={shopCategories} />
+        </FadeInSection>
+      ))}
 
       {/* Gift Genie Promo Banner */}
       <FadeInSection>
@@ -849,15 +692,11 @@ export const Home: React.FC = () => {
         </div>
       </FadeInSection>
 
-
-
       {/* Recently Viewed */}
       <FadeInSection>
-        <RecentlyViewed />
+        <RecentlyViewedDetails />
       </FadeInSection>
 
-
-
-    </div >
+    </div>
   );
 };

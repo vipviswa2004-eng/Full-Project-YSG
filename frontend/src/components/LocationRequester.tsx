@@ -47,8 +47,8 @@ export const LocationRequester: React.FC = () => {
 
                 localStorage.setItem('location_granted', 'true');
             },
-            (error) => {
-                console.error("Location error:", error);
+            () => {
+                // console.error("Location error:", error); // Suppressed to reduce console noise
                 // Default to INR if location fails/denied
                 setCurrency('INR');
             }

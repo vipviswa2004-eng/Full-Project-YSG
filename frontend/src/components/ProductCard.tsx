@@ -70,7 +70,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                 <div className="relative aspect-[3/4] bg-white overflow-hidden p-3 bg-gradient-to-b from-gray-50/50 to-white">
                     <img
                         className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
-                        src={allImages[currentImageIndex] || product.image}
+                        src={allImages[currentImageIndex] || product.image || '/placeholder-image.png'}
+                        onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/300?text=No+Image'; }}
                         alt={product.name}
                         loading="lazy"
                     />

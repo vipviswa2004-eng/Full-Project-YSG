@@ -1,0 +1,347 @@
+[
+  {
+    "_id": "69662ede44ae4310d252f7a0",
+    "name": "Photo Frame ",
+    "__v": 0,
+    "id": "cat_paste_art",
+    "isFeatured": false,
+    "order": 1,
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate",
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f794",
+    "name": "Acrylic",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 2,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f79a",
+    "name": "3D Crystal",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 3,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f795",
+    "name": "2D Crystal",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 4,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f796",
+    "name": "Wooden Engraving & Color Printing",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 5,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f797",
+    "name": "Glass Art",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 6,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f798",
+    "name": "MDF",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 7,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d2c5131fd8952e37928",
+    "id": "cat_mugs",
+    "name": "Mugs",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 8,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662d6a44ae4310d252f79b",
+    "name": "Photo Box",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 9,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f799",
+    "name": "Couple Thumb Impression Gift",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 10,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d2c5131fd8952e37923",
+    "id": "cat_3d_crystals",
+    "name": "Neon Lights",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 11,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662d2c5131fd8952e37926",
+    "id": "cat_wallets",
+    "name": "Wallets",
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate",
+      "sec_personalised"
+    ],
+    "order": 12,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662d2c5131fd8952e37925",
+    "id": "cat_neon_lights",
+    "name": "Pillows",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 13,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662e1704de614bd20edeb1",
+    "id": "cat_notebooks_1768304151377",
+    "name": "Resine Art Table Top",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 14,
+    "isFeatured": false,
+    "__v": 1
+  },
+  {
+    "_id": "69662e1704de614bd20edeb4",
+    "id": "cat_laptop_sleeves_1768304151377",
+    "name": "Glass Crystal Engraving & Lighting Photo Frames",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 15,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662ede44ae4310d252f7a2",
+    "name": "Photo Moon Lamps",
+    "__v": 0,
+    "id": "cat_statues",
+    "isFeatured": false,
+    "order": 16,
+    "sectionId": "sec_personalised",
+    "sectionIds": []
+  },
+  {
+    "_id": "69662ede44ae4310d252f7a1",
+    "name": "Fridge Magnets",
+    "__v": 0,
+    "id": "cat_fridge_magnets",
+    "isFeatured": false,
+    "order": 17,
+    "sectionId": "sec_personalised",
+    "sectionIds": []
+  },
+  {
+    "_id": "69662d2c5131fd8952e3792d",
+    "id": "cat_wall_art",
+    "name": "Plug Night Lamps",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 18,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662ede44ae4310d252f79e",
+    "name": "T-Shirt",
+    "__v": 0,
+    "id": "cat_t-shirt",
+    "isFeatured": false,
+    "order": 19,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised",
+      "sec_corporate"
+    ]
+  },
+  {
+    "_id": "69662d2c5131fd8952e3792a",
+    "id": "cat_mini_me",
+    "name": "Shodow Wall Light Frames",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 20,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662d2c5131fd8952e37927",
+    "id": "cat_pillows",
+    "name": "Custom Pens",
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate",
+      "sec_personalised"
+    ],
+    "order": 21,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662ede44ae4310d252f79f",
+    "name": "Water Bottles",
+    "__v": 0,
+    "id": "cat_water_bottles",
+    "isFeatured": false,
+    "order": 22,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised",
+      "sec_corporate"
+    ]
+  },
+  {
+    "_id": "69662d2c5131fd8952e37929",
+    "id": "cat_clocks",
+    "name": "Key Chains",
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate",
+      "sec_personalised"
+    ],
+    "order": 23,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662d2c5131fd8952e3792c",
+    "id": "cat_family_set",
+    "name": "Cake Toper",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ],
+    "order": 24,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662def44ae4310d252f79c",
+    "name": "Trophies",
+    "__v": 1,
+    "id": "cat_trophies",
+    "isFeatured": false,
+    "order": 25,
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate",
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662ede44ae4310d252f79d",
+    "name": "MDF & Acrylic Table Top",
+    "__v": 0,
+    "id": "cat_key_chains",
+    "isFeatured": false,
+    "order": 26,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d2c5131fd8952e3792f",
+    "id": "cat_lamps",
+    "name": "Table Top Calender ",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised",
+      "sec_corporate"
+    ],
+    "order": 27,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "69662d2c5131fd8952e3792e",
+    "id": "cat_table_decor",
+    "name": "Diary Books",
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised",
+      "sec_corporate"
+    ],
+    "order": 28,
+    "isFeatured": false,
+    "__v": 0
+  },
+  {
+    "_id": "6966314318043043e66ef098",
+    "id": "cat_corp_combo",
+    "name": "Corporate Combos",
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate"
+    ],
+    "order": 29,
+    "isFeatured": false,
+    "__v": 0
+  }
+]

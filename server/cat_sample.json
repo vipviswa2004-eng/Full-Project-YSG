@@ -1,0 +1,59 @@
+[
+  {
+    "_id": "69662ede44ae4310d252f7a0",
+    "name": "Photo Frame ",
+    "__v": 0,
+    "id": "cat_paste_art",
+    "isFeatured": false,
+    "order": 1,
+    "sectionId": "sec_corporate",
+    "sectionIds": [
+      "sec_corporate",
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f794",
+    "name": "Acrylic",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 2,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f79a",
+    "name": "3D Crystal",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 3,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f795",
+    "name": "2D Crystal",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 4,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  },
+  {
+    "_id": "69662d6a44ae4310d252f796",
+    "name": "Wooden Engraving & Color Printing",
+    "__v": 0,
+    "isFeatured": false,
+    "order": 5,
+    "sectionId": "sec_personalised",
+    "sectionIds": [
+      "sec_personalised"
+    ]
+  }
+]
