@@ -12,7 +12,11 @@ export interface VariationOption {
   id: string;
   label: string; // e.g., "Small", "Red", "Heart"
   description?: string; // e.g. "10x10cm", "Premium Wood"
-  priceAdjustment: number; // Added to the base PDF price
+  priceAdjustment: number; // Added to the base PDF price (Deprecated but kept for stability)
+  mrp?: number; // Original price for this variation
+  finalPrice?: number; // Final sale price for this variation
+  discount?: number; // Discount percentage for this variation
+  isManualDiscount?: boolean; // If true, the discount was manually set
   image?: string; // Specific image for this variation option
   size?: string;
   isDefault?: boolean; // If true, this variation's image is used as the main product image
@@ -28,6 +32,7 @@ export interface Variation {
 export type ProductStatus = 'Active' | 'Inactive' | 'Draft';
 
 export interface Product {
+  _id?: string;
   id: string;
   code: string;
   name: string;
@@ -40,7 +45,10 @@ export interface Product {
   gallery?: string[]; // Additional images
   description: string;
   size?: string;
+  mrp?: number; // Base MRP
+  finalPrice?: number; // Base Final Price
   discount?: number; // Percentage (e.g., 35)
+  isManualDiscount?: boolean; // Manual override flag
   allowsExtraHeads?: boolean; // Deprecated - kept for backward compatibility
   additionalHeadsConfig?: {
     enabled: boolean;
@@ -69,6 +77,7 @@ export interface Product {
     title: string;
     content: string;
     isHidden: boolean;
+    isManual?: boolean;
   }[];
 }
 
@@ -206,8 +215,8 @@ export const ADMIN_EMAILS = [
 ];
 
 export const WHATSAPP_NUMBERS = [
-  "9342310194",
-  "6380016798"
+
+  "916380016798"
 ];
 
 export interface Review {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SEO } from '../components/SEO';
 import { Link, useSearchParams, useNavigate, useNavigationType } from 'react-router-dom';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, ChevronDown } from 'lucide-react';
 import { useCart } from '../context';
 import { Product } from '../types';
 import { calculatePrice } from '../data/products';
@@ -31,6 +31,7 @@ export const Shop: React.FC = () => {
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+    const [isPriceOpen, setIsPriceOpen] = useState(false);
 
     // Handle legacy category links and Budget parameter parsing
     useEffect(() => {
@@ -406,51 +407,7 @@ export const Shop: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Price Range Vertical */}
-                        <div className="p-4">
-                            <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-4">Price Range</h3>
-                            <div className="space-y-4">
-                                <div className="flex gap-2 items-center">
-                                    <div className="relative flex-1">
-                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₹</span>
-                                        <input
-                                            type="number"
-                                            placeholder="Min"
-                                            value={minPrice}
-                                            onChange={(e) => setMinPrice(e.target.value)}
-                                            className="w-full pl-5 pr-2 py-2 text-xs border border-gray-100 rounded-md focus:ring-1 focus:ring-primary outline-none bg-gray-50 font-bold"
-                                        />
-                                    </div>
-                                    <span className="text-gray-400 text-[10px] font-bold">TO</span>
-                                    <div className="relative flex-1">
-                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₹</span>
-                                        <input
-                                            type="number"
-                                            placeholder="Max"
-                                            value={maxPrice}
-                                            onChange={(e) => setMaxPrice(e.target.value)}
-                                            className="w-full pl-5 pr-2 py-2 text-xs border border-gray-100 rounded-md focus:ring-1 focus:ring-primary outline-none bg-gray-50 font-bold"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[
-                                        { l: 'Under 500', min: '0', max: '500' },
-                                        { l: '500-1000', min: '500', max: '1000' },
-                                        { l: '1000-2000', min: '1000', max: '2000' },
-                                        { l: 'Over 2000', min: '2000', max: '' },
-                                    ].map((range, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => { setMinPrice(range.min); setMaxPrice(range.max); }}
-                                            className="text-[10px] font-bold py-1.5 px-2 bg-gray-50 border border-gray-100 rounded-md text-gray-600 hover:bg-white hover:border-primary hover:text-primary transition-all text-center"
-                                        >
-                                            {range.l}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+                        {/* Price Range Removed from Sidebar */}
                     </aside>
 
                     {/* Main Content Area */}
@@ -490,6 +447,72 @@ export const Shop: React.FC = () => {
                                     >
                                         <Filter className="w-4 h-4" /> Filters
                                     </button>
+
+                                    {/* Price Filter Dropdown */}
+                                    <div className="relative hidden sm:block">
+                                        <button
+                                            onClick={() => setIsPriceOpen(!isPriceOpen)}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-black uppercase tracking-widest transition-all ${minPrice || maxPrice ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary shadow-sm'}`}
+                                        >
+                                            Price
+                                            <ChevronDown className={`w-3 h-3 transition-transform ${isPriceOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isPriceOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setIsPriceOpen(false)} />
+                                                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 z-20 animate-fade-in-up">
+                                                    <div className="flex gap-2 items-center mb-4">
+                                                        <div className="relative flex-1">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Min"
+                                                                value={minPrice}
+                                                                onChange={(e) => setMinPrice(e.target.value)}
+                                                                className="w-full pl-6 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-gray-50 font-bold"
+                                                            />
+                                                        </div>
+                                                        <span className="text-gray-300 text-[10px] font-black">TO</span>
+                                                        <div className="relative flex-1">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Max"
+                                                                value={maxPrice}
+                                                                onChange={(e) => setMaxPrice(e.target.value)}
+                                                                className="w-full pl-6 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-gray-50 font-bold"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {[
+                                                            { l: 'Under 500', min: '0', max: '500' },
+                                                            { l: '500-1000', min: '500', max: '1000' },
+                                                            { l: '1000-2000', min: '1000', max: '2000' },
+                                                            { l: 'Over 2000', min: '2000', max: '' },
+                                                        ].map((range, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => { setMinPrice(range.min); setMaxPrice(range.max); setIsPriceOpen(false); }}
+                                                                className="text-[10px] font-bold py-2 px-2 bg-gray-50 border border-gray-100 rounded-md text-gray-600 hover:bg-primary hover:text-white hover:border-primary transition-all text-center"
+                                                            >
+                                                                {range.l}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    {(minPrice || maxPrice) && (
+                                                        <button
+                                                            onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                                                            className="w-full mt-3 text-[10px] text-red-500 font-bold hover:underline text-center"
+                                                        >
+                                                            Reset Price
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
                                     {/* Sort Bar */}
                                     <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 ring-1 ring-black/5">

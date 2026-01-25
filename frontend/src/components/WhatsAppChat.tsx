@@ -63,7 +63,7 @@ export const WhatsAppChat: React.FC = () => {
         }
 
         // Format the support number (your number)
-        const supportNumber = '919342310194';
+        const supportNumber = '916380016798';
 
         // Construct the message
         const text = message

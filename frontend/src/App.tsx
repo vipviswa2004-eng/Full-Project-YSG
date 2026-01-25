@@ -7,6 +7,7 @@ import { GiftAdvisor } from './components/GiftAdvisor';
 import { WhatsAppChat } from './components/WhatsAppChat';
 import { LocationRequester } from './components/LocationRequester';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { GalaxyCursor } from './components/GalaxyCursor';
 import { Home } from './pages/Home';
 import { Shop } from './pages/Shop';
 import { Customize } from './pages/Customize';
@@ -28,6 +29,12 @@ const AppContent: React.FC = () => {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const { setUser } = useCart();
   const navType = useNavigationType();
+
+  // Detect Touch to disable custom cursor CSS
+  const [isTouch, setIsTouch] = React.useState(false);
+  useEffect(() => {
+    setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   // Disable browser scroll restoration to avoid conflicts
   useEffect(() => {
@@ -70,7 +77,8 @@ const AppContent: React.FC = () => {
   }, [setUser]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-app-bg">
+    <div className={`flex flex-col min-h-screen bg-app-bg ${!isTouch ? 'cursor-none' : ''}`}>
+      <GalaxyCursor />
       <Navbar />
       {!isAdminRoute && <CategoryNav />}
       <main className="flex-grow">

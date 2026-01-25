@@ -65,9 +65,9 @@ export const ShopSection: React.FC<ShopSectionProps> = ({ section, categories })
     }
 
     return (
-        <div className="mb-8 group/section relative">
+        <div className="mb-8 group/section relative overflow-hidden">
+            {/* Header */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header */}
                 {section.title && (
                     <div className="flex justify-center items-center mb-8 relative">
                         <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent z-0"></div>
@@ -77,38 +77,43 @@ export const ShopSection: React.FC<ShopSectionProps> = ({ section, categories })
                         <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent z-0"></div>
                     </div>
                 )}
+            </div>
 
-                {/* Categories Carousel */}
-                <div className="relative group/carousel px-4">
-                    {/* Left Arrow */}
+            {/* Categories Carousel */}
+            <div className="relative group/carousel">
+                {/* Left Arrow */}
+                <button
+                    onClick={() => scroll('left')}
+                    disabled={!canScrollLeft}
+                    className={`absolute left-[4rem] top-1/2 -translate-y-1/2 z-30 bg-white/95 shadow-xl rounded-full p-3 transition-all duration-300 border border-gray-100 hidden md:flex items-center justify-center ${!canScrollLeft
+                        ? 'opacity-50 cursor-not-allowed text-gray-300'
+                        : 'hover:bg-primary hover:text-white text-gray-800 hover:scale-110 group-hover/section:opacity-100 opacity-0'
+                        }`}
+                    aria-label="Scroll left"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {/* Right Arrow */}
+                {canScrollRight && (
                     <button
-                        onClick={() => scroll('left')}
-                        disabled={!canScrollLeft}
-                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/95 shadow-xl rounded-full p-3 transition-all duration-300 border border-gray-100 hidden md:flex items-center justify-center -ml-4 ${!canScrollLeft
-                            ? 'opacity-50 cursor-not-allowed text-gray-300'
-                            : 'hover:bg-primary hover:text-white text-gray-800 hover:scale-110 group-hover/section:opacity-100 opacity-0'
-                            }`}
-                        aria-label="Scroll left"
+                        onClick={() => scroll('right')}
+                        className="absolute right-[4rem] top-1/2 -translate-y-1/2 z-30 bg-white/95 shadow-xl rounded-full p-3 hover:bg-primary hover:text-white transition-all duration-300 border border-gray-100 hidden md:flex items-center justify-center group-hover/section:opacity-100 opacity-0"
+                        aria-label="Scroll right"
                     >
-                        <ChevronLeft className="w-5 h-5" />
+                        <ChevronRight className="w-5 h-5" />
                     </button>
+                )}
 
-                    {/* Right Arrow */}
-                    {canScrollRight && (
-                        <button
-                            onClick={() => scroll('right')}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/95 shadow-xl rounded-full p-3 hover:bg-primary hover:text-white transition-all duration-300 border border-gray-100 hidden md:flex items-center justify-center -mr-4"
-                            aria-label="Scroll right"
-                        >
-                            <ChevronRight className="w-5 h-5" />
-                        </button>
-                    )}
-
-                    {/* Categories Container */}
+                {/* Categories Container */}
+                <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
                     <div
                         ref={scrollContainerRef}
-                        className="grid grid-rows-2 grid-flow-col gap-x-6 md:gap-x-10 gap-y-12 overflow-x-auto scrollbar-hide scroll-smooth px-2 pb-10 snap-x snap-mandatory"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        className="grid grid-rows-2 grid-flow-col gap-x-6 md:gap-x-10 gap-y-12 overflow-x-auto scrollbar-hide scroll-smooth pb-10 snap-x snap-mandatory px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
+                        style={{
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none',
+                        }}
                     >
                         {sectionCategories.map((category) => (
                             <Link

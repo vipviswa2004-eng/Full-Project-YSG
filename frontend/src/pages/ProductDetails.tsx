@@ -624,10 +624,12 @@ export const ProductDetails: React.FC = () => {
 
                                 <div className="mt-4 flex items-baseline gap-3">
                                     <p className="text-3xl font-bold text-gray-900">{formatPrice(prices.final)}</p>
-                                    {(product.discount !== undefined && product.discount > 0) && (
+                                    {prices.final < prices.original && (
                                         <>
                                             <p className="text-sm text-gray-500 line-through">{formatPrice(prices.original)}</p>
-                                            <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">{product.discount}% OFF</span>
+                                            <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">
+                                                {Math.round((1 - prices.final / prices.original) * 100)}% OFF
+                                            </span>
                                         </>
                                     )}
                                 </div>
@@ -1036,52 +1038,126 @@ export const ProductDetails: React.FC = () => {
                                     {descriptionTab && (
                                         <div className="text-gray-600 leading-relaxed space-y-4 text-sm md:text-base min-h-[100px] bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 animate-fade-in">
                                             {(() => {
-                                                const sections = product.aboutSections?.filter(s => !s.isHidden);
-                                                if (sections && sections.length > 0) {
-                                                    const section = sections.find(s => s.id === descriptionTab);
-                                                    if (!section) return null;
+                                                const dynamic = (() => {
+                                                    const cat = (product.category || '').toLowerCase();
+                                                    const nm = (product.name || '').toLowerCase();
 
-                                                    // Use special formatting for the "Description" section or first section
-                                                    if (section.title === 'Description' || section.id === 'desc') {
-                                                        return (
-                                                            <div className="animate-fade-in">
-                                                                <h5 className="font-bold text-gray-900 mb-2">{section.title}:</h5>
-                                                                <div className="space-y-2 mb-4">
-                                                                    {section.content.split('\n').map((paragraph, idx) => (
-                                                                        <p key={idx} className="flex gap-2">
-                                                                            <span className="text-gray-400 mt-1.5">•</span>
-                                                                            <span>{paragraph}</span>
-                                                                        </p>
-                                                                    ))}
-                                                                </div>
-                                                                <ul className="space-y-1 text-gray-500 text-sm mt-4 pt-4 border-t border-gray-100">
-                                                                    <li className="flex gap-2"><span className="text-gray-400">•</span> Net Quantity: 1 Unit</li>
-                                                                    <li className="flex gap-2"><span className="text-gray-400">•</span> Country of Origin: India</li>
-                                                                </ul>
-                                                            </div>
-                                                        );
+                                                    if (cat.includes('t-shirt') || nm.includes('t-shirt') || cat.includes('apparel')) {
+                                                        return {
+                                                            description: [
+                                                                "Premium Quality Fabric: Soft, breathable cotton-rich blend for all-day comfort.",
+                                                                "High-Definition Digital Printing: Vibrant colors with long-lasting print durability.",
+                                                                "Comfortable Fit: Precision-cut for a modern, relaxed silhouette.",
+                                                                "Perfect Personalized Gift: Ideal for special occasions, team wear, or personal keepsakes."
+                                                            ],
+                                                            instructions: [
+                                                                "Fabric Care: Machine wash cold with similar colors, inside out.",
+                                                                "Ironing: Do not iron directly on the printed area; iron on the reverse side.",
+                                                                "Detergent: Use mild detergent only; do not bleach or dry clean.",
+                                                                "Drying: Tumble dry low or hang dry in shade to maintain print quality."
+                                                            ]
+                                                        };
                                                     }
+                                                    if (cat.includes('crystal') || cat.includes('glass') || nm.includes('crystal')) {
+                                                        return {
+                                                            description: [
+                                                                "Optical Grade K9 Crystal: High-purity crystal with exceptional clarity and brilliance.",
+                                                                "Advanced 3D Laser Engraving: Intricate designs etched deep inside for a lifetime of beauty.",
+                                                                "Polished Edges: Smooth, bevelled finishes that catch and reflect light elegantly.",
+                                                                "Premium Keepsake: A sophisticated decor piece for home or executive office spaces."
+                                                            ],
+                                                            instructions: [
+                                                                "Handling: Handle with care to avoid chipping or surface scratches.",
+                                                                "Cleaning: Gently wipe with a soft, lint-free microfiber cloth for a streak-free shine.",
+                                                                "Lighting Notes: Place on an LED light base (if available) to bring out the 3D details.",
+                                                                "Avoid: Keep away from direct heat and harsh chemical cleaners."
+                                                            ]
+                                                        };
+                                                    }
+                                                    if (cat.includes('mug') || nm.includes('mug')) {
+                                                        return {
+                                                            description: [
+                                                                "High-Grade Ceramic: Durable material with a smooth, glossy premium finish.",
+                                                                "Vibrant Sublimation Print: Full-color wrap-around graphics that won't fade.",
+                                                                "Ergonomic Handle: Designed for a comfortable grip while enjoying hot or cold beverages.",
+                                                                "Everyday Utility: Dishwasher-friendly (standard white) and microwave safe."
+                                                            ],
+                                                            instructions: [
+                                                                "Washing: Gentle hand wash with a soft sponge is recommended for longest print life.",
+                                                                "Scrubbing: Avoid using metallic scrubbers or abrasive pads on the printed design.",
+                                                                "Heat: Durable for boiling liquids; avoid sudden extreme temperature changes.",
+                                                                "Storage: Store in a dry place to maintain the outer glossy coating."
+                                                            ]
+                                                        };
+                                                    }
+                                                    if (cat.includes('lamp') || nm.includes('lamp') || cat.includes('light')) {
+                                                        return {
+                                                            description: [
+                                                                "Ambient Illumination: Low-energy LED light source providing a warm, comforting glow.",
+                                                                "Custom Acrylic Panel: High-transparency acrylic with precision-etched personalized detail.",
+                                                                "Sleek Support Base: Modern, sturdy base design with integrated power controls.",
+                                                                "Versatile Decor: Ideal as a bedroom night light, nursery lamp, or personalized desk accessory."
+                                                            ],
+                                                            instructions: [
+                                                                "Power Safety: Use only the provided USB cable or recommended 5V adapter.",
+                                                                "Surface Cleaning: Use a dry, soft cloth to remove fingerprints from the acrylic panel.",
+                                                                "Usage: Do not leave the lamp powered on continuously for more than 24 hours.",
+                                                                "Handling: Do not touch the internal LED components or electrical parts."
+                                                            ]
+                                                        };
+                                                    }
+                                                    if (cat.includes('wood') || cat.includes('mdf') || cat.includes('frame') || nm.includes('frame')) {
+                                                        return {
+                                                            description: [
+                                                                "Quality Craftsmanship: Made from high-density MDF or natural wood with a refined finish.",
+                                                                "High-Resolution Print/Engraving: Sharp details with UV-resistant inks or laser precision.",
+                                                                "Easy Display: Designed for quick wall mounting or stable tabletop placement.",
+                                                                "Timeless Aesthetic: Neutral wood tones that complement any interior decor style."
+                                                            ],
+                                                            instructions: [
+                                                                "Dusting: Regularly wipe with a soft, dry cloth to prevent dust buildup.",
+                                                                "Moisture Protection: Keep in a dry, well-ventilated area; avoid damp environment.",
+                                                                "Sunlight Exposure: Avoid prolonged direct sunlight to prevent natural wood fading.",
+                                                                "Maintenance: Do not use wet wipes or water-based cleaners on engraved areas."
+                                                            ]
+                                                        };
+                                                    }
+                                                    // Fallback
+                                                    return {
+                                                        description: product.description ? product.description.split('\n') : ["Premium quality personalized gift.", "Expertly crafted for your special moments."],
+                                                        instructions: [
+                                                            "Handle with care to maintain the product's finish and longevity.",
+                                                            "Clean with a soft, dry cloth to remove dust and fingerprints.",
+                                                            "Keep in a cool, dry place away from direct moisture or humidity.",
+                                                            "Avoid exposure to harsh chemicals or abrasive cleaning agents."
+                                                        ]
+                                                    };
+                                                })();
 
-                                                    // Default renderer for other sections
-                                                    return (
-                                                        <div className="animate-fade-in whitespace-pre-wrap">
-                                                            {section.content}
-                                                        </div>
-                                                    );
-                                                }
+                                                const currentSection = product.aboutSections?.find(s => s.id === descriptionTab);
+                                                const useManual = currentSection?.isManual && currentSection.content;
 
-                                                // Fallback for legacy products
+
                                                 if (descriptionTab === 'description') {
                                                     return (
                                                         <div className="animate-fade-in">
                                                             <h5 className="font-bold text-gray-900 mb-2">Product Details:</h5>
                                                             <div className="space-y-2 mb-4">
-                                                                {product.description.split('\n').map((paragraph, idx) => (
-                                                                    <p key={idx} className="flex gap-2">
-                                                                        <span className="text-gray-400 mt-1.5">•</span>
-                                                                        <span>{paragraph}</span>
-                                                                    </p>
-                                                                ))}
+                                                                {useManual ? (
+                                                                    currentSection!.content.split('\n').map((line, idx) => (
+                                                                        <p key={idx} className="flex gap-2">
+                                                                            <span className="text-gray-400 mt-1.5">•</span>
+                                                                            <span>{line}</span>
+                                                                        </p>
+                                                                    ))
+                                                                ) : (
+                                                                    dynamic.description.map((line, idx) => (
+                                                                        <p key={idx} className="flex gap-2">
+                                                                            <span className="text-gray-400 mt-1.5">•</span>
+                                                                            <span>{line}</span>
+                                                                        </p>
+                                                                    ))
+                                                                )}
                                                             </div>
                                                             <ul className="space-y-1 text-gray-500 text-sm mt-4 pt-4 border-t border-gray-100">
                                                                 <li className="flex gap-2"><span className="text-gray-400">•</span> Net Quantity: 1 Unit</li>
@@ -1093,13 +1169,25 @@ export const ProductDetails: React.FC = () => {
                                                 if (descriptionTab === 'instructions') {
                                                     return (
                                                         <div className="animate-fade-in space-y-3">
-                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Handle with care to avoid scratches.</p>
-                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Clean with a soft, dry cloth only.</p>
-                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Keep away from direct sunlight for longevity.</p>
-                                                            <p className="flex gap-2"><span className="text-gray-400">•</span> Do not use abrasive chemicals for cleaning.</p>
+                                                            {useManual ? (
+                                                                currentSection!.content.split('\n').map((line, idx) => (
+                                                                    <p key={idx} className="flex gap-2">
+                                                                        <span className="text-gray-400 mt-1.5">•</span>
+                                                                        <span>{line}</span>
+                                                                    </p>
+                                                                ))
+                                                            ) : (
+                                                                dynamic.instructions.map((line, idx) => (
+                                                                    <p key={idx} className="flex gap-2">
+                                                                        <span className="text-gray-400 mt-1.5">•</span>
+                                                                        <span>{line}</span>
+                                                                    </p>
+                                                                ))
+                                                            )}
                                                         </div>
                                                     );
                                                 }
+
                                                 if (descriptionTab === 'delivery') {
                                                     return (
                                                         <div className="animate-fade-in space-y-4">
@@ -1127,6 +1215,7 @@ export const ProductDetails: React.FC = () => {
                                                         </div>
                                                     );
                                                 }
+                                                return null;
                                             })()}
                                         </div>
                                     )}
@@ -1140,8 +1229,8 @@ export const ProductDetails: React.FC = () => {
 
                         {/* Action Buttons - Fixed at bottom for mobile, docked at bottom for desktop */}
                         <div className="fixed bottom-0 left-0 right-0 lg:relative lg:bottom-auto p-3 md:p-4 bg-white border-t border-gray-100 z-50 flex gap-3 md:gap-4 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] lg:shadow-none lg:bg-transparent lg:border-none lg:pt-6">
-                            <button onClick={handleAddToCartClick} className="flex-1 bg-white border-2 border-primary text-primary py-3 md:py-4 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 text-xs md:text-base shadow-sm">Customize & Add to Cart</button>
-                            <button onClick={handleBuyNowClick} className="flex-1 bg-primary text-white py-3 md:py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all active:scale-95 text-xs md:text-base">Buy Now</button>
+                            <button onClick={handleAddToCartClick} className="flex-1 bg-primary text-white py-3 md:py-4 rounded-xl font-bold hover:bg-purple-800 shadow-lg shadow-primary/20 transition-all active:scale-95 text-xs md:text-base">Customize & Add to Cart</button>
+                            <button onClick={handleBuyNowClick} className="flex-1 bg-white border-2 border-primary text-primary py-3 md:py-4 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 text-xs md:text-base shadow-sm">Buy Now</button>
                         </div>
                     </div>
                 </div>

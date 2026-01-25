@@ -89,9 +89,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                     )}
 
                     <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                        {product.discount && (
+                        {prices.final < prices.original && (
                             <div className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg shadow-red-600/20 uppercase tracking-tighter">
-                                {product.discount}% OFF
+                                {Math.round((1 - prices.final / prices.original) * 100)}% OFF
                             </div>
                         )}
                         {product.isBestseller && (
@@ -142,7 +142,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                             <span className="text-base font-black text-gray-900 leading-none">
                                 {formatPrice(prices.final)}
                             </span>
-                            {product.discount && (
+                            {prices.final < prices.original && (
                                 <span className="text-[10px] text-gray-400 line-through font-bold mt-1">
                                     {formatPrice(prices.original)}
                                 </span>

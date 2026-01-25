@@ -181,7 +181,7 @@ export const Cart: React.FC = () => {
     }
 
     // 2. Send Details via WhatsApp to MULTIPLE numbers
-    const adminNumbers = ['9342310194', '6380016798']; // Admin phone numbers
+    const adminNumbers = ['916380016798']; // Admin phone numbers
 
     let message = "Hello Sign Galaxy 👋\n";
     message += "I’ve placed an order successfully.\n\n";

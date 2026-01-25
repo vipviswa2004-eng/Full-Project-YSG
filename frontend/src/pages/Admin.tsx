@@ -137,14 +137,15 @@ export const Admin: React.FC = () => {
 
     const fetchShopData = async () => {
         try {
+            const t = Date.now();
             const [sectionsRes, categoriesRes, subCategoriesRes, occasionsRes, shopOccasionsRes, recipientsRes, couponsRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL}/api/sections`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/special-occasions`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/shop-occasions`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/shop-recipients`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/coupons`)
+                fetch(`${import.meta.env.VITE_API_URL}/api/sections?t=${t}`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/shop-categories?t=${t}`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories?t=${t}`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/special-occasions?t=${t}`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/shop-occasions?t=${t}`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/shop-recipients?t=${t}`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/coupons?t=${t}`)
             ]);
 
             const parseSafe = async (res: Response) => {
@@ -320,14 +321,49 @@ export const Admin: React.FC = () => {
 
     const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions' | 'shop-recipients', data: any) => {
         try {
-            const method = data._id ? 'PUT' : 'POST';
+            let finalData = { ...data };
+
+            // If image is base64, upload to Cloudinary first
+            if (finalData.image && finalData.image.startsWith('data:')) {
+                console.log('📤 Uploading base64 image to Cloudinary...');
+                try {
+                    // Convert base64 to blob
+                    const response = await fetch(finalData.image);
+                    const blob = await response.blob();
+
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('image', blob, 'category-image.png');
+
+                    // Upload to Cloudinary
+                    const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (uploadResponse.ok) {
+                        const uploadData = await uploadResponse.json();
+                        finalData.image = uploadData.url;
+                        console.log('✅ Image uploaded successfully:', uploadData.url);
+                    } else {
+                        console.warn('⚠️ Cloudinary upload failed, using base64 as fallback');
+                        // Keep base64 as fallback
+                    }
+                } catch (uploadError) {
+                    console.error('❌ Image upload error:', uploadError);
+                    console.warn('⚠️ Using base64 as fallback');
+                    // Keep base64 as fallback
+                }
+            }
+
+            const method = finalData._id ? 'PUT' : 'POST';
             const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : type === 'shop-recipients' ? 'shop-recipients' : 'shop-occasions';
-            const url = `${import.meta.env.VITE_API_URL}/api/${apiPath}${data._id ? `/${data._id}` : ''}`;
+            const url = `${import.meta.env.VITE_API_URL}/api/${apiPath}${finalData._id ? `/${finalData._id}` : ''}`;
 
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(finalData)
             });
 
             if (!res.ok) {
@@ -573,44 +609,131 @@ export const Admin: React.FC = () => {
         setEditedProduct(prev => prev ? { ...prev, image: newImage, variations: updatedVariations } : null);
     };
 
+    // Helper for Premium Pricing Logic
+    // Helper for Premium Pricing Logic
+    // RULES: 
+    // 1. Final Price must end in 9 (X9). 
+    // 2. MRP must end in 99 (X99).
+    // 3. Discount approx 35-50%.
+    const calculatePremiumPricing = (rawFinalPrice: number) => {
+        if (!rawFinalPrice || rawFinalPrice <= 0) return { final: rawFinalPrice, mrp: 0, discount: 0 };
+
+        // 1. Enforce Final Price ending in 9
+        // Logic: Round to nearest 10, then subtract 1. (800 -> 799, 804 -> 799, 805 -> 809)
+        let final = Math.round(rawFinalPrice / 10) * 10 - 1;
+        if (final <= 0) final = 9; // Safety
+
+        // 2. Minimum Price Difference Rule: MRP - Final >= 1000
+        const MIN_DIFF = 1000;
+        const minMRPByDiff = final + MIN_DIFF;
+
+        // 3. Ratio Rule: At least 1.35x
+        const minMRPByRatio = Math.ceil(final * 1.35);
+
+        // Absolute Minimum MRP allowed
+        const absoluteMinMRP = Math.max(minMRPByDiff, minMRPByRatio);
+
+        // Find nearest X99 >= absoluteMinMRP
+        // Start from base of absoluteMinMRP
+        let base = Math.floor(absoluteMinMRP / 100) * 100;
+        let candidates = [
+            base - 100 + 99,
+            base + 99,
+            base + 100 + 99,
+            base + 200 + 99
+        ];
+
+        // Filter valid candidates
+        candidates = candidates.filter(c => c >= absoluteMinMRP);
+
+        let bestMRP = 0;
+        if (candidates.length > 0) {
+            // Pick the smallest valid X99 that satisfies the condition (to keep it competitive but premium)
+            // Or pick closest to 1.6x if possible?
+            // Let's target 1.6x if it satisfies the condition
+            let targetMRP = final * 1.6;
+            // Best one is closest to target BUT must be >= absoluteMinMRP
+            bestMRP = candidates.reduce((prev, curr) => {
+                return (Math.abs(curr - targetMRP) < Math.abs(prev - targetMRP) ? curr : prev);
+            });
+        } else {
+            // Fallback construction
+            let approxBase = Math.floor(absoluteMinMRP / 100) * 100;
+            bestMRP = approxBase + 99;
+            if (bestMRP < absoluteMinMRP) bestMRP += 100;
+        }
+
+        let discount = Math.round(((bestMRP - final) / bestMRP) * 100);
+
+        return { final, mrp: bestMRP, discount };
+    };
+
     // Removed unused helper functions (handleAddVariation, etc.)
     const saveProduct = async () => {
         if (!editedProduct) return;
 
         console.log('💾 Saving product:', editedProduct.name, 'ID:', editedProduct.id, 'MongoID:', (editedProduct as any)._id);
 
-        // Force update category name from ID to ensure consistency
         let finalProduct = { ...editedProduct };
+
+        // Use custom id from shopCategoryId if available
         if (finalProduct.shopCategoryId) {
-            const cat = shopCategories.find(c => c.id === finalProduct.shopCategoryId);
+            const cat = shopCategories.find(c => (c.id === finalProduct.shopCategoryId) || ((c as any)._id === finalProduct.shopCategoryId));
             if (cat) {
                 finalProduct.category = cat.name;
-                if (cat.sectionId) finalProduct.sectionId = cat.sectionId;
+                // Preserve section mapping from category
+                if (cat.sectionIds && cat.sectionIds.length > 0) {
+                    finalProduct.sectionId = cat.sectionIds[0];
+                } else if (cat.sectionId) {
+                    finalProduct.sectionId = cat.sectionId;
+                }
             }
         }
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
-                method: 'POST',
+            const mongoId = (finalProduct as any)._id || (finalProduct as any).id;
+            const isUpdate = !!(finalProduct as any)._id;
+
+            const method = isUpdate ? 'PUT' : 'POST';
+            const url = isUpdate
+                ? `${import.meta.env.VITE_API_URL}/api/products/${mongoId}`
+                : `${import.meta.env.VITE_API_URL}/api/products`;
+
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(finalProduct),
                 cache: 'no-store'
             });
 
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to save product');
+            }
+
             const savedProduct = await response.json();
             console.log('✅ Product saved successfully:', savedProduct);
 
-            const exists = productList.find(p => p.id === editedProduct.id);
-            if (exists) {
-                setProductList(prev => prev.map(p => p.id === editedProduct.id ? savedProduct : p));
-            } else {
-                setProductList(prev => [...prev, savedProduct]);
-            }
+            // Update local state robustly
+            setProductList(prev => {
+                const index = prev.findIndex(p =>
+                    ((p as any)._id && (p as any)._id === savedProduct._id) ||
+                    (p.id === savedProduct.id)
+                );
+
+                if (index !== -1) {
+                    const newList = [...prev];
+                    newList[index] = savedProduct;
+                    return newList;
+                } else {
+                    return [...prev, savedProduct];
+                }
+            });
 
             setIsEditing(null);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to save product", e);
-            alert("Failed to save product. Please try again.");
+            alert(`Failed to save product: ${e.message}`);
         }
     };
 
@@ -975,7 +1098,7 @@ export const Admin: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredProducts.map(p => (
-                                    <tr key={p.id} className="hover:bg-blue-50/30 transition-all group">
+                                    <tr key={p._id || p.id} className="hover:bg-blue-50/30 transition-all group">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="relative">
@@ -1126,6 +1249,39 @@ export const Admin: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch customers", error);
         }
+    };
+
+    const autoTagRules = [
+        { tag: 'Birthday', keywords: ['Birthday', 'Bday', 'Year'] },
+        { tag: 'Wedding & Anniversary', keywords: ['Wedding', 'Anniversary', 'Marriage', 'Engagement', 'Bride', 'Groom', 'Spouse', 'Wifey', 'Hubby'] },
+        { tag: 'Love & Romance', keywords: ['Love', 'Valentine', 'Romance', 'Heart', 'Date', 'Soulmate'] },
+        { tag: 'For Kids', keywords: ['Kid', 'Child', 'Baby', 'School', 'Toy', 'Boy', 'Girl', 'Son', 'Daughter', 'Born'] },
+        { tag: 'Him', keywords: ['Him', 'Husband', 'Boyfriend', 'Dad', 'Father', 'Brother', 'Men', 'Man', 'Grandfather', 'Papa', 'Appa', 'Thatha', 'Hubby'] },
+        { tag: 'Her', keywords: ['Her', 'Wife', 'Girlfriend', 'Mom', 'Mother', 'Sister', 'Woman', 'Women', 'Lady', 'Grandmother', 'Amma', 'Pati', 'Wifey'] },
+        { tag: 'Couples', keywords: ['Couple', 'Pair', 'Husband & Wife', 'Mr & Mrs', 'Together', 'Wedding'] },
+        { tag: 'Kids', keywords: ['Kid', 'Child', 'Baby', 'School', 'Toy', 'Boy', 'Girl', 'Son', 'Daughter'] },
+        { tag: 'Parents', keywords: ['Parent', 'Mom & Dad', 'Father & Mother', 'Anniversary', 'Amma & Appa'] }
+    ];
+
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newName = e.target.value;
+        if (!editedProduct) return;
+
+        const nameLower = newName.toLowerCase();
+        const currentOccasions = new Set(editedProduct.occasions || []);
+
+        autoTagRules.forEach(rule => {
+            const match = rule.keywords.some(k => nameLower.includes(k.toLowerCase()));
+            if (match) {
+                currentOccasions.add(rule.tag);
+            }
+        });
+
+        setEditedProduct({
+            ...editedProduct,
+            name: newName,
+            occasions: Array.from(currentOccasions)
+        });
     };
 
 
@@ -1508,7 +1664,7 @@ export const Admin: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {sections.map(section => (
-                            <div key={section.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={section._id || section.id} className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-900">{section.title}</h3>
@@ -1551,10 +1707,10 @@ export const Admin: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {shopCategories.map(category => (
-                            <div key={category.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={category._id || category.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex gap-4">
                                     <img
-                                        src={category.image}
+                                        src={category.image || 'https://placehold.co/200x200?text=No+Image'}
                                         alt={category.name}
                                         className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
                                     />
@@ -1625,10 +1781,10 @@ export const Admin: React.FC = () => {
                         {subCategories
                             .filter(sub => !subCategoryListFilter || sub.categoryId === subCategoryListFilter)
                             .map(sub => (
-                                <div key={sub.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div key={sub._id || sub.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                                     <div className="flex gap-4">
                                         <img
-                                            src={sub.image}
+                                            src={sub.image || 'https://placehold.co/200x200?text=No+Image'}
                                             alt={sub.name}
                                             className="w-20 h-20 rounded-lg object-cover border-2 border-gray-100"
                                         />
@@ -1671,7 +1827,7 @@ export const Admin: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {specialOccasions.map(occ => (
-                            <div key={occ.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={occ._id || occ.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex gap-4">
                                     <img
                                         src={occ.image}
@@ -1717,7 +1873,7 @@ export const Admin: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {shopOccasions.map(occ => (
-                            <div key={occ.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={occ._id || occ.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex gap-4">
                                     <img
                                         src={occ.image}
@@ -1763,10 +1919,10 @@ export const Admin: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {shopRecipients.map(rec => (
-                            <div key={rec.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={rec._id || rec.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex gap-4">
                                     <img
-                                        src={rec.image}
+                                        src={rec.image || 'https://placehold.co/200x200?text=No+Image'}
                                         alt={rec.name}
                                         className="w-20 h-20 rounded-lg object-cover border-2 border-gray-100"
                                     />
@@ -2194,11 +2350,57 @@ export const Admin: React.FC = () => {
                                 {editTab === 'vital' && (<div className="space-y-6">
                                     {/* Vital Info Fields */}
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={e => setEditedProduct({ ...editedProduct, name: e.target.value })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700">Price</label><input type="number" value={editedProduct.pdfPrice} onChange={e => setEditedProduct({ ...editedProduct, pdfPrice: parseFloat(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={handleNameChange} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
+                                        <div><label className="block text-sm font-medium text-gray-700">MRP (Original Price)</label><input type="number" value={editedProduct.mrp || editedProduct.pdfPrice} onChange={e => {
+                                            const mrp = parseFloat(e.target.value) || 0;
+                                            const currentFinal = editedProduct.finalPrice || (editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100));
+                                            const disc = mrp > 0 ? Math.round((1 - currentFinal / mrp) * 100) : 0;
+                                            setEditedProduct({
+                                                ...editedProduct,
+                                                mrp: mrp,
+                                                pdfPrice: mrp,
+                                                discount: editedProduct.isManualDiscount ? editedProduct.discount : disc
+                                            });
+                                        }} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
+
+                                        <div><label className="block text-sm font-medium text-gray-700">Final Price (Source of Truth)</label><input type="number" value={editedProduct.finalPrice || ''} onChange={e => {
+                                            const rawFinal = parseFloat(e.target.value) || 0;
+                                            const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                            setEditedProduct({
+                                                ...editedProduct,
+                                                finalPrice: final,
+                                                mrp: mrp,
+                                                pdfPrice: mrp,
+                                                discount: discount
+                                            });
+                                        }} className="mt-1 block w-full border border-gray-300 rounded-md p-2 font-bold text-green-600 shadow-sm border-green-200 focus:border-green-500" /></div>
+
                                         <div><label className="block text-sm font-medium text-gray-700">Stock</label><input type="number" value={editedProduct.stock || 0} onChange={e => setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700">Discount (%)</label><input type="number" min="0" max="100" value={editedProduct.discount || 0} onChange={e => setEditedProduct({ ...editedProduct, discount: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700">Final Price (Calculated)</label><input type="text" value={editedProduct.pdfPrice && editedProduct.discount ? Math.round(editedProduct.pdfPrice * (1 - editedProduct.discount / 100)) : editedProduct.pdfPrice} readOnly disabled className="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-gray-100 font-bold text-green-600" /></div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center">
+                                                <label className="block text-sm font-medium text-gray-700">Discount (%)</label>
+                                                <label className="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editedProduct.isManualDiscount || false}
+                                                        onChange={e => setEditedProduct({ ...editedProduct, isManualDiscount: e.target.checked })}
+                                                        className="w-3 h-3 text-primary focus:ring-primary rounded"
+                                                    /> Manual
+                                                </label>
+                                            </div>
+                                            <input type="number" min="0" max="100" value={editedProduct.discount || 0} onChange={e => {
+                                                const disc = parseInt(e.target.value) || 0;
+                                                const final = editedProduct.finalPrice || (editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100));
+                                                const mrp = disc < 100 ? Math.round(final / (1 - disc / 100)) : final;
+                                                setEditedProduct({
+                                                    ...editedProduct,
+                                                    discount: disc,
+                                                    mrp: editedProduct.isManualDiscount ? mrp : editedProduct.mrp,
+                                                    pdfPrice: editedProduct.isManualDiscount ? mrp : editedProduct.pdfPrice
+                                                });
+                                            }} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" />
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Shop Category</label>
                                             <select
@@ -2557,17 +2759,25 @@ export const Admin: React.FC = () => {
                                                             </div>
 
                                                             <div>
-                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Price Adj. (₹)</label>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">MRP (₹)</label>
                                                                 <input
                                                                     type="number"
-                                                                    value={option.priceAdjustment}
+                                                                    value={option.mrp || 0}
                                                                     onChange={(e) => {
+                                                                        const mrp = parseFloat(e.target.value) || 0;
+                                                                        const final = option.finalPrice || 0;
+                                                                        const disc = mrp > 0 ? Math.round((1 - final / mrp) * 100) : 0;
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
                                                                             if (v.name === 'Size') {
                                                                                 return {
                                                                                     ...v,
                                                                                     options: v.options.map(o =>
-                                                                                        o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                        o.id === option.id ? {
+                                                                                            ...o,
+                                                                                            mrp,
+                                                                                            priceAdjustment: mrp || 0,
+                                                                                            discount: o.isManualDiscount ? o.discount : disc
+                                                                                        } : o
                                                                                     )
                                                                                 };
                                                                             }
@@ -2575,7 +2785,93 @@ export const Admin: React.FC = () => {
                                                                         });
                                                                         setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                     }}
-                                                                    placeholder="0"
+                                                                    placeholder="MRP"
+                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Final Price (₹)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={option.finalPrice || 0}
+                                                                    onChange={(e) => {
+                                                                        const rawFinal = parseFloat(e.target.value) || 0;
+                                                                        const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                            if (v.name === 'Size') {
+                                                                                return {
+                                                                                    ...v,
+                                                                                    options: v.options.map(o =>
+                                                                                        o.id === option.id ? {
+                                                                                            ...o,
+                                                                                            finalPrice: final,
+                                                                                            mrp: mrp,
+                                                                                            discount: discount,
+                                                                                            priceAdjustment: mrp || 0
+                                                                                        } : o
+                                                                                    )
+                                                                                };
+                                                                            }
+                                                                            return v;
+                                                                        });
+                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                    }}
+                                                                    placeholder="Final"
+                                                                    className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <div className="flex justify-between items-center mb-1">
+                                                                    <label className="block text-xs font-medium text-gray-700">Disc (%)</label>
+                                                                    <label className="flex items-center gap-0.5 text-[9px] font-bold text-gray-400 cursor-pointer">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={option.isManualDiscount || false}
+                                                                            onChange={e => {
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Size') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            className="w-2.5 h-2.5 rounded"
+                                                                        /> M
+                                                                    </label>
+                                                                </div>
+                                                                <input
+                                                                    type="number"
+                                                                    value={option.discount || (option.mrp && option.finalPrice ? Math.round((1 - option.finalPrice / option.mrp) * 100) : 0)}
+                                                                    onChange={(e) => {
+                                                                        const disc = parseInt(e.target.value) || 0;
+                                                                        const final = option.finalPrice || 0;
+                                                                        const mrp = disc < 100 ? Math.round(final / (1 - disc / 100)) : final;
+                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                            if (v.name === 'Size') {
+                                                                                return {
+                                                                                    ...v,
+                                                                                    options: v.options.map(o =>
+                                                                                        o.id === option.id ? {
+                                                                                            ...o,
+                                                                                            discount: disc,
+                                                                                            mrp: o.isManualDiscount ? mrp : o.mrp,
+                                                                                            priceAdjustment: (o.isManualDiscount ? mrp : o.mrp) || o.priceAdjustment || 0
+                                                                                        } : o
+                                                                                    )
+                                                                                };
+                                                                            }
+                                                                            return v;
+                                                                        });
+                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                    }}
                                                                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
                                                                 />
                                                             </div>
@@ -2626,9 +2922,14 @@ export const Admin: React.FC = () => {
                                                                             />
                                                                             <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
                                                                         </div>
-                                                                        <p className="text-[10px] text-gray-500 font-bold leading-tight">
-                                                                            Final: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
-                                                                        </p>
+                                                                        <div className="text-[10px] items-start flex flex-col">
+                                                                            <span className="text-gray-500 font-bold leading-tight">
+                                                                                Disc: {option.mrp && option.finalPrice ? Math.round((1 - option.finalPrice / option.mrp) * 100) : 0}%
+                                                                            </span>
+                                                                            <span className="text-gray-500 font-bold leading-tight">
+                                                                                Final: ₹{option.finalPrice || 0}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -2811,17 +3112,25 @@ export const Admin: React.FC = () => {
                                                                 </div>
 
                                                                 <div>
-                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Price (+₹)</label>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">MRP (₹)</label>
                                                                     <input
                                                                         type="number"
-                                                                        value={option.priceAdjustment}
+                                                                        value={option.mrp || 0}
                                                                         onChange={(e) => {
+                                                                            const mrp = parseFloat(e.target.value) || 0;
+                                                                            const final = option.finalPrice || 0;
+                                                                            const disc = mrp > 0 ? Math.round((1 - final / mrp) * 100) : 0;
                                                                             const updatedVariations = editedProduct.variations?.map(v => {
                                                                                 if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                     return {
                                                                                         ...v,
                                                                                         options: v.options.map(o =>
-                                                                                            o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                            o.id === option.id ? {
+                                                                                                ...o,
+                                                                                                mrp,
+                                                                                                priceAdjustment: mrp || 0,
+                                                                                                discount: o.isManualDiscount ? o.discount : disc
+                                                                                            } : o
                                                                                         )
                                                                                     };
                                                                                 }
@@ -2829,7 +3138,93 @@ export const Admin: React.FC = () => {
                                                                             });
                                                                             setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                         }}
-                                                                        placeholder="0"
+                                                                        placeholder="MRP"
+                                                                        className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Final (₹)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={option.finalPrice || 0}
+                                                                        onChange={(e) => {
+                                                                            const rawFinal = parseFloat(e.target.value) || 0;
+                                                                            const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.map(o =>
+                                                                                            o.id === option.id ? {
+                                                                                                ...o,
+                                                                                                finalPrice: final,
+                                                                                                mrp: mrp,
+                                                                                                discount: discount,
+                                                                                                priceAdjustment: mrp || 0
+                                                                                            } : o
+                                                                                        )
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            });
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
+                                                                        placeholder="Final"
+                                                                        className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <label className="block text-xs font-medium text-gray-700">Disc (%)</label>
+                                                                        <label className="flex items-center gap-0.5 text-[9px] font-bold text-gray-400 cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={option.isManualDiscount || false}
+                                                                                onChange={e => {
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.map(o =>
+                                                                                                    o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
+                                                                                                )
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    });
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="w-2.5 h-2.5 rounded"
+                                                                            /> M
+                                                                        </label>
+                                                                    </div>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={option.discount || (option.mrp && option.finalPrice ? Math.round((1 - option.finalPrice / option.mrp) * 100) : 0)}
+                                                                        onChange={(e) => {
+                                                                            const disc = parseInt(e.target.value) || 0;
+                                                                            const final = option.finalPrice || 0;
+                                                                            const mrp = disc < 100 ? Math.round(final / (1 - disc / 100)) : final;
+                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                if (v.id === 'lb_variation' || v.name === 'Light Base') {
+                                                                                    return {
+                                                                                        ...v,
+                                                                                        options: v.options.map(o =>
+                                                                                            o.id === option.id ? {
+                                                                                                ...o,
+                                                                                                discount: disc,
+                                                                                                mrp: o.isManualDiscount ? mrp : o.mrp,
+                                                                                                priceAdjustment: (o.isManualDiscount ? mrp : o.mrp) || o.priceAdjustment || 0
+                                                                                            } : o
+                                                                                        )
+                                                                                    };
+                                                                                }
+                                                                                return v;
+                                                                            });
+                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        }}
                                                                         className="w-full border border-gray-300 rounded-md p-2 text-sm"
                                                                     />
                                                                 </div>
@@ -2880,8 +3275,13 @@ export const Admin: React.FC = () => {
                                                                                 />
                                                                                 <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
                                                                             </div>
-                                                                            <div className="text-[10px] text-gray-500 font-bold leading-tight">
-                                                                                Total: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
+                                                                            <div className="text-[10px] items-start flex flex-col">
+                                                                                <span className="text-gray-500 font-bold leading-tight">
+                                                                                    Disc: {option.mrp && option.finalPrice ? Math.round((1 - option.finalPrice / option.mrp) * 100) : 0}%
+                                                                                </span>
+                                                                                <span className="text-gray-500 font-bold leading-tight">
+                                                                                    Final: ₹{option.finalPrice || 0}
+                                                                                </span>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -3604,6 +4004,19 @@ export const Admin: React.FC = () => {
                                                         <label className="flex items-center gap-2 cursor-pointer select-none">
                                                             <input
                                                                 type="checkbox"
+                                                                checked={section.isManual}
+                                                                onChange={e => {
+                                                                    const updated = [...(editedProduct.aboutSections || [])];
+                                                                    updated[idx] = { ...updated[idx], isManual: e.target.checked };
+                                                                    setEditedProduct({ ...editedProduct, aboutSections: updated });
+                                                                }}
+                                                                className="w-4 h-4 text-primary rounded focus:ring-primary border-gray-300"
+                                                            />
+                                                            <span className="text-sm font-medium text-gray-600">Manual</span>
+                                                        </label>
+                                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                            <input
+                                                                type="checkbox"
                                                                 checked={section.isHidden}
                                                                 onChange={e => {
                                                                     const updated = [...(editedProduct.aboutSections || [])];
@@ -3638,7 +4051,8 @@ export const Admin: React.FC = () => {
                                                     id: `sec_${Date.now()}`,
                                                     title: 'New Section',
                                                     content: '',
-                                                    isHidden: false
+                                                    isHidden: false,
+                                                    isManual: false
                                                 }]
                                             })}
                                             className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-bold hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"

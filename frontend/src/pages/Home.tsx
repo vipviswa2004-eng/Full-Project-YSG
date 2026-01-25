@@ -81,28 +81,20 @@ const BUDGET_OPTIONS = [
   { label: 'Luxury Gifts', value: '2000-max', color: 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-600 hover:text-white hover:border-amber-600' }
 ];
 
-// Simple Fade-in Observer Component
-const FadeInSection = ({ children }: { children: React.ReactNode }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const domRef = React.useRef<HTMLDivElement>(null);
+import { motion } from 'framer-motion';
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => setIsVisible(entry.isIntersecting));
-    }, { threshold: 0.1 });
-    const currentRef = domRef.current;
-    if (currentRef) observer.observe(currentRef);
-    return () => { if (currentRef) observer.unobserve(currentRef); };
-  }, []);
-
+// Enhanced Fade-in Section with Framer Motion
+const FadeInSection = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => {
   return (
-    <div
-      ref={domRef}
-      className={`transition-all duration-500 ease-out transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        }`}
+    <motion.div
+      initial={{ opacity: 0, y: 50, scale: 0.95 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.8, delay, type: "spring", bounce: 0.4 }}
+      className={className}
     >
       {children}
-    </div>
+    </motion.div>
   );
 };
 
@@ -130,68 +122,81 @@ const ScrollableProductSection: React.FC<{
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 relative group/section">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
-            {icon} {title}
-          </h2>
-          <p className="text-xs md:text-sm text-gray-500 mt-1">{subtitle}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex gap-2 opacity-0 group-hover/section:opacity-100 transition-opacity">
-            <button onClick={() => scroll('left')} className="p-2 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-600 hover:text-primary"><ChevronLeft className="w-5 h-5" /></button>
-            <button onClick={() => scroll('right')} className="p-2 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-600 hover:text-primary"><ChevronRight className="w-5 h-5" /></button>
+    <div className="py-8 relative group/section overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+              {icon} {title}
+            </h2>
+            <p className="text-xs md:text-sm text-gray-500 mt-1">{subtitle}</p>
           </div>
-          <Link to={viewAllLink} className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex gap-2 opacity-0 group-hover/section:opacity-100 transition-opacity">
+              <button onClick={() => scroll('left')} className="p-2 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-600 hover:text-primary"><ChevronLeft className="w-5 h-5" /></button>
+              <button onClick={() => scroll('right')} className="p-2 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all text-gray-600 hover:text-primary"><ChevronRight className="w-5 h-5" /></button>
+            </div>
+            <Link to={viewAllLink} className="text-primary font-bold text-xs md:text-sm hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3 md:w-4 md:h-4" /></Link>
+          </div>
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-1"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {products.map((product) => {
-          const prices = calculatePrice(product);
-          return (
-            <div key={product.id} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
-              <Link to={`/product/${product.id}`} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full overflow-hidden">
-                <div className="relative aspect-square bg-white overflow-hidden">
-                  <img className="w-full h-full object-contain p-0 md:p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                  {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
+      <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
+        <div
+          ref={scrollRef}
+          className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          {products.map((product) => {
+            const prices = calculatePrice(product);
+            return (
+              <div key={product.id} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
+                <Link to={`/product/${product.id}`} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full overflow-hidden">
+                  <div className="relative aspect-square bg-white overflow-hidden">
+                    <img className="w-full h-full object-contain p-0 md:p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
+                    {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
 
-                  <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
-                    <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
-                  </div>
-                </div>
-
-                <div className="p-1.5 md:p-3 flex flex-col flex-grow">
-                  <div className="flex-1">
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 line-clamp-1">{product.category}</p>
-                    <h3 className="text-[10px] md:text-sm font-semibold text-gray-800 line-clamp-2 h-7 md:h-9 leading-tight group-hover:text-primary transition-colors">{product.name}</h3>
-                    <div className="flex items-center gap-1 mt-1">
-                      <div className="bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">4.8 <Star className="w-2 h-2 fill-current" /></div>
-                      <span className="text-[10px] text-gray-400 hidden md:inline">(1.2k)</span>
+                    <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
+                      <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
                     </div>
                   </div>
-                  <div className="mt-1 flex items-baseline gap-1 border-t border-gray-50 pt-1">
-                    <span className="text-xs md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span>
-                    {(product.discount !== undefined && product.discount > 0) && (
-                      <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
-                    )}
+
+                  <div className="p-1.5 md:p-3 flex flex-col flex-grow">
+                    <div className="flex-1">
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 line-clamp-1">{product.category}</p>
+                      <h3 className="text-[10px] md:text-sm font-semibold text-gray-800 line-clamp-2 h-7 md:h-9 leading-tight group-hover:text-primary transition-colors">{product.name}</h3>
+                      {(product.reviewsCount || 0) > 0 ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
+                            {product.rating} <Star className="w-2.5 h-2.5 fill-current" />
+                          </div>
+                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">({product.reviewsCount} reviews)</span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 h-[18px]"></div>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-baseline gap-1 border-t border-gray-50 pt-1">
+                      <span className="text-xs md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span>
+                      {(product.discount !== undefined && product.discount > 0) && (
+                        <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
-              <button
-                onClick={(e) => onWishlistToggle(e, product)}
-                className={`absolute top-1 right-1 p-1 md:p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
-              >
-                <Heart className={`w-3 h-3 md:w-4 md:h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-              </button>
-            </div>
-          );
-        })}
+                </Link>
+                <button
+                  onClick={(e) => onWishlistToggle(e, product)}
+                  className={`absolute top-1 right-1 p-1 md:p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
+                >
+                  <Heart className={`w-3 h-3 md:w-4 md:h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -283,7 +288,9 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-0 md:pb-16">
       <SEO
-        keywords={['custom gifts', 'personalized neon', 'home decor', 'corporate gifts']}
+        title="Custom Neon Signs & Personalized Gifts"
+        description="Discover the best custom neon signs, personalized gifts, and corporate branding solutions at Sign Galaxy. Hand-crafted with love for every occasion."
+        keywords={['custom gifts', 'personalized neon', 'home decor', 'corporate gifts', 'neon signs india', 'unique gifts']}
       />
       {!activeHeroView ? (
         <div className="relative h-[180px] md:h-[320px] overflow-hidden group bg-gray-900 mt-4 mx-3 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-2 md:border-4 border-white">
@@ -295,43 +302,65 @@ export const Home: React.FC = () => {
                 alt={slide.title}
                 className={`w-full h-full object-cover transition-transform duration-[10s] ease-linear ${index === currentSlide ? 'scale-110' : 'scale-100'}`}
               />
-              <div className="absolute inset-0 z-20 flex items-center justify-between px-6 md:px-20 text-white">
-                <div className="flex flex-col items-start text-left max-w-xl">
-                  <span className={`${slide.color} font-black text-[9px] md:text-xs uppercase tracking-[0.3em] mb-1 md:mb-3 animate-fade-in-up drop-shadow-sm`}>{slide.tag}</span>
-                  <h2 className="text-2xl md:text-5xl font-black mb-2 md:mb-3 tracking-tighter drop-shadow-2xl animate-fade-in-up leading-tight">{slide.title}</h2>
-                  <p className="text-[10px] md:text-lg mb-4 md:mb-6 text-gray-200 font-medium drop-shadow-md animate-fade-in-up delay-100 max-w-[200px] md:max-w-full leading-tight">{slide.subtitle}</p>
-
-                  {slide.type === 'link' ? (
-                    <Link to={slide.link!} className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200">
-                      {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
-                    </Link>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        if (slide.type === 'action' && (slide as any).id === 'personalized') {
-                          setActiveHeroView('personalized');
-                        } else if (slide.type === 'scroll') {
-                          const el = document.getElementById((slide as any).target!);
-                          el?.scrollIntoView({ behavior: 'smooth' });
-                        }
-                      }}
-                      className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95 animate-fade-in-up delay-200"
+              {index === currentSlide && (
+                <div className="absolute inset-0 z-20 flex items-center justify-between px-6 md:px-20 text-white">
+                  <div className="flex flex-col items-start text-left max-w-xl">
+                    <motion.span
+                      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                      className={`${slide.color} font-black text-[9px] md:text-xs uppercase tracking-[0.3em] mb-1 md:mb-3 drop-shadow-sm`}
                     >
-                      {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
-                    </button>
-                  )}
-                </div>
+                      {slide.tag}
+                    </motion.span>
+                    <motion.h2
+                      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, type: "spring" }}
+                      className="text-2xl md:text-5xl font-black mb-2 md:mb-3 tracking-tighter drop-shadow-2xl leading-tight"
+                    >
+                      {slide.title}
+                    </motion.h2>
+                    <motion.p
+                      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                      className="text-[10px] md:text-lg mb-4 md:mb-6 text-gray-200 font-medium drop-shadow-md max-w-[200px] md:max-w-full leading-tight"
+                    >
+                      {slide.subtitle}
+                    </motion.p>
 
-                {/* Featured Product Image */}
-                <div className="hidden md:flex relative w-1/3 aspect-square items-center justify-center animate-fade-in-right">
-                  <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full" />
-                  <img
-                    src={slide.productImage}
-                    alt=""
-                    className="relative max-h-full max-w-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform hover:rotate-3 transition-transform duration-500"
-                  />
+                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: "spring" }}>
+                      {slide.type === 'link' ? (
+                        <Link to={slide.link!} className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95">
+                          {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (slide.type === 'action' && (slide as any).id === 'personalized') {
+                              setActiveHeroView('personalized');
+                            } else if (slide.type === 'scroll') {
+                              const el = document.getElementById((slide as any).target!);
+                              el?.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
+                          className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95"
+                        >
+                          {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
+                        </button>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  {/* Featured Product Image */}
+                  <motion.div
+                    initial={{ opacity: 0, x: 50, scale: 0.8 }} animate={{ opacity: 1, x: 0, scale: 1 }} transition={{ delay: 0.4, type: "spring" }}
+                    className="hidden md:flex relative w-1/3 aspect-square items-center justify-center"
+                  >
+                    <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full" />
+                    <img
+                      src={slide.productImage}
+                      alt=""
+                      className="relative max-h-full max-w-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform hover:rotate-3 transition-transform duration-500"
+                    />
+                  </motion.div>
                 </div>
-              </div>
+              )}
             </div>
           ))}
 
@@ -428,46 +457,51 @@ export const Home: React.FC = () => {
       )}
 
       {/* Special Occasions */}
-      <FadeInSection>
-        <div id="special-occasions-section" className="max-w-7xl mx-auto py-8 md:py-12 px-4">
-          <div className="text-center mb-6 md:mb-10">
-            <h2 className="text-xl md:text-4xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
-              <Sparkles className="text-accent w-6 h-6 md:w-8 md:h-8" /> Special Occasions
-            </h2>
-            <p className="text-gray-500 mt-2 max-w-2xl mx-auto text-xs md:text-base">Make your milestones unforgettable with our specially curated collections.</p>
-            <div className="mt-3 w-16 md:w-24 h-1 bg-primary mx-auto"></div>
-          </div>
+      {specialOccasions.length > 0 ? (
+        <FadeInSection>
+          <div id="special-occasions-section" className="max-w-7xl mx-auto py-8 md:py-12 px-4">
+            <div className="text-center mb-6 md:mb-10">
+              <h2 className="text-xl md:text-4xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
+                <Sparkles className="text-accent w-6 h-6 md:w-8 md:h-8" /> Special Occasions
+              </h2>
+              <p className="text-gray-500 mt-2 max-w-2xl mx-auto text-xs md:text-base">Make your milestones unforgettable with our specially curated collections.</p>
+              <div className="mt-3 w-16 md:w-24 h-1 bg-primary mx-auto"></div>
+            </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
-            {specialOccasions.map((occasion) => {
-              const getLink = () => {
-                if (occasion.link && occasion.link.trim() !== '' && occasion.link !== '#') return occasion.link;
-                return `/products?occasion=${encodeURIComponent(occasion.name)}`;
-              };
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
+              {specialOccasions.map((occasion) => {
+                const getLink = () => {
+                  if (occasion.link && occasion.link.trim() !== '' && occasion.link !== '#') return occasion.link;
+                  return `/products?occasion=${encodeURIComponent(occasion.name)}`;
+                };
 
-              return (
-                <Link
-                  key={occasion.id}
-                  to={getLink()}
-                  className="group relative overflow-hidden rounded-2xl aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500"
-                >
-                  <img
-                    src={occasion.image}
-                    alt={occasion.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
-                    <h3 className="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-1">{occasion.name}</h3>
-                    <p className="text-gray-200 text-sm opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
-                      {occasion.description}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={occasion.id}
+                    to={getLink()}
+                    className="group relative overflow-hidden rounded-2xl aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500"
+                  >
+                    <img
+                      src={occasion.image}
+                      alt={occasion.name}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+                      <h3 className="text-2xl font-bold text-white mb-2 transform transition-transform duration-500 group-hover:-translate-y-1">{occasion.name}</h3>
+                      <p className="text-gray-200 text-sm opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                        {occasion.description}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </FadeInSection>
+        </FadeInSection>
+      ) : (
+        /* Breakthrough spacer when Special Occasions is empty */
+        <div className="py-4 md:py-10" />
+      )}
 
       {/* Occasions Grid */}
       <FadeInSection>
@@ -497,53 +531,71 @@ export const Home: React.FC = () => {
       {/* Shop By Recipient Section */}
       {!activeHeroView && (
         <FadeInSection>
-          <div className="max-w-7xl mx-auto py-8 md:py-12 px-4">
-            <div className="flex justify-between items-end mb-4 md:mb-8">
-              <div>
-                <h2 className="text-xl md:text-3xl font-bold text-gray-900">Shop by Recipient</h2>
-                <p className="text-xs md:text-sm text-gray-500 mt-1">Find the perfect match for your loved ones</p>
+          <div className="py-8 md:py-12 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="flex justify-between items-end mb-4 md:mb-8">
+                <div>
+                  <h2 className="text-xl md:text-3xl font-bold text-gray-900">Shop by Recipient</h2>
+                  <p className="text-xs md:text-sm text-gray-500 mt-1">Find the perfect match for your loved ones</p>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-6">
-              {shopRecipients.length > 0 ? (
-                shopRecipients.map((recipient) => (
-                  <Link
-                    key={recipient.id}
-                    to={recipient.link}
-                    className="group"
-                  >
-                    <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all duration-500">
-                      <img
-                        src={recipient.image}
-                        alt={recipient.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/400x500/e2e8f0/1e293b?text=' + recipient.name;
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                      <div className="absolute bottom-4 inset-x-0 text-center">
-                        <span className="text-white font-bold text-sm md:text-lg tracking-tight uppercase">{recipient.name}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                ['Him', 'Her', 'Couples', 'Kids', 'Parents'].map((rec) => (
-                  <Link
-                    key={rec}
-                    to={`/products?recipient=${rec}`}
-                    className="group"
-                  >
-                    <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all duration-500 bg-gray-100 flex items-center justify-center">
-                      <div className="text-center">
-                        <User className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                        <span className="text-gray-900 font-bold text-lg md:text-xl">For {rec}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              )}
+            <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
+              <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-6 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
+                {shopRecipients.length > 0 ? (
+                  shopRecipients.map((recipient) => (
+                    <motion.div
+                      key={recipient.id}
+                      className="min-w-[31%] md:min-w-0 snap-start"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <Link to={recipient.link} className="group block h-full">
+                        <div className="relative aspect-[4/5] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all duration-500">
+                          <img
+                            src={recipient.image}
+                            alt={recipient.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/400x500/e2e8f0/1e293b?text=' + recipient.name;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                          <div className="absolute bottom-3 md:bottom-4 inset-x-0 text-center">
+                            <span className="text-white font-bold text-[10px] md:text-lg tracking-tight uppercase">{recipient.name}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))
+                ) : (
+                  ['Him', 'Her', 'Couples', 'Kids', 'Parents'].map((rec, i) => (
+                    <motion.div
+                      key={rec}
+                      className="min-w-[31%] md:min-w-0 snap-start"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ opacity: 0, x: 20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1, type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <Link to={`/products?recipient=${rec}`} className="group block h-full">
+                        <div className="relative aspect-[4/5] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all duration-500 bg-gray-100 flex items-center justify-center">
+                          <div className="text-center">
+                            <User className="w-8 h-8 md:w-12 md:h-12 text-gray-300 mx-auto mb-2" />
+                            <span className="text-gray-900 font-bold text-xs md:text-xl">For {rec}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </FadeInSection>
@@ -563,8 +615,19 @@ export const Home: React.FC = () => {
                 <span className="flex items-center gap-1 md:gap-2"><Zap className="w-2.5 h-2.5 md:w-4 md:h-4 text-amber-500" /> SSL Secured</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+            <motion.div
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={{
+                visible: { transition: { staggerChildren: 0.15 } }
+              }}
+            >
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+              >
                 <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
                   <Truck className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
@@ -572,9 +635,12 @@ export const Home: React.FC = () => {
                   <span className="text-xs md:text-lg font-bold text-gray-800 block">Free Delivery</span>
                   <span className="text-xs text-gray-500 hidden md:block">On all orders</span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+              >
                 <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
                   <ShieldCheck className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
@@ -582,9 +648,12 @@ export const Home: React.FC = () => {
                   <span className="text-xs md:text-lg font-bold text-gray-800 block">100% Quality</span>
                   <span className="text-xs text-gray-500 hidden md:block">Guaranteed</span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+              >
                 <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
                   <Gift className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
@@ -592,9 +661,12 @@ export const Home: React.FC = () => {
                   <span className="text-xs md:text-lg font-bold text-gray-800 block">Premium Packaging</span>
                   <span className="text-xs text-gray-500 hidden md:block">Luxury boxes</span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300">
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+              >
                 <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
                   <User className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
@@ -602,8 +674,8 @@ export const Home: React.FC = () => {
                   <span className="text-xs md:text-lg font-bold text-gray-800 block">24/7 Support</span>
                   <span className="text-xs text-gray-500 hidden md:block">Always here</span>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </FadeInSection>
@@ -637,28 +709,49 @@ export const Home: React.FC = () => {
       </FadeInSection>
 
       {/* Gifts by Budget */}
+      {/* Gifts by Budget */}
       {!activeHeroView && (
         <div className="max-w-7xl mx-auto px-4 mt-8 md:mt-16 mb-8 md:mb-12 text-center">
-          <div className="mb-6 md:mb-10 animate-fade-in-up">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-6 md:mb-10"
+          >
             <h2 className="text-xl md:text-4xl font-black text-gray-900 tracking-tight flex items-center justify-center gap-2 md:gap-3">
               <Wallet className="w-6 h-6 md:w-10 md:h-10 text-primary" /> Find Gifts by Budget
             </h2>
             <p className="text-gray-500 font-bold mt-2 text-sm md:text-lg">Quick picks that fit your pocket</p>
             <div className="mt-4 w-16 md:w-20 h-1.5 bg-gradient-to-r from-primary/20 via-primary to-primary/20 mx-auto rounded-full"></div>
-          </div>
-          <div className="flex flex-wrap gap-3 md:gap-6 justify-center">
-            {BUDGET_OPTIONS.map((opt, idx) => (
-              <Link
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={{
+              visible: { transition: { staggerChildren: 0.1 } }
+            }}
+            className="flex flex-wrap gap-3 md:gap-6 justify-center"
+          >
+            {BUDGET_OPTIONS.map((opt) => (
+              <motion.div
                 key={opt.value}
-                to={`/products?budget=${opt.value}`}
-                className={`group px-5 py-3 md:px-8 md:py-5 rounded-2xl md:rounded-[2rem] text-xs md:text-lg font-black border-2 transition-all hover:shadow-2xl hover:-translate-y-1.5 active:scale-95 flex items-center gap-2 md:gap-3 shadow-sm animate-fade-in-up ${opt.color}`}
-                style={{ animationDelay: `${idx * 100}ms` }}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.8, y: 20 },
+                  visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 20 } }
+                }}
               >
-                {opt.label}
-                <ArrowRight className="w-4 h-4 md:w-5 md:h-5 opacity-0 group-hover:opacity-100 transition-all -translate-x-3 group-hover:translate-x-0" />
-              </Link>
+                <Link
+                  to={`/products?budget=${opt.value}`}
+                  className={`group px-5 py-3 md:px-8 md:py-5 rounded-2xl md:rounded-[2rem] text-xs md:text-lg font-black border-2 transition-all hover:shadow-2xl hover:-translate-y-1.5 active:scale-95 flex items-center gap-2 md:gap-3 shadow-sm ${opt.color}`}
+                >
+                  {opt.label}
+                  <ArrowRight className="w-4 h-4 md:w-5 md:h-5 opacity-0 group-hover:opacity-100 transition-all -translate-x-3 group-hover:translate-x-0" />
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       )}
 

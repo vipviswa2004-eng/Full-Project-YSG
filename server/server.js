@@ -9,7 +9,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient, GiftGenieQuery, WhatsAppLead } = require('./models');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://viswakumar2004_db_user:yathes2026@cluster0.5r4mxg9.mongodb.net/yathes_sign_galaxy?retryWrites=true&w=majority&appName=Cluster0";
 console.log("---------------------------------------------------");
 console.log("DEBUG: process.env.MONGO_URI:", process.env.MONGO_URI ? "DEFINED" : "UNDEFINED");
@@ -393,8 +393,8 @@ app.get("/api/products", async (req, res) => {
 
     console.log("...Fetching Products from DB...");
     const products = await Product.find()
-      .limit(500) // Increase limit to cover full catalog
-      .select('id name pdfPrice image gallery variations discount category subCategoryId shopCategoryId sectionId description isTrending isBestseller rating reviewsCount occasions')
+      .limit(5000) // Increase limit to cover full catalog (2000+)
+      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId sectionId description isTrending isBestseller rating reviewsCount occasions')
       .lean()
       .maxTimeMS(10000); // 10s timeout
 
@@ -414,10 +414,74 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
+// Helper for Premium Pricing (Must match Frontend & Migration Logic)
+const enforcePremiumPricing = (productData) => {
+  const calculatePremiumPricing = (rawFinalPrice) => {
+    if (!rawFinalPrice || rawFinalPrice <= 0) return { final: rawFinalPrice, mrp: 0, discount: 0 };
+
+    // 1. Enforce Final
+    let final = Math.round(rawFinalPrice / 10) * 10 - 1;
+    if (final <= 0) final = 9;
+
+    // 2. Enforce MRP with 1000 min diff
+    let targetMRP = final * 1.6;
+    const MIN_DIFF = 1000;
+    const minMRPByDiff = final + MIN_DIFF;
+    const minMRPByRatio = Math.ceil(final * 1.35);
+    const absoluteMinMRP = Math.max(minMRPByDiff, minMRPByRatio);
+
+    let base = Math.floor(absoluteMinMRP / 100) * 100;
+    let candidates = [base - 100 + 99, base + 99, base + 100 + 99, base + 200 + 99];
+
+    candidates = candidates.filter(c => c >= absoluteMinMRP);
+
+    let bestMRP = 0;
+    if (candidates.length > 0) {
+      bestMRP = candidates.reduce((prev, curr) => (Math.abs(curr - targetMRP) < Math.abs(prev - targetMRP) ? curr : prev));
+    } else {
+      let approxBase = Math.floor(absoluteMinMRP / 100) * 100;
+      bestMRP = approxBase + 99;
+      if (bestMRP < absoluteMinMRP) bestMRP += 100;
+    }
+
+    let discount = Math.round(((bestMRP - final) / bestMRP) * 100);
+    return { final, mrp: bestMRP, discount };
+  };
+
+  // 1. Base Product
+  if (productData.finalPrice > 0) {
+    const { final, mrp, discount } = calculatePremiumPricing(productData.finalPrice);
+    productData.finalPrice = final;
+    productData.mrp = mrp;
+    productData.discount = discount;
+  }
+
+  // 2. Variations
+  if (productData.variations && Array.isArray(productData.variations)) {
+    productData.variations.forEach(v => {
+      if (v.options && Array.isArray(v.options)) {
+        v.options.forEach(o => {
+          if (o.finalPrice > 0) {
+            const { final, mrp, discount } = calculatePremiumPricing(o.finalPrice);
+            o.finalPrice = final;
+            o.mrp = mrp;
+            o.discount = discount;
+            o.priceAdjustment = mrp;
+          }
+        });
+      }
+    });
+  }
+  return productData;
+};
+
 // Create/Update Product (Admin)
 app.post("/api/products", async (req, res) => {
   try {
-    const productData = req.body;
+    let productData = req.body;
+
+    // ENFORCE PRICING RULES
+    productData = enforcePremiumPricing(productData);
 
     if (productData._id) {
       // Update existing product
@@ -426,12 +490,13 @@ app.post("/api/products", async (req, res) => {
         productData,
         { new: true, upsert: true }
       );
+      productCache = null;
       res.json(updated);
     } else {
       // Create new product
       const product = new Product(productData);
       await product.save();
-      productCache = null; // Invalidate cache
+      productCache = null;
       res.json(product);
     }
   } catch (e) {
@@ -442,11 +507,16 @@ app.post("/api/products", async (req, res) => {
 // Update Product (Admin)
 app.put("/api/products/:id", async (req, res) => {
   try {
+    let productData = req.body;
+    // ENFORCE PRICING RULES
+    productData = enforcePremiumPricing(productData);
+
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      productData,
       { new: true }
     );
+    productCache = null;
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -462,6 +532,8 @@ app.delete("/api/products/:id", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+
 
 // Activate All Products (Admin)
 app.post("/api/products/activate-all", async (req, res) => {
@@ -684,6 +756,19 @@ app.post("/api/reviews", async (req, res) => {
   try {
     const review = new Review(req.body);
     await review.save();
+
+    // Recalculate product rating if review is approved
+    if (review.status === 'Approved') {
+      const reviews = await Review.find({ productId: review.productId, status: 'Approved' });
+      const count = reviews.length;
+      const avg = count > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / count : 0;
+
+      await Product.findOneAndUpdate({ id: review.productId }, {
+        rating: avg.toFixed(1),
+        reviewsCount: count
+      });
+    }
+
     res.json(review);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -723,7 +808,7 @@ app.put("/api/reviews/:id", async (req, res) => {
       const avg = count > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / count : 0;
 
       await Product.findOneAndUpdate({ id: review.productId }, {
-        rating: avg,
+        rating: avg.toFixed(1),
         reviewsCount: count
       });
     }
@@ -746,7 +831,7 @@ app.delete("/api/reviews/:id", async (req, res) => {
       const avg = count > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / count : 0;
 
       await Product.findOneAndUpdate({ id: review.productId }, {
-        rating: avg,
+        rating: avg.toFixed(1),
         reviewsCount: count
       });
     }
@@ -924,22 +1009,35 @@ app.delete("/api/sections/:id", async (req, res) => {
 // Basic In-Memory Cache for Categories
 let categoryCache = null;
 let lastCategoryCacheTime = 0;
-const CATEGORY_CACHE_DURATION = 2 * 60 * 1000; // Reduced to 2 minutes
+let isFetchingCategories = false;
+let categoryWaiters = [];
+const CATEGORY_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
 app.get("/api/shop-categories", async (req, res) => {
   console.log("📥 GET /api/shop-categories requested");
   try {
     // Return cache if valid
-    if (categoryCache && (Date.now() - lastCategoryCacheTime < CATEGORY_CACHE_DURATION)) {
+    if (Array.isArray(categoryCache) && (Date.now() - lastCategoryCacheTime < CATEGORY_CACHE_DURATION)) {
       console.log("✅ Serving Categories from Cache");
       return res.json(categoryCache);
     }
 
-    // Fetch from DB: Remove .sort from query to avoid Atlas hangs
+    // Handle concurrent requests (Cache Stampede Protection)
+    if (isFetchingCategories) {
+      console.log("⏳ Already fetching categories, adding to waitlist...");
+      return new Promise((resolve) => {
+        categoryWaiters.push(resolve);
+      }).then(data => res.json(data));
+    }
+
+    isFetchingCategories = true;
     console.log("...Fetching Categories from DB...");
+
+    // Fetch from DB: Add maxTimeMS to prevent Atlas hangs
     let categories = await ShopCategory.find()
       .limit(100)
-      .lean();
+      .lean()
+      .maxTimeMS(10000); // 10s timeout
 
     // Sort in memory
     categories.sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -947,13 +1045,31 @@ app.get("/api/shop-categories", async (req, res) => {
     // Update Cache
     categoryCache = categories;
     lastCategoryCacheTime = Date.now();
+    isFetchingCategories = false;
 
     console.log(`✅ Served & Cached ${categories.length} Categories`);
+
+    // Resolve any waiters
+    categoryWaiters.forEach(resolve => resolve(categories));
+    categoryWaiters = [];
+
     res.json(categories);
   } catch (e) {
+    isFetchingCategories = false;
     console.error("❌ Error fetching categories:", e);
-    // Explicitly log the cause if available
-    if (e.cause) console.error("Caused by:", e.cause);
+
+    // Fallback: If cache exists but is expired, return it anyway on error
+    if (Array.isArray(categoryCache)) {
+      console.log("⚠️ DB error, serving stale cache as fallback");
+      categoryWaiters.forEach(resolve => resolve(categoryCache));
+      categoryWaiters = [];
+      return res.json(categoryCache);
+    }
+
+    // Resolve waiters with empty array to prevent client hangs
+    categoryWaiters.forEach(resolve => resolve([]));
+    categoryWaiters = [];
+
     res.status(500).json({ error: e.message, stack: e.stack });
   }
 });
@@ -972,15 +1088,32 @@ app.post("/api/shop-categories", async (req, res) => {
 });
 
 app.put("/api/shop-categories/:id", async (req, res) => {
+  const { id } = req.params;
+  console.log(`📥 [PUT] Updating Category: ${id}`);
   try {
-    categoryCache = null; // Invalidate cache
-    const category = await ShopCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    categoryCache = null; // Clear cache
+    const updateData = { ...req.body };
+    delete updateData._id; // Prevent MongoDB _id conflicts
+
+    // Find by either standard _id, custom id, or name fallback
+    const category = await ShopCategory.findOneAndUpdate(
+      { $or: [{ _id: mongoose.Types.ObjectId.isValid(id) ? id : null }, { id: id }] },
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!category) {
+      console.warn(`⚠️ [WARN] Category ${id} not found.`);
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    console.log(`✅ [SUCCESS] Category "${category.name}" updated in DB.`);
     res.json(category);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (err) {
+    console.error(`❌ [SERVER ERROR] Update Failed: ${err.message}`);
+    res.status(500).json({ error: err.message });
   }
 });
-
 app.delete("/api/shop-categories/:id", async (req, res) => {
   try {
     categoryCache = null; // Invalidate cache
@@ -1778,8 +1911,10 @@ console.log("⏳ Initializing Server...");
 
 // Define connection options - helpful for stable connections
 const mongooseOptions = {
-  serverSelectionTimeoutMS: 20000,
-  socketTimeoutMS: 40000,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 60000,
+  maxPoolSize: 50,
+  connectTimeoutMS: 30000,
 };
 
 // Cache Warming Function
@@ -1794,7 +1929,7 @@ const warmUpCaches = async () => {
     const startCat = Date.now();
     // Fetch without DB sort to prevent potential Atlas hangs on unindexed fields
     console.log("...Fetching Categories...");
-    let categories = await ShopCategory.find().limit(50).lean().setOptions(opts);
+    let categories = await ShopCategory.find().limit(500).lean().setOptions(opts);
     // Sort in memory (robust & fast for small datasets)
     categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -1808,12 +1943,12 @@ const warmUpCaches = async () => {
     sections.sort((a, b) => (a.order || 0) - (b.order || 0)); // In-memory sort
 
     const subCategories = await SubCategory.find().lean().setOptions(opts);
-    memoryCache.put('sections', sections);
+    memoryCache.set('sections', sections);
     console.log(`✅ [WarmUp] Sections: ${sections.length}, Subs: ${subCategories.length} (took ${Date.now() - startSec}ms)`);
 
     // 3. Fetch Products (Heaviest Payload) - Do this LAST
     const startProd = Date.now();
-    const products = await Product.find().limit(50).lean().maxTimeMS(5000);
+    const products = await Product.find().limit(5000).lean().maxTimeMS(10000);
     productCache = products;
     lastCacheTime = Date.now();
     console.log(`✅ [WarmUp] Products: ${products.length} (took ${Date.now() - startProd}ms)`);
@@ -1832,7 +1967,7 @@ mongoose.connect(MONGO_URI, mongooseOptions)
 
       // Run seed scripts safely after connection
       seedRecipients().catch(err => console.error("❌ Seed Error:", err));
-      // warmUpCaches(); // Start fetching data immediately
+      warmUpCaches(); // Start fetching data immediately
 
       app.get('/api/health', (req, res) => res.send('OK')); // Simple health check
 

@@ -59,34 +59,124 @@ export const calculatePrice = (
   extraHeads: number = 0,
   selectedVariations: Record<string, VariationOption> = {}
 ) => {
-  const variationCost = Object.values(selectedVariations).reduce((acc, option) => acc + Number(option.priceAdjustment), 0);
+  // Use product.mrp/finalPrice as base if available, otherwise fallback to pdfPrice
+  let baseMRP = Number(product.mrp || product.pdfPrice || 0);
+  let baseFinal = Number(product.finalPrice || (product.pdfPrice ? Math.round(product.pdfPrice * (1 - (product.discount || 0) / 100)) : 0));
 
-  // Use configurable price per head or default to 125 for backward compatibility
+  // --- RUNTIME FIX: Ensure Base Final is X9 ---
+  if (baseFinal > 0) {
+    if ((baseFinal + 1) % 10 !== 0) {
+      // Force to X9
+      const normalizedFinal = Math.round(baseFinal / 10) * 10 - 1;
+      baseFinal = normalizedFinal > 0 ? normalizedFinal : 9;
+    }
+  }
+
+  // --- RUNTIME FIX: Ensure Base MRP is X99 AND Diff >= 1000 ---
+  // If MRP does not end in 99 OR is less than 1.2x Final Price OR Diff < 1000, force recalculate
+  if (baseFinal > 0) {
+    const isPremium = (baseMRP + 1) % 100 === 0 && baseMRP > baseFinal * 1.15 && (baseMRP - baseFinal >= 1000);
+    if (!isPremium) {
+      // Recalculate Logic: Target 1.6x, round to X99
+      let target = baseFinal * 1.6;
+      let minDiffMRP = baseFinal + 1000;
+
+      let absMin = Math.max(Math.ceil(baseFinal * 1.35), minDiffMRP);
+
+      let base = Math.floor(absMin / 100) * 100;
+
+      let candidates = [
+        base - 100 + 99,
+        base + 99,
+        base + 100 + 99,
+        base + 200 + 99
+      ];
+      candidates = candidates.filter(c => c >= absMin);
+
+      if (candidates.length > 0) {
+        // Find closest
+        baseMRP = candidates.reduce((prev, curr) =>
+          Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev
+        );
+      } else {
+        // Fallback
+        let approx = Math.ceil(baseFinal * 1.5);
+        let fbBase = Math.floor(approx / 100) * 100;
+        let fbMRP = fbBase + 99;
+        if (fbMRP < absMin) fbMRP = Math.floor(absMin / 100) * 100 + 99;
+        if (fbMRP < absMin) fbMRP += 100;
+        baseMRP = fbMRP;
+      }
+    }
+  }
+
+  let variationsMRP = 0;
+  let variationsFinal = 0;
+
+  // Track if any selected variation provides an absolute base price (like "Size")
+  Object.values(selectedVariations).forEach(option => {
+    if (option.finalPrice !== undefined && option.mrp !== undefined) {
+      let optFinal = Number(option.finalPrice);
+      let optMRP = Number(option.mrp);
+
+      // --- RUNTIME FIX: Ensure Variation Final is X9 ---
+      if (optFinal > 0) {
+        if ((optFinal + 1) % 10 !== 0) {
+          const normalizedOptFinal = Math.round(optFinal / 10) * 10 - 1;
+          optFinal = normalizedOptFinal > 0 ? normalizedOptFinal : 9;
+        }
+      }
+
+      // --- RUNTIME FIX: Ensure Variation MRP is X99 AND Diff >= 1000 ---
+      if (optFinal > 0) {
+        const isOptPremium = (optMRP + 1) % 100 === 0 && optMRP > optFinal * 1.15 && (optMRP - optFinal >= 1000);
+        if (!isOptPremium) {
+          let target = optFinal * 1.6;
+          let minDiffMRP = optFinal + 1000;
+          let absMin = Math.max(Math.ceil(optFinal * 1.35), minDiffMRP);
+
+          let base = Math.floor(absMin / 100) * 100;
+          let candidates = [base - 100 + 99, base + 99, base + 100 + 99];
+
+          candidates = candidates.filter(c => c >= absMin);
+
+          if (candidates.length > 0) {
+            optMRP = candidates.reduce((prev, curr) => Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev);
+          } else {
+            let approx = Math.ceil(optFinal * 1.5);
+            let fbBase = Math.floor(approx / 100) * 100;
+            let fbMRP = fbBase + 99;
+            if (fbMRP < absMin) fbMRP = Math.floor(absMin / 100) * 100 + 99;
+            if (fbMRP < absMin) fbMRP += 100;
+            optMRP = fbMRP;
+          }
+        }
+      }
+
+      variationsMRP += optMRP;
+      variationsFinal += optFinal;
+    } else {
+      // Fallback to priceAdjustment
+      const adj = Number(option.priceAdjustment || 0);
+      variationsMRP += adj;
+      variationsFinal += adj;
+    }
+  });
+
+  // Additional heads cost
   const pricePerHead = product.additionalHeadsConfig?.pricePerHead || 125;
   const headCost = extraHeads * pricePerHead;
 
-  const basePrice = Number(product.pdfPrice);
-
-  // Original price includes everything before discount
-  const originalPrice = basePrice + variationCost + headCost;
-
-  // Calculate final price: Discount applies ONLY to base price
-  let discountedBasePrice = basePrice;
-  if (product.discount !== undefined && product.discount > 0) {
-    const discountFactor = (100 - product.discount) / 100;
-    discountedBasePrice = Math.round(basePrice * discountFactor);
-  }
-
-  // Final price is discounted base + full variation cost + full head cost
-  const finalPrice = discountedBasePrice + variationCost + headCost;
+  const totalMRP = baseMRP + variationsMRP + headCost;
+  const totalFinal = baseFinal + variationsFinal + headCost;
 
   return {
-    original: Math.round(originalPrice),
-    final: finalPrice,
+    original: Math.round(totalMRP),
+    final: Math.round(totalFinal),
     breakdown: {
-      base: product.pdfPrice,
-      shape: 0,
-      variations: variationCost,
+      base: baseFinal,
+      mrp: baseMRP,
+      variations: variationsFinal,
       heads: headCost
     }
   };
