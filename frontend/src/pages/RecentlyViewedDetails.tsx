@@ -77,10 +77,10 @@ export const RecentlyViewedDetails: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
+            <div className="w-full">
                 <div
                     ref={scrollRef}
-                    className="grid grid-flow-col auto-cols-[calc((100%-32px)/3)] md:auto-cols-[calc((100%-64px)/5)] gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
+                    className="grid grid-flow-col auto-cols-[calc((100%-32px)/3)] md:auto-cols-[calc((100%-64px)/5)] gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {recentProducts.map((product) => {

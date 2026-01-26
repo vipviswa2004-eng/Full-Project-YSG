@@ -106,10 +106,10 @@ export const ShopSection: React.FC<ShopSectionProps> = ({ section, categories })
                 )}
 
                 {/* Categories Container */}
-                <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
+                <div className="w-full">
                     <div
                         ref={scrollContainerRef}
-                        className="grid grid-rows-2 grid-flow-col gap-x-6 md:gap-x-10 gap-y-12 overflow-x-auto scrollbar-hide scroll-smooth pb-10 snap-x snap-mandatory px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
+                        className="grid grid-rows-2 grid-flow-col gap-x-6 md:gap-x-10 gap-y-12 overflow-x-auto scrollbar-hide scroll-smooth pb-10 snap-x snap-mandatory px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
                         style={{
                             scrollbarWidth: 'none',
                             msOverflowStyle: 'none',

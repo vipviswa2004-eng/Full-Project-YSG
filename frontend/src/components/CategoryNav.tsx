@@ -156,9 +156,9 @@ export const CategoryNav: React.FC = () => {
 
     return (
         <div className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-100 sticky top-16 z-40 h-[74px] md:h-[84px] transition-all duration-300">
-            <div className="max-w-7xl mx-auto px-4 lg:px-6 h-full relative">
+            <div className="w-full h-full relative">
                 <div className="flex items-center justify-between h-full">
-                    <div className="flex items-center gap-2 md:gap-6 lg:gap-10 overflow-x-auto no-scrollbar pb-1 md:pb-0 h-full scroll-smooth flex-1">
+                    <div className="flex items-center gap-2 md:gap-6 lg:gap-10 overflow-x-auto no-scrollbar pb-1 md:pb-0 h-full scroll-smooth flex-1 px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
                         {NAV_ITEMS.map((item) => {
                             const title = (item as any).title || (item as any).name;
                             const isActive = activeDropdown === item.id;
@@ -178,7 +178,7 @@ export const CategoryNav: React.FC = () => {
                                             {isActive && <div className="absolute -bottom-1 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white scale-100 transition-transform"></div>}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className={`text-[11px] md:text-[13px] font-black tracking-tight leading-none flex items-center gap-1 ${isActive ? 'text-primary' : 'text-gray-900'}`}>
+                                            <span className={`text-[11px] md:text-[12px] font-black tracking-tight leading-none flex items-center gap-1 ${isActive ? 'text-primary' : 'text-gray-900'}`}>
                                                 {title}
                                                 <ChevronDown className={`w-3 h-3 md:w-3.5 md:h-3.5 transition-all duration-500 ${isActive ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
                                             </span>
@@ -194,25 +194,25 @@ export const CategoryNav: React.FC = () => {
                             <>
                                 <Link to="/products?filter=trending" className="flex items-center gap-2 px-3 py-2 shrink-0 group">
                                     <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100"><Zap className="w-4 h-4 text-orange-500 fill-orange-500" /></div>
-                                    <div className="flex flex-col"><span className="text-[10px] font-black text-gray-900">TRENDING</span><span className="text-[8px] text-gray-400 font-bold">HOT NOW</span></div>
+                                    <div className="flex flex-col"><span className="text-[9.5px] font-black text-gray-900 lowercase">TRENDING</span><span className="text-[8px] text-gray-400 font-bold">HOT NOW</span></div>
                                 </Link>
                                 <Link to="/products?filter=bestseller" className="flex items-center gap-2 px-3 py-2 shrink-0 group">
                                     <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center border border-yellow-100"><Award className="w-4 h-4 text-yellow-600 fill-yellow-600" /></div>
-                                    <div className="flex flex-col"><span className="text-[10px] font-black text-gray-900">BESTSELLER</span><span className="text-[8px] text-gray-400 font-bold">TOP RATED</span></div>
+                                    <div className="flex flex-col"><span className="text-[9.5px] font-black text-gray-900 lowercase">BESTSELLER</span><span className="text-[8px] text-gray-400 font-bold">TOP RATED</span></div>
                                 </Link>
                             </>
                         )}
                     </div>
 
-                    <div className="hidden lg:flex items-center h-full ml-4">
+                    <div className="hidden lg:flex items-center h-full ml-4 pr-[max(1rem,calc((100vw-80rem)/2+1.5rem))]">
                         <div className="w-[1px] h-8 bg-gray-100 mx-4"></div>
                         <Link to="/products?filter=trending" onClick={closeMenu} className="group flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-orange-50/50 transition-all">
                             <div className="w-10 h-10 rounded-1.5xl bg-orange-50 flex items-center justify-center border border-orange-100 shadow-sm"><Zap className="w-4.5 h-4.5 text-orange-500 fill-orange-500" /></div>
-                            <div className="flex flex-col text-left"><span className="text-[10px] font-black text-gray-900 leading-none mb-0.5">TRENDING</span><span className="text-[8.5px] text-gray-400 font-bold">Hot Now</span></div>
+                            <div className="flex flex-col text-left"><span className="text-[9.5px] font-black text-gray-900 leading-none mb-0.5 uppercase">TRENDING</span><span className="text-[8.5px] text-gray-400 font-bold">Hot Now</span></div>
                         </Link>
                         <Link to="/products?filter=bestseller" onClick={closeMenu} className="group flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-yellow-50/50 transition-all ml-2">
                             <div className="w-10 h-10 rounded-1.5xl bg-yellow-50 flex items-center justify-center border border-yellow-100 shadow-sm"><Award className="w-4.5 h-4.5 text-yellow-600 fill-yellow-600" /></div>
-                            <div className="flex flex-col text-left"><span className="text-[10px] font-black text-gray-900 leading-none mb-0.5">BESTSELLER</span><span className="text-[8.5px] text-gray-400 font-bold">Top Rated</span></div>
+                            <div className="flex flex-col text-left"><span className="text-[9.5px] font-black text-gray-900 leading-none mb-0.5 uppercase">BESTSELLER</span><span className="text-[8.5px] text-gray-400 font-bold">Top Rated</span></div>
                         </Link>
                     </div>
 

@@ -141,10 +141,10 @@ const ScrollableProductSection: React.FC<{
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
+      <div className="w-full">
         <div
           ref={scrollRef}
-          className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
+          className="flex gap-2 md:gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
@@ -540,8 +540,8 @@ export const Home: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="max-w-7xl mx-auto px-4 md:max-w-none md:px-0">
-              <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-6 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-0 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
+            <div className="w-full">
+              <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-6 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
                 {shopRecipients.length > 0 ? (
                   shopRecipients.map((recipient) => (
                     <motion.div
