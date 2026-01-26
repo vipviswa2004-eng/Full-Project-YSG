@@ -582,26 +582,28 @@ export const Admin: React.FC = () => {
         }
     };
 
-    const handleSetDefaultImage = (type: 'variation' | 'gallery', varId?: string, optId?: string, galleryIdx?: number) => {
+    const handleSetDefaultOption = (type: 'variation' | 'gallery', varId?: string, optId?: string, galleryIdx?: number) => {
         if (!editedProduct) return;
 
         let newImage = editedProduct.image;
-        let updatedVariations = editedProduct.variations?.map(v => ({
-            ...v,
-            options: v.options.map(o => ({ ...o, isDefault: false }))
-        }));
+        let updatedVariations = editedProduct.variations;
 
         if (type === 'variation' && varId && optId) {
-            updatedVariations = updatedVariations?.map(v => ({
-                ...v,
-                options: v.options.map(o => {
-                    const isMatch = v.id === varId && o.id === optId;
-                    if (isMatch && o.image) {
-                        newImage = o.image;
-                    }
-                    return { ...o, isDefault: isMatch };
-                })
-            }));
+            updatedVariations = editedProduct.variations?.map(v => {
+                if (v.id === varId) {
+                    return {
+                        ...v,
+                        options: v.options.map(o => {
+                            const isMatch = o.id === optId;
+                            if (isMatch && o.image) {
+                                newImage = o.image;
+                            }
+                            return { ...o, isDefault: isMatch };
+                        })
+                    };
+                }
+                return v;
+            });
         } else if (type === 'gallery' && galleryIdx !== undefined && editedProduct.gallery?.[galleryIdx]) {
             newImage = editedProduct.gallery[galleryIdx];
         }
@@ -2586,7 +2588,7 @@ export const Admin: React.FC = () => {
                                                                 type="radio"
                                                                 name="defaultImage"
                                                                 checked={editedProduct.image === img}
-                                                                onChange={() => handleSetDefaultImage('gallery', undefined, undefined, idx)}
+                                                                onChange={() => handleSetDefaultOption('gallery', undefined, undefined, idx)}
                                                                 className="w-3 h-3 text-primary"
                                                             />
                                                             <span className="text-[9px] font-bold text-gray-700">Main</span>
@@ -2917,7 +2919,7 @@ export const Admin: React.FC = () => {
                                                                                 name="defaultImage"
                                                                                 id={`default_${option.id}`}
                                                                                 checked={option.isDefault || false}
-                                                                                onChange={() => handleSetDefaultImage('variation', sizeVar.id, option.id)}
+                                                                                onChange={() => handleSetDefaultOption('variation', sizeVar.id, option.id)}
                                                                                 className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
                                                                             />
                                                                             <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
@@ -3270,7 +3272,7 @@ export const Admin: React.FC = () => {
                                                                                     name="defaultImage"
                                                                                     id={`default_${option.id}`}
                                                                                     checked={option.isDefault || false}
-                                                                                    onChange={() => handleSetDefaultImage('variation', lbVar.id, option.id)}
+                                                                                    onChange={() => handleSetDefaultOption('variation', lbVar.id, option.id)}
                                                                                     className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
                                                                                 />
                                                                                 <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
@@ -3367,7 +3369,7 @@ export const Admin: React.FC = () => {
                                                         }
                                                         return shapeVar.options.map((option) => (
                                                             <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                                <div className="grid grid-cols-5 gap-4">
+                                                                <div className="grid grid-cols-6 gap-3">
                                                                     <div>
                                                                         <label className="block text-xs font-medium text-gray-700 mb-1">Shape Name</label>
                                                                         <input
@@ -3387,7 +3389,7 @@ export const Admin: React.FC = () => {
                                                                                 });
                                                                                 setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                             }}
-                                                                            placeholder="e.g., Rectangle, Heart, Round"
+                                                                            placeholder="e.g., Rectangle, Heart"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm"
                                                                         />
                                                                     </div>
@@ -3417,17 +3419,25 @@ export const Admin: React.FC = () => {
                                                                     </div>
 
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Price (+₹)</label>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">MRP (₹)</label>
                                                                         <input
                                                                             type="number"
-                                                                            value={option.priceAdjustment}
+                                                                            value={option.mrp || 0}
                                                                             onChange={(e) => {
+                                                                                const mrp = parseFloat(e.target.value) || 0;
+                                                                                const final = option.finalPrice || 0;
+                                                                                const disc = mrp > 0 ? Math.round((1 - final / mrp) * 100) : 0;
                                                                                 const updatedVariations = editedProduct.variations?.map(v => {
                                                                                     if (v.name === 'Shape') {
                                                                                         return {
                                                                                             ...v,
                                                                                             options: v.options.map(o =>
-                                                                                                o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                                o.id === option.id ? {
+                                                                                                    ...o,
+                                                                                                    mrp,
+                                                                                                    priceAdjustment: mrp || 0,
+                                                                                                    discount: o.isManualDiscount ? o.discount : disc
+                                                                                                } : o
                                                                                             )
                                                                                         };
                                                                                     }
@@ -3435,13 +3445,99 @@ export const Admin: React.FC = () => {
                                                                                 });
                                                                                 setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                             }}
-                                                                            placeholder="0"
+                                                                            placeholder="MRP"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm"
                                                                         />
                                                                     </div>
 
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Image</label>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Final (₹)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={option.finalPrice || 0}
+                                                                            onChange={(e) => {
+                                                                                const rawFinal = parseFloat(e.target.value) || 0;
+                                                                                const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Shape') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? {
+                                                                                                    ...o,
+                                                                                                    finalPrice: final,
+                                                                                                    mrp: mrp,
+                                                                                                    discount: discount,
+                                                                                                    priceAdjustment: mrp || 0
+                                                                                                } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="Final"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <div className="flex justify-between items-center mb-1">
+                                                                            <label className="block text-xs font-medium text-gray-700">Disc (%)</label>
+                                                                            <label className="flex items-center gap-0.5 text-[9px] font-bold text-gray-400 cursor-pointer">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={option.isManualDiscount || false}
+                                                                                    onChange={e => {
+                                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                            if (v.name === 'Shape') {
+                                                                                                return {
+                                                                                                    ...v,
+                                                                                                    options: v.options.map(o =>
+                                                                                                        o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
+                                                                                                    )
+                                                                                                };
+                                                                                            }
+                                                                                            return v;
+                                                                                        });
+                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                    }}
+                                                                                    className="w-2.5 h-2.5 rounded"
+                                                                                /> M
+                                                                            </label>
+                                                                        </div>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={option.discount || (option.mrp && option.finalPrice ? Math.round((1 - option.finalPrice / option.mrp) * 100) : 0)}
+                                                                            onChange={(e) => {
+                                                                                const disc = parseInt(e.target.value) || 0;
+                                                                                const final = option.finalPrice || 0;
+                                                                                const mrp = disc < 100 ? Math.round(final / (1 - disc / 100)) : final;
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Shape') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? {
+                                                                                                    ...o,
+                                                                                                    discount: disc,
+                                                                                                    mrp: o.isManualDiscount ? mrp : o.mrp,
+                                                                                                    priceAdjustment: (o.isManualDiscount ? mrp : o.mrp) || o.priceAdjustment || 0
+                                                                                                } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Image & Actions</label>
                                                                         <div className="flex items-center gap-2">
                                                                             {option.image ? (
                                                                                 <div className="relative group/opt">
@@ -3481,36 +3577,31 @@ export const Admin: React.FC = () => {
                                                                                         name="defaultImage"
                                                                                         id={`default_${option.id}`}
                                                                                         checked={option.isDefault || false}
-                                                                                        onChange={() => handleSetDefaultImage('variation', shapeVar.id, option.id)}
+                                                                                        onChange={() => handleSetDefaultOption('variation', shapeVar.id, option.id)}
                                                                                         className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
                                                                                     />
                                                                                     <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
                                                                                 </div>
-                                                                                <div className="text-[10px] text-gray-500 font-bold leading-tight">
-                                                                                    Total: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
-                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                            if (v.name === 'Shape') {
+                                                                                                return {
+                                                                                                    ...v,
+                                                                                                    options: v.options.filter(o => o.id !== option.id)
+                                                                                                };
+                                                                                            }
+                                                                                            return v;
+                                                                                        }).filter(v => v.name !== 'Shape' || v.options.length > 0);
+                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                    }}
+                                                                                    className="bg-red-50 text-red-600 p-1.5 rounded-md hover:bg-red-100 transition-colors"
+                                                                                    title="Delete Option"
+                                                                                >
+                                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                                </button>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
-
-                                                                    <div className="flex items-end">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                const updatedVariations = editedProduct.variations?.map(v => {
-                                                                                    if (v.name === 'Shape') {
-                                                                                        return {
-                                                                                            ...v,
-                                                                                            options: v.options.filter(o => o.id !== option.id)
-                                                                                        };
-                                                                                    }
-                                                                                    return v;
-                                                                                }).filter(v => v.name !== 'Shape' || v.options.length > 0);
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                            }}
-                                                                            className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" /> Delete
-                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -3604,7 +3695,7 @@ export const Admin: React.FC = () => {
                                                         }
                                                         return colorVar.options.map((option) => (
                                                             <div key={option.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                                <div className="grid grid-cols-5 gap-4">
+                                                                <div className="grid grid-cols-6 gap-3">
                                                                     <div>
                                                                         <label className="block text-xs font-medium text-gray-700 mb-1">Color Name</label>
                                                                         <input
@@ -3648,23 +3739,31 @@ export const Admin: React.FC = () => {
                                                                                 });
                                                                                 setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                             }}
-                                                                            placeholder="e.g., XL, 10cm"
+                                                                            placeholder="e.g., Standard"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm"
                                                                         />
                                                                     </div>
 
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Price (+₹)</label>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">MRP (₹)</label>
                                                                         <input
                                                                             type="number"
-                                                                            value={option.priceAdjustment}
+                                                                            value={option.mrp || 0}
                                                                             onChange={(e) => {
+                                                                                const mrp = parseFloat(e.target.value) || 0;
+                                                                                const final = option.finalPrice || 0;
+                                                                                const disc = mrp > 0 ? Math.round((1 - final / mrp) * 100) : 0;
                                                                                 const updatedVariations = editedProduct.variations?.map(v => {
                                                                                     if (v.name === 'Color') {
                                                                                         return {
                                                                                             ...v,
                                                                                             options: v.options.map(o =>
-                                                                                                o.id === option.id ? { ...o, priceAdjustment: parseFloat(e.target.value) || 0 } : o
+                                                                                                o.id === option.id ? {
+                                                                                                    ...o,
+                                                                                                    mrp,
+                                                                                                    priceAdjustment: mrp || 0,
+                                                                                                    discount: o.isManualDiscount ? o.discount : disc
+                                                                                                } : o
                                                                                             )
                                                                                         };
                                                                                     }
@@ -3672,13 +3771,99 @@ export const Admin: React.FC = () => {
                                                                                 });
                                                                                 setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                             }}
-                                                                            placeholder="0"
+                                                                            placeholder="MRP"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm"
                                                                         />
                                                                     </div>
 
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Image</label>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Final (₹)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={option.finalPrice || 0}
+                                                                            onChange={(e) => {
+                                                                                const rawFinal = parseFloat(e.target.value) || 0;
+                                                                                const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Color') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? {
+                                                                                                    ...o,
+                                                                                                    finalPrice: final,
+                                                                                                    mrp: mrp,
+                                                                                                    discount: discount,
+                                                                                                    priceAdjustment: mrp || 0
+                                                                                                } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            placeholder="Final"
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <div className="flex justify-between items-center mb-1">
+                                                                            <label className="block text-xs font-medium text-gray-700">Disc (%)</label>
+                                                                            <label className="flex items-center gap-0.5 text-[9px] font-bold text-gray-400 cursor-pointer">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={option.isManualDiscount || false}
+                                                                                    onChange={e => {
+                                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                            if (v.name === 'Color') {
+                                                                                                return {
+                                                                                                    ...v,
+                                                                                                    options: v.options.map(o =>
+                                                                                                        o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
+                                                                                                    )
+                                                                                                };
+                                                                                            }
+                                                                                            return v;
+                                                                                        });
+                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                    }}
+                                                                                    className="w-2.5 h-2.5 rounded"
+                                                                                /> M
+                                                                            </label>
+                                                                        </div>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={option.discount || (option.mrp && option.finalPrice ? Math.round((1 - option.finalPrice / option.mrp) * 100) : 0)}
+                                                                            onChange={(e) => {
+                                                                                const disc = parseInt(e.target.value) || 0;
+                                                                                const final = option.finalPrice || 0;
+                                                                                const mrp = disc < 100 ? Math.round(final / (1 - disc / 100)) : final;
+                                                                                const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                    if (v.name === 'Color') {
+                                                                                        return {
+                                                                                            ...v,
+                                                                                            options: v.options.map(o =>
+                                                                                                o.id === option.id ? {
+                                                                                                    ...o,
+                                                                                                    discount: disc,
+                                                                                                    mrp: o.isManualDiscount ? mrp : o.mrp,
+                                                                                                    priceAdjustment: (o.isManualDiscount ? mrp : o.mrp) || o.priceAdjustment || 0
+                                                                                                } : o
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return v;
+                                                                                });
+                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            }}
+                                                                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Image & Actions</label>
                                                                         <div className="flex items-center gap-2">
                                                                             {option.image ? (
                                                                                 <div className="relative group/opt">
@@ -3718,36 +3903,31 @@ export const Admin: React.FC = () => {
                                                                                         name="defaultImage"
                                                                                         id={`default_${option.id}`}
                                                                                         checked={option.isDefault || false}
-                                                                                        onChange={() => handleSetDefaultImage('variation', colorVar.id, option.id)}
+                                                                                        onChange={() => handleSetDefaultOption('variation', colorVar.id, option.id)}
                                                                                         className="w-3.5 h-3.5 text-primary focus:ring-primary border-gray-300"
                                                                                     />
                                                                                     <label htmlFor={`default_${option.id}`} className="text-[10px] text-gray-600 font-bold cursor-pointer">Default</label>
                                                                                 </div>
-                                                                                <div className="text-[10px] text-gray-500 font-bold leading-tight">
-                                                                                    Total: ₹{(Math.round(editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100)) + (option.priceAdjustment || 0)).toFixed(0)}
-                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                            if (v.name === 'Color') {
+                                                                                                return {
+                                                                                                    ...v,
+                                                                                                    options: v.options.filter(o => o.id !== option.id)
+                                                                                                };
+                                                                                            }
+                                                                                            return v;
+                                                                                        }).filter(v => v.name !== 'Color' || v.options.length > 0 || v.disableAutoSelect);
+                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                    }}
+                                                                                    className="bg-red-50 text-red-600 p-1.5 rounded-md hover:bg-red-100 transition-colors"
+                                                                                    title="Delete Option"
+                                                                                >
+                                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                                </button>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
-
-                                                                    <div className="flex items-end">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                const updatedVariations = editedProduct.variations?.map(v => {
-                                                                                    if (v.name === 'Color') {
-                                                                                        return {
-                                                                                            ...v,
-                                                                                            options: v.options.filter(o => o.id !== option.id)
-                                                                                        };
-                                                                                    }
-                                                                                    return v;
-                                                                                }).filter(v => v.name !== 'Color' || v.options.length > 0 || v.disableAutoSelect);
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
-                                                                            }}
-                                                                            className="w-full bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-1"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" /> Delete
-                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -3934,26 +4114,212 @@ export const Admin: React.FC = () => {
                                             <div className="border-t pt-6 mt-6">
                                                 <h4 className="font-bold text-lg mb-4">Other Variations</h4>
                                                 {editedProduct.variations?.filter(v => !['Size', 'Shape', 'Light Base', 'Color'].includes(v.name)).map((variation) => (
-                                                    <div key={variation.id} className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                                    <div key={variation.id} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                                                         <div className="flex justify-between items-center mb-3">
-                                                            <h5 className="font-medium">{variation.name}</h5>
+                                                            <h5 className="font-bold text-gray-800">{variation.name}</h5>
                                                             <button
                                                                 onClick={() => {
                                                                     const updatedVariations = editedProduct.variations?.filter(v => v.id !== variation.id);
                                                                     setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                 }}
-                                                                className="text-red-600 text-sm hover:underline"
+                                                                className="text-red-500 text-xs font-bold hover:bg-red-50 px-2 py-1 rounded transition-colors"
                                                             >
                                                                 Remove Variation
                                                             </button>
                                                         </div>
-                                                        <div className="space-y-2">
+                                                        <div className="space-y-3">
                                                             {variation.options.map((opt) => (
-                                                                <div key={opt.id} className="flex gap-2 items-center bg-white p-2 rounded">
-                                                                    <span className="flex-1 text-sm">{opt.label}</span>
-                                                                    <span className="text-xs text-gray-500">+₹{opt.priceAdjustment}</span>
+                                                                <div key={opt.id} className="bg-white p-3 rounded border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                                                                    <div className="grid grid-cols-6 gap-3 items-end">
+                                                                        <div>
+                                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">Option Name</label>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={opt.label}
+                                                                                onChange={(e) => {
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.id === variation.id) {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.map(o => o.id === opt.id ? { ...o, label: e.target.value } : o)
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    });
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">MRP (₹)</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={opt.mrp || 0}
+                                                                                onChange={(e) => {
+                                                                                    const mrp = parseFloat(e.target.value) || 0;
+                                                                                    const final = opt.finalPrice || 0;
+                                                                                    const disc = mrp > 0 ? Math.round((1 - final / mrp) * 100) : 0;
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.id === variation.id) {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.map(o => o.id === opt.id ? {
+                                                                                                    ...o,
+                                                                                                    mrp,
+                                                                                                    priceAdjustment: mrp || 0,
+                                                                                                    discount: o.isManualDiscount ? o.discount : disc
+                                                                                                } : o)
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    });
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/10 transition-all"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">Final (₹)</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={opt.finalPrice || 0}
+                                                                                onChange={(e) => {
+                                                                                    const rawFinal = parseFloat(e.target.value) || 0;
+                                                                                    const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.id === variation.id) {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.map(o => o.id === opt.id ? {
+                                                                                                    ...o,
+                                                                                                    finalPrice: final,
+                                                                                                    mrp: mrp,
+                                                                                                    discount: discount,
+                                                                                                    priceAdjustment: mrp || 0
+                                                                                                } : o)
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    });
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold text-green-600 focus:ring-2 focus:ring-green-100 transition-all shadow-inner"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <div className="flex justify-between items-center mb-1">
+                                                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Disc (%)</label>
+                                                                                <label className="flex items-center gap-0.5 text-[9px] font-bold text-gray-300 cursor-pointer">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={opt.isManualDiscount || false}
+                                                                                        onChange={e => {
+                                                                                            const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                                if (v.id === variation.id) {
+                                                                                                    return {
+                                                                                                        ...v,
+                                                                                                        options: v.options.map(o => o.id === opt.id ? { ...o, isManualDiscount: e.target.checked } : o)
+                                                                                                    };
+                                                                                                }
+                                                                                                return v;
+                                                                                            });
+                                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                        }}
+                                                                                        className="w-2.5 h-2.5 rounded"
+                                                                                    /> M
+                                                                                </label>
+                                                                            </div>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={opt.discount || (opt.mrp && opt.finalPrice ? Math.round((1 - opt.finalPrice / opt.mrp) * 100) : 0)}
+                                                                                onChange={(e) => {
+                                                                                    const disc = parseInt(e.target.value) || 0;
+                                                                                    const final = opt.finalPrice || 0;
+                                                                                    const mrp = disc < 100 ? Math.round(final / (1 - disc / 100)) : final;
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.id === variation.id) {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.map(o => o.id === opt.id ? {
+                                                                                                    ...o,
+                                                                                                    discount: disc,
+                                                                                                    mrp: o.isManualDiscount ? mrp : o.mrp,
+                                                                                                    priceAdjustment: (o.isManualDiscount ? mrp : o.mrp) || o.priceAdjustment || 0
+                                                                                                } : o)
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    });
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/10 transition-all"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1 text-center">Default</label>
+                                                                            <div className="flex justify-center h-9 items-center">
+                                                                                <input
+                                                                                    type="radio"
+                                                                                    name={`default_${variation.id}`}
+                                                                                    checked={opt.isDefault || false}
+                                                                                    onChange={() => handleSetDefaultOption('variation', variation.id, opt.id)}
+                                                                                    className="w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                                        if (v.id === variation.id) {
+                                                                                            return {
+                                                                                                ...v,
+                                                                                                options: v.options.filter(o => o.id !== opt.id)
+                                                                                            };
+                                                                                        }
+                                                                                        return v;
+                                                                                    }).filter(v => v.options.length > 0 || ['Size', 'Color', 'Shape', 'Light Base'].includes(v.name));
+                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                }}
+                                                                                className="w-full bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center"
+                                                                                title="Delete Option"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             ))}
+                                                            <button
+                                                                onClick={() => {
+                                                                    const updatedVariations = editedProduct.variations?.map(v => {
+                                                                        if (v.id === variation.id) {
+                                                                            return {
+                                                                                ...v,
+                                                                                options: [...v.options, {
+                                                                                    id: `opt_${Date.now()}`,
+                                                                                    label: 'New Option',
+                                                                                    priceAdjustment: 0,
+                                                                                    mrp: 0,
+                                                                                    finalPrice: 0,
+                                                                                    discount: 0
+                                                                                }]
+                                                                            };
+                                                                        }
+                                                                        return v;
+                                                                    });
+                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                }}
+                                                                className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-xs font-bold hover:border-gray-300 hover:text-gray-500 transition-all flex items-center justify-center gap-1.5"
+                                                            >
+                                                                <Plus className="w-3.5 h-3.5" /> Add {variation.name} Option
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}

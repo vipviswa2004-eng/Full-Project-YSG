@@ -59,6 +59,19 @@ export const calculatePrice = (
   extraHeads: number = 0,
   selectedVariations: Record<string, VariationOption> = {}
 ) => {
+  // --- DEFAULT VARIATION DETECTION ---
+  // If no variations are explicitly selected (e.g. on Shop page cards),
+  // automatically use any options marked as isDefault by the admin.
+  let effectiveVariations = selectedVariations;
+  if (Object.keys(selectedVariations).length === 0 && product.variations) {
+    const defaults: Record<string, VariationOption> = {};
+    product.variations.forEach(v => {
+      const def = v.options.find(o => o.isDefault);
+      if (def) defaults[v.id] = def;
+    });
+    effectiveVariations = defaults;
+  }
+
   // Use product.mrp/finalPrice as base if available, otherwise fallback to pdfPrice
   let baseMRP = Number(product.mrp || product.pdfPrice || 0);
   let baseFinal = Number(product.finalPrice || (product.pdfPrice ? Math.round(product.pdfPrice * (1 - (product.discount || 0) / 100)) : 0));
@@ -112,9 +125,10 @@ export const calculatePrice = (
 
   let variationsMRP = 0;
   let variationsFinal = 0;
+  let hasAbsoluteVariation = false;
 
   // Track if any selected variation provides an absolute base price (like "Size")
-  Object.values(selectedVariations).forEach(option => {
+  Object.values(effectiveVariations).forEach(option => {
     if (option.finalPrice !== undefined && option.mrp !== undefined) {
       let optFinal = Number(option.finalPrice);
       let optMRP = Number(option.mrp);
@@ -155,6 +169,7 @@ export const calculatePrice = (
 
       variationsMRP += optMRP;
       variationsFinal += optFinal;
+      hasAbsoluteVariation = true;
     } else {
       // Fallback to priceAdjustment
       const adj = Number(option.priceAdjustment || 0);
@@ -162,6 +177,12 @@ export const calculatePrice = (
       variationsFinal += adj;
     }
   });
+
+  // If we have an absolute variation (like Size), it replaces the base product price
+  if (hasAbsoluteVariation) {
+    baseMRP = 0;
+    baseFinal = 0;
+  }
 
   // Additional heads cost
   const pricePerHead = product.additionalHeadsConfig?.pricePerHead || 125;

@@ -334,12 +334,12 @@ export const Navbar: React.FC = () => {
                 <button onClick={() => setIsGiftAdvisorOpen(true)} className="text-white hover:text-[#f5ebd0] p-1 hidden md:block" title="Gift Genie"><Gift className="h-6 w-6" /></button>
                 <Link to="/wishlist" className="relative text-white hover:text-[#f5ebd0] p-1 hidden md:block">
                   <Heart className="h-6 w-6" />
-                  {wishlist.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">{wishlist.length}</span>}
+                  {wishlist.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{wishlist.length}</span>}
                 </Link>
                 <Link to="/cart" className="relative text-white hover:text-[#f5ebd0] p-1 hidden md:block">
                   <ShoppingCart className="h-6 w-6" />
                   {cart.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center animate-bounce">
+                    <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
                       {cart.reduce((acc, item) => acc + item.quantity, 0)}
                     </span>
                   )}
@@ -561,8 +561,8 @@ export const Navbar: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="px-6 pt-8 pb-6 relative z-0">
-                  <div className="text-center mb-6">
+                <div className="px-6 pt-1 pb-6 relative z-0">
+                  <div className="text-center mb-3">
                     <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4 animate-bounce-short">
                       {authMode === 'login' ? <LogIn className="h-6 w-6 text-purple-600" /> : <UserPlus className="h-6 w-6 text-purple-600" />}
                     </div>

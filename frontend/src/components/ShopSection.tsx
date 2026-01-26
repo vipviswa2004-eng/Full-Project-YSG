@@ -122,23 +122,31 @@ export const ShopSection: React.FC<ShopSectionProps> = ({ section, categories })
                                 className="flex flex-col items-center w-[120px] md:w-[200px] group cursor-pointer snap-start"
                             >
                                 <div className="relative w-full aspect-square">
+                                    {/* Hover Glow Effect */}
+                                    <div className="absolute -inset-4 bg-primary/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
                                     {/* Square Image Card */}
-                                    <div className="w-full h-full rounded-[3rem] overflow-hidden border-2 border-white group-hover:border-primary transition-all duration-500 bg-white">
-                                        <div className="absolute inset-0 p-1">
+                                    <div className="relative w-full h-full rounded-[3rem] overflow-hidden border-2 border-white group-hover:border-primary/50 transition-all duration-500 bg-white shadow-lg group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.12)] group-hover:-translate-y-3">
+                                        <div className="absolute inset-0 p-4">
                                             <img
                                                 src={category.image}
                                                 alt={category.name}
-                                                className="w-full h-full object-cover rounded-[2.8rem] transform group-hover:scale-110 transition-transform duration-700"
+                                                className="w-full h-full object-contain transform group-hover:scale-110 group-hover:rotate-2 transition-transform duration-700"
                                                 loading="lazy"
                                             />
                                         </div>
-                                        {/* Subtle overlay */}
+
+                                        {/* Premium Shine Sweep */}
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out"></div>
                                     </div>
                                 </div>
                                 {/* Category Name */}
-                                <h3 className="mt-5 text-center font-extrabold text-gray-800 text-xs md:text-sm group-hover:text-primary transition-colors tracking-tight line-clamp-2 h-10 px-1 leading-tight uppercase">
-                                    {category.name}
-                                </h3>
+                                <div className="relative">
+                                    <h3 className="mt-5 text-center font-extrabold text-gray-800 text-xs md:text-sm group-hover:text-primary transition-colors tracking-tight line-clamp-2 h-10 px-1 leading-tight uppercase">
+                                        {category.name}
+                                    </h3>
+                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary rounded-full group-hover:w-full transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
+                                </div>
                             </Link>
                         ))}
                     </div>

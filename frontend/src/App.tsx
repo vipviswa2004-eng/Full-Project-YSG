@@ -7,8 +7,8 @@ import { SEO } from './components/SEO';
 import { GiftAdvisor } from './components/GiftAdvisor';
 import { WhatsAppChat } from './components/WhatsAppChat';
 import { LocationRequester } from './components/LocationRequester';
+import { WhatsAppRequestModal } from './components/WhatsAppRequestModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { GalaxyCursor } from './components/GalaxyCursor';
 import { Home } from './pages/Home';
 import { Shop } from './pages/Shop';
 import { Customize } from './pages/Customize';
@@ -28,14 +28,23 @@ import { CartProvider, useCart } from './context';
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const { setUser } = useCart();
+  const { user, setUser } = useCart();
   const navType = useNavigationType();
+  const [showWhatsAppPrompt, setShowWhatsAppPrompt] = React.useState(false);
 
-  // Detect Touch to disable custom cursor CSS
-  const [isTouch, setIsTouch] = React.useState(false);
+  // Mandatory WhatsApp Prompt Logic (5 seconds after login)
   useEffect(() => {
-    setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
+    if (user && !user.phone) {
+      const timer = setTimeout(() => {
+        setShowWhatsAppPrompt(true);
+      }, 5000); // 5 second delay requested
+      return () => clearTimeout(timer);
+    } else {
+      setShowWhatsAppPrompt(false);
+    }
+  }, [user]);
+
+
 
   // Disable browser scroll restoration to avoid conflicts
   useEffect(() => {
@@ -78,9 +87,8 @@ const AppContent: React.FC = () => {
   }, [setUser]);
 
   return (
-    <div className={`flex flex-col min-h-screen bg-app-bg ${!isTouch ? 'cursor-none' : ''}`}>
+    <div className={`flex flex-col min-h-screen bg-app-bg`}>
       <SEO />
-      <GalaxyCursor />
       <Navbar />
       {!isAdminRoute && <CategoryNav />}
       <main className="flex-grow">
@@ -105,6 +113,7 @@ const AppContent: React.FC = () => {
       <GiftAdvisor />
       <WhatsAppChat />
       <LocationRequester />
+      {showWhatsAppPrompt && <WhatsAppRequestModal />}
       {!isAdminRoute && !location.pathname.startsWith('/product/') && <MobileBottomNav />}
       {!isAdminRoute && <Footer />}
     </div>

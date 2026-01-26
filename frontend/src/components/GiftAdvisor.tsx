@@ -660,7 +660,7 @@ export const GiftAdvisor: React.FC = () => {
           <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-purple-700 text-white p-3.5 flex justify-between items-center shadow-lg shrink-0">
             {/* ... Header content ... */}
             <div className="flex items-center gap-2.5">
-              <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-inner animate-pulse">
+              <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm shadow-inner">
                 <Sparkles className="h-4 w-4 text-yellow-300" />
               </div>
               <div>
@@ -717,7 +717,7 @@ export const GiftAdvisor: React.FC = () => {
 
             {loading && (
               <div className="flex justify-start items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm shadow-md animate-pulse">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm shadow-md">
                   🧞‍♂️
                 </div>
                 <div className="bg-white border border-purple-100 px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-2.5 text-xs text-purple-800 font-medium shadow-sm">
@@ -812,9 +812,9 @@ export const GiftAdvisor: React.FC = () => {
           onClick={() => setIsGiftAdvisorOpen(true)}
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 hover:-translate-y-1 flex items-center justify-center group relative ring-4 ring-purple-200"
         >
-          <Gift className="h-6 w-6 text-yellow-300 animate-bounce-slow" />
+          <Gift className="h-6 w-6 text-yellow-300" />
           <span className="absolute right-0 top-0 -mt-1 -mr-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+
             <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500 border-2 border-white"></span>
           </span>
           <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl border border-gray-700">

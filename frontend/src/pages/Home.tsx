@@ -24,6 +24,14 @@ const OCCASIONS = [
   { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', color: 'from-yellow-400 to-orange-500' },
 ];
 
+const RECIPIENTS = [
+  { id: 'rec_him', name: 'Him', image: '/recipients/recipient_him.png', link: '/products?recipient=Him' },
+  { id: 'rec_her', name: 'Her', image: '/recipients/recipient_her.png', link: '/products?recipient=Her' },
+  { id: 'rec_couples', name: 'Couples', image: '/recipients/recipient_couples.png', link: '/products?recipient=Couples' },
+  { id: 'rec_kids', name: 'Kids', image: '/recipients/recipient_kids.png', link: '/products?recipient=Kids' },
+  { id: 'rec_parents', name: 'Parents', image: '/recipients/recipient_parents.png', link: '/products?recipient=Parents' },
+];
+
 const HERO_SLIDES = [
   {
     id: 'personalized',
@@ -71,6 +79,18 @@ const HERO_SLIDES = [
     target: 'shop-by-occasion-section',
     tag: 'Gifts for All',
     color: 'text-pink-400'
+  },
+  {
+    id: 'recipient',
+    image: personalizedBg,
+    productImage: '/recipients/recipient_her.png',
+    title: 'Shop by Recipient',
+    subtitle: 'Thoughtful gifts curated for everyone you love.',
+    cta: 'Browse for Them',
+    type: 'scroll',
+    target: 'shop-by-recipient-section',
+    tag: 'For Your Loved Ones',
+    color: 'text-emerald-400'
   }
 ];
 
@@ -417,10 +437,10 @@ export const Home: React.FC = () => {
             {shopCategories
               .filter(cat => cat.sectionIds?.includes('sec_personalised') || cat.sectionId === 'sec_personalised')
               .map(cat => (
-                <div key={cat.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                <div key={cat.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group cursor-pointer">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md border-2 border-white">
-                      <img src={cat.image} alt="" className="w-full h-full object-cover" />
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md border-2 border-white bg-white transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                      <img src={cat.image} alt="" className="w-full h-full object-contain p-1" />
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-gray-900 leading-tight">{cat.name}</h4>
@@ -455,6 +475,8 @@ export const Home: React.FC = () => {
           </div>
         </div>
       )}
+
+
 
       {/* Special Occasions */}
       {specialOccasions.length > 0 ? (
@@ -528,25 +550,27 @@ export const Home: React.FC = () => {
         </div>
       </FadeInSection>
 
-      {/* Shop By Recipient Section */}
+      {/* Shop By Recipient Section - Positioned prominently after Shop By Occasion */}
       {!activeHeroView && (
         <FadeInSection>
-          <div className="py-8 md:py-12 overflow-hidden">
+          <div id="shop-by-recipient-section" className="py-6 md:py-10 overflow-hidden">
             <div className="max-w-7xl mx-auto px-4">
-              <div className="flex justify-between items-end mb-4 md:mb-8">
+              <div className="flex justify-between items-end mb-4 md:mb-6">
                 <div>
-                  <h2 className="text-xl md:text-3xl font-bold text-gray-900">Shop by Recipient</h2>
+                  <h2 className="text-xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                    <User className="w-5 h-5 md:w-8 md:h-8 text-primary" /> Shop by Recipient
+                  </h2>
                   <p className="text-xs md:text-sm text-gray-500 mt-1">Find the perfect match for your loved ones</p>
                 </div>
               </div>
             </div>
             <div className="w-full">
-              <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-6 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
+              <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-5 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
                 {shopRecipients.length > 0 ? (
                   shopRecipients.map((recipient) => (
                     <motion.div
                       key={recipient.id}
-                      className="min-w-[31%] md:min-w-0 snap-start"
+                      className="min-w-[42%] md:min-w-0 snap-start"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -555,7 +579,7 @@ export const Home: React.FC = () => {
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
                       <Link to={recipient.link} className="group block h-full">
-                        <div className="relative aspect-[4/5] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all duration-500">
+                        <div className="relative aspect-[4/5] rounded-[1.2rem] md:rounded-[1.8rem] overflow-hidden mb-2 shadow-md group-hover:shadow-xl transition-all duration-500">
                           <img
                             src={recipient.image}
                             alt={recipient.name}
@@ -564,19 +588,19 @@ export const Home: React.FC = () => {
                               (e.target as HTMLImageElement).src = 'https://placehold.co/400x500/e2e8f0/1e293b?text=' + recipient.name;
                             }}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                          <div className="absolute bottom-3 md:bottom-4 inset-x-0 text-center">
-                            <span className="text-white font-bold text-[10px] md:text-lg tracking-tight uppercase">{recipient.name}</span>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                          <div className="absolute bottom-3 md:bottom-5 inset-x-0 text-center">
+                            <span className="text-white font-bold text-[11px] md:text-xl tracking-tight uppercase px-1">{recipient.name}</span>
                           </div>
                         </div>
                       </Link>
                     </motion.div>
                   ))
                 ) : (
-                  ['Him', 'Her', 'Couples', 'Kids', 'Parents'].map((rec, i) => (
+                  RECIPIENTS.map((rec, i) => (
                     <motion.div
-                      key={rec}
-                      className="min-w-[31%] md:min-w-0 snap-start"
+                      key={rec.id}
+                      className="min-w-[42%] md:min-w-0 snap-start"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       initial={{ opacity: 0, x: 20 }}
@@ -584,11 +608,16 @@ export const Home: React.FC = () => {
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.1, type: "spring", stiffness: 300, damping: 20 }}
                     >
-                      <Link to={`/products?recipient=${rec}`} className="group block h-full">
-                        <div className="relative aspect-[4/5] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden mb-3 shadow-md group-hover:shadow-xl transition-all duration-500 bg-gray-100 flex items-center justify-center">
-                          <div className="text-center">
-                            <User className="w-8 h-8 md:w-12 md:h-12 text-gray-300 mx-auto mb-2" />
-                            <span className="text-gray-900 font-bold text-xs md:text-xl">For {rec}</span>
+                      <Link to={rec.link} className="group block h-full">
+                        <div className="relative aspect-[4/5] rounded-[1.2rem] md:rounded-[1.8rem] overflow-hidden mb-2 shadow-md group-hover:shadow-xl transition-all duration-500">
+                          <img
+                            src={rec.image}
+                            alt={rec.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                          <div className="absolute bottom-3 md:bottom-5 inset-x-0 text-center">
+                            <span className="text-white font-bold text-[11px] md:text-xl tracking-tight uppercase px-1">{rec.name}</span>
                           </div>
                         </div>
                       </Link>
@@ -600,6 +629,8 @@ export const Home: React.FC = () => {
           </div>
         </FadeInSection>
       )}
+
+
 
       {/* Trust Strip */}
       <FadeInSection>
@@ -768,7 +799,7 @@ export const Home: React.FC = () => {
           <div className="bg-gradient-to-r from-purple-900 via-indigo-800 to-purple-900 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 border border-purple-700/50">
             <div className="flex items-center gap-4">
               <div className="bg-white/10 p-3 rounded-full backdrop-blur-sm">
-                <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
+                <Sparkles className="w-8 h-8 text-yellow-400" />
               </div>
               <div>
                 <h3 className="text-xl md:text-2xl font-bold text-white">Confused what to buy?</h3>

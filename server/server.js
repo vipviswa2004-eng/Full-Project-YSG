@@ -9,7 +9,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient, GiftGenieQuery, WhatsAppLead } = require('./models');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://viswakumar2004_db_user:yathes2026@cluster0.5r4mxg9.mongodb.net/yathes_sign_galaxy?retryWrites=true&w=majority&appName=Cluster0";
 console.log("---------------------------------------------------");
 console.log("DEBUG: process.env.MONGO_URI:", process.env.MONGO_URI ? "DEFINED" : "UNDEFINED");
@@ -554,7 +554,12 @@ app.get("/api/user/:email", async (req, res) => {
       user = new User({ email: req.params.email, cart: [], wishlist: [] });
       await user.save();
     }
-    res.json({ cart: user.cart || [], wishlist: user.wishlist || [], isAdmin: user.isAdmin });
+    res.json({
+      cart: user.cart || [],
+      wishlist: user.wishlist || [],
+      isAdmin: user.isAdmin,
+      phone: user.phone
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -584,6 +589,35 @@ app.post("/api/cart", async (req, res) => {
     res.json({ success: true, cart: user.cart });
   } catch (e) {
     console.error("❌ POST /api/cart Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update user's phone number
+app.post("/api/user/update-phone", async (req, res) => {
+  try {
+    const { email, phone } = req.body;
+    if (!email || !phone) {
+      return res.status(400).json({ error: "Email and phone are required" });
+    }
+    const user = await User.findOneAndUpdate({ email }, { phone }, { new: true });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Also save as a Lead for marketing tracker
+    try {
+      const lead = new WhatsAppLead({
+        phoneNumber: phone,
+        message: 'Verified via Mandatory Onboarding Popup'
+      });
+      await lead.save();
+    } catch (err) {
+      console.error("Error saving lead backup:", err);
+    }
+
+    res.json({ success: true, user });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -626,6 +660,7 @@ app.post("/api/user/login", async (req, res) => {
     res.json({
       email: user.email,
       isAdmin: user.isAdmin,
+      phone: user.phone,
       cart: user.cart || [],
       wishlist: user.wishlist || []
     });

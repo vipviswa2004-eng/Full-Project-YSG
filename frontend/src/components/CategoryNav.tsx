@@ -170,19 +170,19 @@ export const CategoryNav: React.FC = () => {
                                     onMouseLeave={handleNavMouseLeave}
                                     onClick={() => handleNavClick(item.id)}
                                 >
-                                    <div className={`flex items-center gap-2.5 md:gap-3 px-2 md:px-4 py-2 rounded-2xl transition-all duration-500 relative cursor-pointer ${isActive ? 'bg-primary/5' : 'hover:bg-gray-50/80'}`}>
+                                    <div className={`flex items-center gap-2.5 md:gap-3 px-2 md:px-4 py-2 rounded-2xl transition-all duration-500 relative cursor-pointer transform-gpu group-hover/nav-item:scale-105 group-hover/nav-item:bg-white group-hover/nav-item:shadow-xl group-hover/nav-item:shadow-primary/5 ${isActive ? 'bg-primary/5 border border-primary/10' : 'hover:bg-gray-50/80 border border-transparent'}`}>
                                         <div className="relative">
-                                            <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-1.5xl overflow-hidden bg-white flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'border-primary shadow-lg ring-2 ring-primary/10' : 'border-white shadow-md ring-1 ring-gray-100'}`}>
-                                                <img src={item.image} alt={title} className="w-full h-full object-cover" />
+                                            <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-1.5xl overflow-hidden bg-white flex items-center justify-center border-2 transition-all duration-700 transform-gpu group-hover/nav-item:-translate-y-1 group-hover/nav-item:border-primary/50 ${isActive ? 'border-primary shadow-lg ring-2 ring-primary/10' : 'border-white shadow-md ring-1 ring-gray-100'}`}>
+                                                <img src={item.image} alt={title} className="w-full h-full object-cover transform transition-transform duration-700 group-hover/nav-item:scale-125" />
                                             </div>
-                                            {isActive && <div className="absolute -bottom-1 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white scale-100 transition-transform"></div>}
+                                            <div className={`absolute -bottom-1 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white transition-all duration-500 ${isActive ? 'scale-100 opacity-100' : 'scale-0 opacity-0 group-hover/nav-item:scale-100 group-hover/nav-item:opacity-50'}`}></div>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className={`text-[11px] md:text-[12px] font-black tracking-tight leading-none flex items-center gap-1 ${isActive ? 'text-primary' : 'text-gray-900'}`}>
+                                            <span className={`text-[11px] md:text-[12px] font-black tracking-tight leading-none flex items-center gap-1 transition-colors duration-300 ${isActive ? 'text-primary' : 'text-gray-900 group-hover/nav-item:text-primary'}`}>
                                                 {title}
-                                                <ChevronDown className={`w-3 h-3 md:w-3.5 md:h-3.5 transition-all duration-500 ${isActive ? 'rotate-180 opacity-100' : 'opacity-40'}`} />
+                                                <ChevronDown className={`w-3 h-3 md:w-3.5 md:h-3.5 transition-all duration-500 ${isActive ? 'rotate-180 opacity-100' : 'opacity-40 group-hover/nav-item:opacity-100 group-hover/nav-item:rotate-180'}`} />
                                             </span>
-                                            <span className="text-[8px] md:text-[9px] text-gray-400 font-black uppercase tracking-widest mt-0.5">Explore</span>
+                                            <span className="text-[8px] md:text-[9px] text-gray-400 font-black uppercase tracking-widest mt-0.5 group-hover/nav-item:text-primary/60">Explore</span>
                                         </div>
                                     </div>
                                 </div>

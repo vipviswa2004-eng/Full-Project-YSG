@@ -975,7 +975,7 @@ export const ProductDetails: React.FC = () => {
 
                                     {locationStatus === 'success' && (
                                         <p className="text-[10px] text-green-600 mt-2 flex items-center gap-1.5 ml-1 font-bold animate-fade-in">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                             {locationMessage}
                                         </p>
                                     )}

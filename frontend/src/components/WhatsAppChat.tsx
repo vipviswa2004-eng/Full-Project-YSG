@@ -10,38 +10,10 @@ export const WhatsAppChat: React.FC = () => {
     const [isHovered, setIsHovered] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
 
-    // Auto-open after location popup is closed
+    // Auto-open logic removed to favor Login Modal
     useEffect(() => {
-        const hasSeenChat = sessionStorage.getItem('whatsapp_chat_seen');
-        if (!hasSeenChat) {
-            // Check if location popup has been closed
-            const checkLocationPopup = setInterval(() => {
-                const locationPopupClosed = sessionStorage.getItem('location_popup_closed');
-                if (locationPopupClosed) {
-                    clearInterval(checkLocationPopup);
-                    // Wait 2 seconds after location popup closes
-                    setTimeout(() => {
-                        setIsOpen(true);
-                        sessionStorage.setItem('whatsapp_chat_seen', 'true');
-                    }, 2000);
-                }
-            }, 500); // Check every 500ms
-
-            // Cleanup interval after 30 seconds if location popup never shows
-            const timeout = setTimeout(() => {
-                clearInterval(checkLocationPopup);
-                // If location popup never showed, open WhatsApp chat anyway after 7 seconds total
-                if (!sessionStorage.getItem('whatsapp_chat_seen')) {
-                    setIsOpen(true);
-                    sessionStorage.setItem('whatsapp_chat_seen', 'true');
-                }
-            }, 30000);
-
-            return () => {
-                clearInterval(checkLocationPopup);
-                clearTimeout(timeout);
-            };
-        }
+        // We keep this to track if they've seen the chat icon pulse or something in the future
+        // but no longer auto-opening.
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +66,7 @@ export const WhatsAppChat: React.FC = () => {
                             <div>
                                 <h3 className="font-bold text-base leading-tight">Support Team</h3>
                                 <p className="text-[10px] text-white/90 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
                                     Online 24/7
                                 </p>
                             </div>
@@ -187,7 +159,7 @@ export const WhatsAppChat: React.FC = () => {
 
                 {/* Notification Badge */}
                 {!isOpen && !hasInteracted && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white animate-bounce"></span>
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white"></span>
                 )}
 
                 {/* Tooltip */}
