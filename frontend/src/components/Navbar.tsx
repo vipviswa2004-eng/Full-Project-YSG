@@ -31,7 +31,7 @@ export const Navbar: React.FC = () => {
   const [typingSpeed, setTypingSpeed] = useState(150);
 
   const phrases = React.useMemo(() => {
-    const staticPhrases = ["Search for Wallets...", "Search for Keychains...", "Search for Neon Signs...", "Search for Photo Gifts...", "Search for Water Bottles...", "Search for Gifts..."];
+    const staticPhrases = ["Search for Wallets...", "Search for Keychains...", "Search for Photo Gifts...", "Search for Water Bottles...", "Search for Gifts..."];
     if (!products || products.length === 0) return staticPhrases;
     const categories = Array.from(new Set(products.map(p => p.category))).filter((c): c is string => !!c);
     return categories.length > 0 ? categories.map(c => `Search for ${c}...`) : staticPhrases;

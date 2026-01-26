@@ -288,9 +288,9 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-0 md:pb-16">
       <SEO
-        title="Custom Neon Signs & Personalized Gifts"
-        description="Discover the best custom neon signs, personalized gifts, and corporate branding solutions at Sign Galaxy. Hand-crafted with love for every occasion."
-        keywords={['custom gifts', 'personalized neon', 'home decor', 'corporate gifts', 'neon signs india', 'unique gifts']}
+        title="Premium Personalized Gifts & Custom Creations"
+        description="Discover the best personalized gifts, hand-crafted masterpieces, and corporate branding solutions at Sign Galaxy. Hand-crafted with love for every occasion."
+        keywords={['custom gifts', 'personalized items', 'home decor', 'corporate gifts', 'gift shop india', 'unique gifts']}
       />
       {!activeHeroView ? (
         <div className="relative h-[180px] md:h-[320px] overflow-hidden group bg-gray-900 mt-4 mx-3 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-2 md:border-4 border-white">

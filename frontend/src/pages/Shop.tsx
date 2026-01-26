@@ -532,6 +532,28 @@ export const Shop: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Mobile Price Range Quick Filter */}
+                            <div className="flex sm:hidden overflow-x-auto no-scrollbar gap-2 mt-4 pb-1">
+                                {[
+                                    { label: 'All Prices', min: '', max: '' },
+                                    { label: 'Under 500', min: '0', max: '500' },
+                                    { label: '500-1000', min: '500', max: '1000' },
+                                    { label: '1000-2000', min: '1000', max: '2000' },
+                                    { label: 'Over 2000', min: '2000', max: '' },
+                                ].map((range, i) => {
+                                    const isActive = minPrice === range.min && maxPrice === range.max;
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => { setMinPrice(range.min); setMaxPrice(range.max); }}
+                                            className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-black transition-all border ${isActive ? 'bg-primary text-white border-primary shadow-md shadow-primary/20' : 'bg-white text-gray-600 border-gray-100 hover:border-primary/30 hover:bg-gray-50'}`}
+                                        >
+                                            {range.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
                             {/* Subcategory Pills - Dynamic Switcher */}
                             {categoryFilter && activeSubCategories.length > 0 && (
                                 <div className="mt-6 pt-6 border-t border-gray-50">

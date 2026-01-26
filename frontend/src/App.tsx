@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, useLocation, useNavigationType } from 'react
 import { Navbar } from './components/Navbar';
 import { CategoryNav } from './components/CategoryNav';
 import { Footer } from './components/Footer';
+import { SEO } from './components/SEO';
 import { GiftAdvisor } from './components/GiftAdvisor';
 import { WhatsAppChat } from './components/WhatsAppChat';
 import { LocationRequester } from './components/LocationRequester';
@@ -78,6 +79,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex flex-col min-h-screen bg-app-bg ${!isTouch ? 'cursor-none' : ''}`}>
+      <SEO />
       <GalaxyCursor />
       <Navbar />
       {!isAdminRoute && <CategoryNav />}

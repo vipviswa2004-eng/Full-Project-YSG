@@ -19,7 +19,7 @@ interface SEOProps {
 
 const DOMAIN = 'https://signgalaxy.com';
 const DEFAULT_TITLE = 'Sign Galaxy';
-const DEFAULT_DESCRIPTION = 'Explore Sign Galaxy for premium custom neon signs, personalized gifts, and corporate branding solutions. Turn your ideas into glowing reality.';
+const DEFAULT_DESCRIPTION = 'Explore Sign Galaxy for premium personalized gifts, hand-crafted masterpieces, and corporate branding solutions. Turn your ideas into memorable keepsakes.';
 const DEFAULT_IMAGE = `${DOMAIN}/logo-large.png`; // Improve this if we have a real og-image
 
 export const SEO: React.FC<SEOProps> = ({
@@ -33,10 +33,10 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
     const location = useLocation();
     const canonicalUrl = `${DOMAIN}${location.pathname}`;
-    const fullTitle = title ? `${title} | Sign Galaxy` : DEFAULT_TITLE;
+    const fullTitle = title ? `Sign Galaxy | ${title}` : DEFAULT_TITLE;
     const fullImage = image ? (image.startsWith('http') ? image : `${DOMAIN}${image}`) : DEFAULT_IMAGE;
 
-    const defaultKeywords = ['neon signs', 'custom signs', 'personalized gifts', 'led signs', 'home decor', 'corporate gifts'];
+    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'home decor', 'corporate gifts', 'gift shop india'];
     const allKeywords = [...new Set([...defaultKeywords, ...keywords])].join(', ');
 
     const structuredData = productData

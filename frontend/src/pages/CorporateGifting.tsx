@@ -29,7 +29,7 @@ export const CorporateGifting: React.FC = () => {
         <div className="min-h-screen bg-app-bg">
             <SEO
                 title="Corporate Gifting & Bulk Orders"
-                description="Premium corporate gifts and bulk orders. Custom branding with neon signs and personalized products. Get a quote today."
+                description="Premium corporate gifts and bulk orders. Custom branding for businesses with personalized products. Get a quote today."
                 keywords={['corporate gifts', 'bulk orders', 'business gifts', 'custom branding', 'office decor']}
             />
             {/* Hero Section */}
