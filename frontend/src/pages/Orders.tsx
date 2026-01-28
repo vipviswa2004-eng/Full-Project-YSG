@@ -237,7 +237,18 @@ export const Orders: React.FC = () => {
                                                 <div key={idx} className="flex flex-col sm:flex-row gap-6 items-start bg-white p-5 rounded-xl border border-gray-100 shadow-sm transition-shadow hover:shadow-md">
                                                     <div className="relative w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                                                         <img
-                                                            src={item.customImage || item.image}
+                                                            src={(() => {
+                                                                if (item.customImage) {
+                                                                    try {
+                                                                        if (item.customImage.startsWith('[')) {
+                                                                            const imgs = JSON.parse(item.customImage);
+                                                                            return imgs[0] || item.image;
+                                                                        }
+                                                                    } catch (e) { }
+                                                                    return item.customImage;
+                                                                }
+                                                                return item.image;
+                                                            })()}
                                                             alt={item.name}
                                                             className="w-full h-full object-cover transition-transform hover:scale-105 duration-500"
                                                         />
@@ -289,13 +300,26 @@ export const Orders: React.FC = () => {
                                                                 )}
 
                                                                 {item.customImage && (
-                                                                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
-                                                                        <div className="shrink-0 w-8 h-8 rounded-md overflow-hidden bg-gray-200">
-                                                                            <img src={item.customImage} className="w-full h-full object-cover" alt="Custom upload" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="text-xs font-bold text-blue-800 uppercase tracking-wide">Photo Uploaded</p>
-                                                                            <p className="text-xs text-blue-600">Personalized image used</p>
+                                                                    <div className="flex flex-col gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                                                                        <p className="text-xs font-bold text-blue-800 uppercase tracking-wide">Photo{item.customImage.startsWith('[') && JSON.parse(item.customImage).length > 1 ? 's' : ''} Uploaded</p>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {(() => {
+                                                                                try {
+                                                                                    if (item.customImage?.startsWith('[')) {
+                                                                                        const imgs = JSON.parse(item.customImage);
+                                                                                        return imgs.map((img: string, i: number) => (
+                                                                                            <div key={i} className="shrink-0 w-10 h-10 rounded-md overflow-hidden bg-gray-200 border border-blue-200 shadow-sm">
+                                                                                                <img src={img} className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform" alt={`Custom ${i + 1}`} onClick={() => window.open(img, '_blank')} />
+                                                                                            </div>
+                                                                                        ));
+                                                                                    }
+                                                                                } catch (e) { }
+                                                                                return (
+                                                                                    <div className="shrink-0 w-10 h-10 rounded-md overflow-hidden bg-gray-200 border border-blue-200 shadow-sm">
+                                                                                        <img src={item.customImage} className="w-full h-full object-cover" alt="Custom upload" />
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
                                                                         </div>
                                                                     </div>
                                                                 )}

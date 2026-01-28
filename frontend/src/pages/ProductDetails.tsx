@@ -100,8 +100,8 @@ export const ProductDetails: React.FC = () => {
     // Customization Modal State
     const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
     const [customizeStep, setCustomizeStep] = useState(1);
-    const [customImage, setCustomImage] = useState<string | null>(null);
-    const [customImageFile, setCustomImageFile] = useState<File | null>(null);
+    const [customImages, setCustomImages] = useState<string[]>([]);
+    const [customImageFiles, setCustomImageFiles] = useState<File[]>([]);
     const [customText, setCustomText] = useState('');
     const [isUploading, setIsUploading] = useState(false);
 
@@ -141,65 +141,86 @@ export const ProductDetails: React.FC = () => {
         }, 1000);
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setCustomImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCustomImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const maxPhotos = 15;
+        const availableSlots = maxPhotos - customImages.length;
+
+        if (availableSlots <= 0) {
+            showNotification(`Maximum ${maxPhotos} photos reached.`, "error");
+            return;
+        }
+
+        const filesToProcess = files.slice(0, availableSlots);
+        if (files.length > availableSlots) {
+            showNotification(`Only ${availableSlots} more photos could be added. Max limit is ${maxPhotos}.`, "info");
+        }
+
+        for (const file of filesToProcess) {
+            try {
+                const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                setCustomImages(prev => [...prev, base64]);
+                setCustomImageFiles(prev => [...prev, file]);
+            } catch (err) {
+                console.error("Failed to read file", err);
+            }
         }
     };
 
-    const handleRemoveImage = () => {
-        setCustomImage(null);
-        setCustomImageFile(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+    const handleRemoveImage = (index: number) => {
+        setCustomImages(prev => prev.filter((_, i) => i !== index));
+        setCustomImageFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleModalAddToCart = async () => {
-        let uploadedImageUrl = null;
+        let uploadedUrls: string[] = [];
+        setIsUploading(true);
 
-        // If a new file is selected, try to upload it
-        if (customImageFile) {
-            setIsUploading(true);
-            try {
+        try {
+            // Upload all images
+            for (let i = 0; i < customImageFiles.length; i++) {
+                const file = customImageFiles[i];
                 const formData = new FormData();
-                formData.append('image', customImageFile);
+                formData.append('image', file);
 
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                     method: 'POST',
                     body: formData,
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.warn("Cloudinary upload failed:", errorData.error);
-                    console.warn("Falling back to base64 image storage");
-                    // Fall back to base64 if Cloudinary fails
-                    uploadedImageUrl = customImage; // This is already base64 from handleImageUpload
-                } else {
+                if (response.ok) {
                     const data = await response.json();
-                    uploadedImageUrl = data.url;
+                    uploadedUrls.push(data.url);
+                } else {
+                    // Fallback to base64 if upload fails
+                    uploadedUrls.push(customImages[i]);
                 }
-            } catch (error) {
-                console.error("Image upload failed", error);
-                console.warn("Falling back to base64 image storage");
-                // Fall back to base64 if network error
-                uploadedImageUrl = customImage;
             }
-            setIsUploading(false);
-        } else if (customImage && !customImage.startsWith('data:')) {
-            // Already a URL (re-editing case potentially)
-            uploadedImageUrl = customImage;
-        }
 
-        executeAddToCart(false, uploadedImageUrl || customImage, customText);
-        setIsCustomizeModalOpen(false);
+            // If no files were selected but we have base64 or already set URLs
+            if (customImageFiles.length === 0 && customImages.length > 0) {
+                uploadedUrls = customImages;
+            }
+
+            const finalImageValue = uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : null;
+            executeAddToCart(false, finalImageValue, customText);
+            setIsCustomizeModalOpen(false);
+        } catch (error) {
+            console.error("Image upload failed", error);
+            showNotification("Some images failed to upload. Adding existing ones.", "info");
+            const finalImageValue = customImages.length > 0 ? JSON.stringify(customImages) : null;
+            executeAddToCart(false, finalImageValue, customText);
+            setIsCustomizeModalOpen(false);
+        } finally {
+            setIsUploading(false);
+        }
     };
 
 
@@ -1270,7 +1291,7 @@ export const ProductDetails: React.FC = () => {
                                             <p className="text-xs text-gray-500">Clear front-facing photo recommended</p>
                                         </div>
 
-                                        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 transition-all hover:bg-gray-100 group">
+                                        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 transition-all hover:bg-gray-100 group">
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -1278,27 +1299,39 @@ export const ProductDetails: React.FC = () => {
                                                 onChange={handleImageUpload}
                                                 className="hidden"
                                                 id="photo-upload"
+                                                multiple
                                             />
 
-                                            {customImage ? (
-                                                <div className="relative aspect-square w-full max-w-[200px] mx-auto rounded-lg overflow-hidden border border-gray-200 shadow-sm animate-fade-in">
-                                                    <img src={customImage} alt="Preview" className="w-full h-full object-cover" />
-                                                    <button
-                                                        onClick={handleRemoveImage}
-                                                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-md transition-transform hover:scale-110"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <label htmlFor="photo-upload" className="flex flex-col items-center gap-3 cursor-pointer py-4">
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                                {customImages.map((img, index) => (
+                                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm animate-fade-in group/item">
+                                                        <img src={img} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                                                        <button
+                                                            onClick={() => handleRemoveImage(index)}
+                                                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 shadow-md transition-transform hover:scale-110 opacity-0 group-hover/item:opacity-100"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+
+                                                {customImages.length < 15 && (
+                                                    <label htmlFor="photo-upload" className="flex flex-col items-center justify-center gap-1 cursor-pointer aspect-square bg-white rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-all group/add">
+                                                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center group-hover/add:scale-110 transition-transform">
+                                                            <Plus className="w-5 h-5 text-primary" />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-primary">Add More</span>
+                                                    </label>
+                                                )}
+                                            </div>
+
+                                            {customImages.length === 0 && (
+                                                <label htmlFor="photo-upload" className="flex flex-col items-center gap-3 cursor-pointer py-8">
                                                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-200 group-hover:scale-110 transition-transform">
                                                         <Sparkles className="w-8 h-8 text-primary" />
                                                     </div>
-                                                    <button
-                                                        className="px-6 py-2.5 bg-primary/10 text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-colors pointer-events-none"
-                                                    >
-                                                        Upload Photo
+                                                    <button className="px-6 py-2.5 bg-primary/10 text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-colors pointer-events-none">
+                                                        Upload Up to 15 Photos
                                                     </button>
                                                 </label>
                                             )}
@@ -1307,6 +1340,18 @@ export const ProductDetails: React.FC = () => {
                                         <p className="text-xs text-center text-gray-500 -mt-2">
                                             Our designers will adjust your image and share a preview before production.
                                         </p>
+
+                                        {/* Extra Image Charges Notice */}
+                                        <div className="bg-amber-50/50 border border-amber-100/60 rounded-xl p-3.5">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <span className="text-amber-600 text-sm">⚠️</span>
+                                                <h4 className="font-bold text-amber-900/80 text-[11px] uppercase tracking-wider">Extra Image Charges (if applicable)</h4>
+                                            </div>
+                                            <p className="text-[10px] text-amber-800/70 leading-relaxed font-medium">
+                                                Uploading more than the required number of images may include additional charges.
+                                                The final amount will be confirmed during WhatsApp design approval.
+                                            </p>
+                                        </div>
 
                                         {/* Notice Box */}
                                         <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 flex items-start gap-3">
@@ -1364,7 +1409,19 @@ export const ProductDetails: React.FC = () => {
                                                 placeholder="Enter your personalized message"
                                                 className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-base outline-none bg-gray-50 focus:bg-white"
                                             />
-                                            <p className="text-center text-xs text-gray-400 mt-2">Example: "Happy Birthday Mom!", "Love You Forever"</p>
+                                            <p className="text-center text-xs text-gray-400 mt-2 mb-6">Example: "Happy Birthday Mom!", "Love You Forever"</p>
+
+                                            {/* Extra Text Charges Notice */}
+                                            <div className="bg-amber-50/50 border border-amber-100/60 rounded-xl p-3.5 mt-4">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <span className="text-amber-600 text-sm">⚠️</span>
+                                                    <h4 className="font-bold text-amber-900/80 text-[11px] uppercase tracking-wider">Extra Text Charges (if applicable)</h4>
+                                                </div>
+                                                <p className="text-[10px] text-amber-800/70 leading-relaxed font-medium">
+                                                    Additional multiple names or longer custom messages may include extra charges.
+                                                    The final amount will be shared during WhatsApp design approval.
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {/* Notice Box (Repeated) */}

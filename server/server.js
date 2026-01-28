@@ -394,7 +394,7 @@ app.get("/api/products", async (req, res) => {
     console.log("...Fetching Products from DB...");
     const products = await Product.find()
       .limit(5000) // Increase limit to cover full catalog (2000+)
-      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId sectionId description isTrending isBestseller rating reviewsCount occasions')
+      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId description isTrending isBestseller rating reviewsCount occasions')
       .lean()
       .maxTimeMS(10000); // 10s timeout
 
@@ -449,7 +449,7 @@ const enforcePremiumPricing = (productData) => {
   };
 
   // 1. Base Product
-  if (productData.finalPrice > 0) {
+  if (productData.finalPrice > 0 && !productData.isManualDiscount) {
     const { final, mrp, discount } = calculatePremiumPricing(productData.finalPrice);
     productData.finalPrice = final;
     productData.mrp = mrp;
@@ -461,12 +461,15 @@ const enforcePremiumPricing = (productData) => {
     productData.variations.forEach(v => {
       if (v.options && Array.isArray(v.options)) {
         v.options.forEach(o => {
-          if (o.finalPrice > 0) {
+          if (o.finalPrice > 0 && !o.isManualDiscount) {
             const { final, mrp, discount } = calculatePremiumPricing(o.finalPrice);
             o.finalPrice = final;
             o.mrp = mrp;
             o.discount = discount;
             o.priceAdjustment = mrp;
+          } else if (o.isManualDiscount) {
+            // Ensure priceAdjustment is synced with mrp even in manual mode
+            o.priceAdjustment = o.mrp || 0;
           }
         });
       }
@@ -479,6 +482,12 @@ const enforcePremiumPricing = (productData) => {
 app.post("/api/products", async (req, res) => {
   try {
     let productData = req.body;
+    console.log(`📥 [POST] Received create/upsert:`, {
+      name: productData.name,
+      shopCategoryIds: productData.shopCategoryIds,
+      subCategoryId: productData.subCategoryId,
+      isUpdate: !!productData._id
+    });
 
     // ENFORCE PRICING RULES
     productData = enforcePremiumPricing(productData);
@@ -508,6 +517,12 @@ app.post("/api/products", async (req, res) => {
 app.put("/api/products/:id", async (req, res) => {
   try {
     let productData = req.body;
+    console.log(`📥 [PUT] Received update for ${req.params.id}:`, {
+      name: productData.name,
+      shopCategoryIds: productData.shopCategoryIds,
+      subCategoryId: productData.subCategoryId
+    });
+
     // ENFORCE PRICING RULES
     productData = enforcePremiumPricing(productData);
 
@@ -516,6 +531,8 @@ app.put("/api/products/:id", async (req, res) => {
       productData,
       { new: true }
     );
+
+    console.log(`✅ [PUT] Updated successfully. Result shopCategoryIds:`, updated ? updated.shopCategoryIds : 'null');
     productCache = null;
     res.json(updated);
   } catch (e) {

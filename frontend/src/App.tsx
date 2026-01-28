@@ -23,6 +23,7 @@ import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { ShippingInfo } from './pages/ShippingInfo';
 import { ReturnPolicy } from './pages/ReturnPolicy';
 import { Profile } from './pages/Profile';
+import { OccasionLanding } from './pages/OccasionLanding';
 import { CartProvider, useCart } from './context';
 
 const AppContent: React.FC = () => {
@@ -107,6 +108,7 @@ const AppContent: React.FC = () => {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/shipping" element={<ShippingInfo />} />
           <Route path="/returns" element={<ReturnPolicy />} />
+          <Route path="/occasion/:occasionId" element={<OccasionLanding />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>

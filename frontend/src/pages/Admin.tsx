@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
-// import { products as initialProducts } from '../data/products';
+import { calculatePrice } from '../data/products';
 import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion, ShopOccasion, ShopRecipient } from '../types';
 // import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini'; // Unused
 import {
@@ -63,11 +63,17 @@ export const Admin: React.FC = () => {
             const editCopy = JSON.parse(JSON.stringify(isEditing));
 
             // Sync category name from shopCategories to ensure consistency
-            if (editCopy.shopCategoryId && shopCategories.length > 0) {
-                const cat = shopCategories.find((c: any) => c.id === editCopy.shopCategoryId);
+            if (editCopy.shopCategoryId && (!editCopy.shopCategoryIds || editCopy.shopCategoryIds.length === 0)) {
+                editCopy.shopCategoryIds = [editCopy.shopCategoryId];
+            }
+
+            if (editCopy.shopCategoryIds && editCopy.shopCategoryIds.length > 0 && shopCategories.length > 0) {
+                const mainCatId = editCopy.shopCategoryIds[0];
+                const cat = shopCategories.find((c: any) => (c.id === mainCatId || c._id === mainCatId));
                 if (cat) {
                     editCopy.category = cat.name;
-                    if (cat.sectionId) editCopy.sectionId = cat.sectionId;
+                    if (cat.sectionIds && cat.sectionIds.length > 0) editCopy.sectionId = cat.sectionIds[0];
+                    else if (cat.sectionId) editCopy.sectionId = cat.sectionId;
                 }
             }
 
@@ -558,10 +564,21 @@ export const Admin: React.FC = () => {
                 if (data.url) {
                     const imageUrl = data.url;
                     if (target === 'main' && editedProduct) {
-                        setEditedProduct({ ...editedProduct, image: imageUrl });
+                        setEditedProduct(prev => {
+                            if (!prev) return null;
+                            const currentGallery = prev.gallery || [];
+                            const nextGallery = currentGallery.includes(imageUrl)
+                                ? currentGallery
+                                : [imageUrl, ...currentGallery];
+                            return { ...prev, image: imageUrl, gallery: nextGallery };
+                        });
                     } else if (target === 'variant' && editedProduct && varId && optId) {
                         setEditedProduct(prev => {
                             if (!prev) return null;
+                            const currentGallery = prev.gallery || [];
+                            const nextGallery = currentGallery.includes(imageUrl)
+                                ? currentGallery
+                                : [...currentGallery, imageUrl];
                             const newVars = prev.variations?.map(v => {
                                 if (v.id === varId) {
                                     return {
@@ -571,7 +588,7 @@ export const Admin: React.FC = () => {
                                 }
                                 return v;
                             });
-                            return { ...prev, variations: newVars };
+                            return { ...prev, variations: newVars, gallery: nextGallery };
                         });
                     }
                 }
@@ -583,32 +600,78 @@ export const Admin: React.FC = () => {
     };
 
     const handleSetDefaultOption = (type: 'variation' | 'gallery', varId?: string, optId?: string, galleryIdx?: number) => {
-        if (!editedProduct) return;
+        setEditedProduct(prev => {
+            if (!prev) return null;
 
-        let newImage = editedProduct.image;
-        let updatedVariations = editedProduct.variations;
+            let nextImage = prev.image;
+            let nextMRP = prev.mrp;
+            let nextFinal = prev.finalPrice;
+            let nextDiscount = prev.discount;
+            let nextIsManual = prev.isManualDiscount;
+            let nextVariations = prev.variations;
 
-        if (type === 'variation' && varId && optId) {
-            updatedVariations = editedProduct.variations?.map(v => {
-                if (v.id === varId) {
-                    return {
-                        ...v,
-                        options: v.options.map(o => {
-                            const isMatch = o.id === optId;
-                            if (isMatch && o.image) {
-                                newImage = o.image;
+            if (type === 'variation' && varId && optId) {
+                nextVariations = prev.variations?.map(v => {
+                    if (v.id === varId) {
+                        return {
+                            ...v,
+                            options: v.options.map(o => {
+                                const isMatch = o.id === optId;
+                                if (isMatch) {
+                                    if (o.image) nextImage = o.image;
+                                    // Update pricing from default variation
+                                    if (o.mrp !== undefined) nextMRP = o.mrp;
+                                    if (o.finalPrice !== undefined) nextFinal = o.finalPrice;
+                                    if (o.discount !== undefined) nextDiscount = o.discount;
+                                    if (o.isManualDiscount !== undefined) nextIsManual = o.isManualDiscount;
+                                }
+                                return { ...o, isDefault: isMatch };
+                            })
+                        };
+                    }
+                    // For other variations, ensure only one variation can have a "default" that affects main pricing?
+                    // Actually, usually only one variation type (like Size) is the "base" price.
+                    // But for now, we just unmark others in THIS variation.
+                    return v;
+                });
+            } else if (type === 'gallery' && galleryIdx !== undefined && prev.gallery?.[galleryIdx]) {
+                nextImage = prev.gallery[galleryIdx];
+                // Sync with variations if this image belongs to one
+                prev.variations?.forEach(v => {
+                    const matchedOption = v.options.find(o => o.image === nextImage);
+                    if (matchedOption) {
+                        if (matchedOption.mrp !== undefined) nextMRP = matchedOption.mrp;
+                        if (matchedOption.finalPrice !== undefined) nextFinal = matchedOption.finalPrice;
+                        if (matchedOption.discount !== undefined) nextDiscount = matchedOption.discount;
+                        if (matchedOption.isManualDiscount !== undefined) nextIsManual = matchedOption.isManualDiscount;
+
+                        nextVariations = nextVariations?.map(v2 => {
+                            if (v2.id === v.id) {
+                                return {
+                                    ...v2,
+                                    options: v2.options.map(o2 => ({
+                                        ...o2,
+                                        isDefault: o2.id === matchedOption.id
+                                    }))
+                                };
                             }
-                            return { ...o, isDefault: isMatch };
-                        })
-                    };
-                }
-                return v;
-            });
-        } else if (type === 'gallery' && galleryIdx !== undefined && editedProduct.gallery?.[galleryIdx]) {
-            newImage = editedProduct.gallery[galleryIdx];
-        }
+                            return v2;
+                        });
+                    }
+                });
+            }
 
-        setEditedProduct(prev => prev ? { ...prev, image: newImage, variations: updatedVariations } : null);
+            return {
+                ...prev,
+                image: nextImage,
+                variations: nextVariations,
+                mrp: nextMRP,
+                finalPrice: nextFinal,
+                discount: nextDiscount,
+                isManualDiscount: nextIsManual,
+                pdfPrice: nextMRP || prev.pdfPrice
+            };
+        });
     };
 
     // Helper for Premium Pricing Logic
@@ -679,8 +742,10 @@ export const Admin: React.FC = () => {
         let finalProduct = { ...editedProduct };
 
         // Use custom id from shopCategoryId if available
-        if (finalProduct.shopCategoryId) {
-            const cat = shopCategories.find(c => (c.id === finalProduct.shopCategoryId) || ((c as any)._id === finalProduct.shopCategoryId));
+        if (finalProduct.shopCategoryIds && finalProduct.shopCategoryIds.length > 0) {
+            const mainCatId = finalProduct.shopCategoryIds[0];
+            finalProduct.shopCategoryId = mainCatId; // Backward compatibility
+            const cat = shopCategories.find(c => (c.id === mainCatId) || ((c as any)._id === mainCatId));
             if (cat) {
                 finalProduct.category = cat.name;
                 // Preserve section mapping from category
@@ -716,19 +781,30 @@ export const Admin: React.FC = () => {
             const savedProduct = await response.json();
             console.log('✅ Product saved successfully:', savedProduct);
 
+            // Merge server response with sent data to ensure fields aren't lost if server strips them (e.g. schema desync)
+            const finalSaved = {
+                ...finalProduct,
+                ...savedProduct,
+                // Explicitly preserve these fields if server didn't return them
+                shopCategoryIds: (savedProduct.shopCategoryIds && savedProduct.shopCategoryIds.length > 0)
+                    ? savedProduct.shopCategoryIds
+                    : finalProduct.shopCategoryIds,
+                subCategoryId: savedProduct.subCategoryId || finalProduct.subCategoryId
+            };
+
             // Update local state robustly
             setProductList(prev => {
                 const index = prev.findIndex(p =>
-                    ((p as any)._id && (p as any)._id === savedProduct._id) ||
-                    (p.id === savedProduct.id)
+                    ((p as any)._id && (p as any)._id === finalSaved._id) ||
+                    (p.id === finalSaved.id)
                 );
 
                 if (index !== -1) {
                     const newList = [...prev];
-                    newList[index] = savedProduct;
+                    newList[index] = finalSaved;
                     return newList;
                 } else {
-                    return [...prev, savedProduct];
+                    return [...prev, finalSaved];
                 }
             });
 
@@ -1163,17 +1239,26 @@ export const Admin: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {p.discount ? (
-                                                <div className="flex flex-col">
-                                                    <div className="text-gray-400 line-through text-[10px] font-medium italic">₹{p.pdfPrice}</div>
-                                                    <div className="font-black text-gray-900 text-base flex items-center gap-1.5 leading-none">
-                                                        ₹{Math.round(p.pdfPrice * (1 - p.discount / 100))}
-                                                        <span className="text-[10px] text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full font-bold">-{p.discount}%</span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="font-black text-gray-900 text-lg leading-none">₹{p.pdfPrice}</div>
-                                            )}
+                                            {(() => {
+                                                const cp = calculatePrice(p);
+                                                const hasDiscount = cp.original > cp.final;
+                                                const discountPercent = hasDiscount ? Math.round((1 - cp.final / cp.original) * 100) : 0;
+
+                                                if (hasDiscount) {
+                                                    return (
+                                                        <div className="flex flex-col">
+                                                            <div className="text-gray-400 line-through text-[10px] font-medium italic">₹{cp.original}</div>
+                                                            <div className="font-black text-gray-900 text-base flex items-center gap-1.5 leading-none">
+                                                                ₹{cp.final}
+                                                                <span className="text-[10px] text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full font-bold">
+                                                                    -{discountPercent}%
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return <div className="font-black text-gray-900 text-lg leading-none">₹{cp.final}</div>;
+                                            })()}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest border transition-all shadow-sm ${p.status === 'Active' ? 'bg-green-600 text-white border-green-700 shadow-green-100' :
@@ -1725,6 +1810,11 @@ export const Admin: React.FC = () => {
                                                     : sections.find(s => s.id === category.sectionId)?.title || 'Unknown'
                                             }
                                         </p>
+                                        {category.specialOccasionIds && category.specialOccasionIds.length > 0 && (
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                Special: {category.specialOccasionIds.map(oid => specialOccasions.find(o => o.id === oid)?.name).filter(Boolean).join(', ')}
+                                            </p>
+                                        )}
                                         <p className="text-xs text-gray-500">Order: {category.order}</p>
                                     </div>
                                 </div>
@@ -2016,6 +2106,39 @@ export const Admin: React.FC = () => {
                                         ))}
                                     </div>
                                     <p className="text-[10px] text-gray-500 mt-1 italic">Category will appear in all selected sections.</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Special Occasions (Select Multiple)</label>
+                                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border rounded bg-gray-50">
+                                        {specialOccasions.map(occ => (
+                                            <label key={occ.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1 rounded group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={(isEditingShopItem.data.specialOccasionIds || []).includes(occ.id)}
+                                                    onChange={e => {
+                                                        const currentIds = isEditingShopItem.data.specialOccasionIds || [];
+                                                        let newIds;
+                                                        if (e.target.checked) {
+                                                            newIds = [...currentIds, occ.id];
+                                                        } else {
+                                                            newIds = currentIds.filter((id: string) => id !== occ.id);
+                                                        }
+                                                        setIsEditingShopItem({
+                                                            ...isEditingShopItem,
+                                                            data: {
+                                                                ...isEditingShopItem.data,
+                                                                specialOccasionIds: newIds
+                                                            }
+                                                        });
+                                                    }}
+                                                    className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                                                />
+                                                <span className="text-xs group-hover:text-primary transition-colors">{occ.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 mt-1 italic">Category will also be featured in selected special occasions.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
@@ -2353,7 +2476,7 @@ export const Admin: React.FC = () => {
                                     {/* Vital Info Fields */}
                                     <div className="grid grid-cols-2 gap-6">
                                         <div><label className="block text-sm font-medium text-gray-700">Product Name</label><input value={editedProduct.name} onChange={handleNameChange} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
-                                        <div><label className="block text-sm font-medium text-gray-700">MRP (Original Price)</label><input type="number" value={editedProduct.mrp || editedProduct.pdfPrice} onChange={e => {
+                                        <div><label className="block text-sm font-medium text-gray-700">MRP (Original Price)</label><input type="number" value={editedProduct.mrp !== undefined ? editedProduct.mrp : (editedProduct.pdfPrice || '')} onChange={e => {
                                             const mrp = parseFloat(e.target.value) || 0;
                                             const currentFinal = editedProduct.finalPrice || (editedProduct.pdfPrice * (1 - (editedProduct.discount || 0) / 100));
                                             const disc = mrp > 0 ? Math.round((1 - currentFinal / mrp) * 100) : 0;
@@ -2361,20 +2484,30 @@ export const Admin: React.FC = () => {
                                                 ...editedProduct,
                                                 mrp: mrp,
                                                 pdfPrice: mrp,
-                                                discount: editedProduct.isManualDiscount ? editedProduct.discount : disc
+                                                discount: disc
                                             });
                                         }} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
 
-                                        <div><label className="block text-sm font-medium text-gray-700">Final Price (Source of Truth)</label><input type="number" value={editedProduct.finalPrice || ''} onChange={e => {
+                                        <div><label className="block text-sm font-medium text-gray-700">Final Price (Source of Truth)</label><input type="number" value={editedProduct.finalPrice !== undefined ? editedProduct.finalPrice : ''} onChange={e => {
                                             const rawFinal = parseFloat(e.target.value) || 0;
-                                            const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
-                                            setEditedProduct({
-                                                ...editedProduct,
-                                                finalPrice: final,
-                                                mrp: mrp,
-                                                pdfPrice: mrp,
-                                                discount: discount
-                                            });
+                                            if (editedProduct.isManualDiscount) {
+                                                const mrp = editedProduct.mrp || editedProduct.pdfPrice || 0;
+                                                const disc = mrp > 0 ? Math.round((1 - rawFinal / mrp) * 100) : 0;
+                                                setEditedProduct({
+                                                    ...editedProduct,
+                                                    finalPrice: rawFinal,
+                                                    discount: disc
+                                                });
+                                            } else {
+                                                const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                setEditedProduct({
+                                                    ...editedProduct,
+                                                    finalPrice: final,
+                                                    mrp: mrp,
+                                                    pdfPrice: mrp,
+                                                    discount: discount
+                                                });
+                                            }
                                         }} className="mt-1 block w-full border border-gray-300 rounded-md p-2 font-bold text-green-600 shadow-sm border-green-200 focus:border-green-500" /></div>
 
                                         <div><label className="block text-sm font-medium text-gray-700">Stock</label><input type="number" value={editedProduct.stock || 0} onChange={e => setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })} className="mt-1 block w-full border border-gray-300 rounded-md p-2" /></div>
@@ -2386,7 +2519,22 @@ export const Admin: React.FC = () => {
                                                     <input
                                                         type="checkbox"
                                                         checked={editedProduct.isManualDiscount || false}
-                                                        onChange={e => setEditedProduct({ ...editedProduct, isManualDiscount: e.target.checked })}
+                                                        onChange={e => {
+                                                            const isManual = e.target.checked;
+                                                            if (!isManual && editedProduct.finalPrice) {
+                                                                const { final, mrp, discount } = calculatePremiumPricing(editedProduct.finalPrice);
+                                                                setEditedProduct({
+                                                                    ...editedProduct,
+                                                                    isManualDiscount: isManual,
+                                                                    finalPrice: final,
+                                                                    mrp,
+                                                                    pdfPrice: mrp,
+                                                                    discount
+                                                                });
+                                                            } else {
+                                                                setEditedProduct({ ...editedProduct, isManualDiscount: isManual });
+                                                            }
+                                                        }}
                                                         className="w-3 h-3 text-primary focus:ring-primary rounded"
                                                     /> Manual
                                                 </label>
@@ -2404,26 +2552,42 @@ export const Admin: React.FC = () => {
                                             }} className="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="e.g., 35" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Shop Category</label>
-                                            <select
-                                                value={editedProduct.shopCategoryId || ''}
-                                                onChange={e => {
-                                                    const cat = shopCategories.find(c => (c.id || c._id) === e.target.value);
-                                                    setEditedProduct({
-                                                        ...editedProduct,
-                                                        shopCategoryId: e.target.value,
-                                                        sectionId: cat?.sectionId || '',
-                                                        category: cat?.name || '',
-                                                        subCategoryId: '' // Reset sub-category when category changes
-                                                    });
-                                                }}
-                                                className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                                            >
-                                                <option value="">-- Select Category --</option>
-                                                {shopCategories.map(cat => (
-                                                    <option key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</option>
-                                                ))}
-                                            </select>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Shop Categories</label>
+                                            <div className="mt-1 block w-full border border-gray-300 rounded-md p-2 h-40 overflow-y-auto bg-gray-50/50">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {shopCategories.map(cat => (
+                                                        <label key={cat.id || (cat as any)._id} className="flex items-center gap-2 p-1.5 hover:bg-white rounded cursor-pointer transition-colors border border-transparent hover:border-gray-200">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={editedProduct.shopCategoryIds?.includes(cat.id || (cat as any)._id) || false}
+                                                                onChange={e => {
+                                                                    const catId = cat.id || (cat as any)._id;
+                                                                    const currentIds = editedProduct.shopCategoryIds || [];
+                                                                    let nextIds;
+                                                                    if (e.target.checked) {
+                                                                        nextIds = [...currentIds, catId];
+                                                                    } else {
+                                                                        nextIds = currentIds.filter(id => id !== catId);
+                                                                    }
+
+                                                                    const mainCat = shopCategories.find(c => (c.id || (c as any)._id) === nextIds[0]);
+
+                                                                    setEditedProduct({
+                                                                        ...editedProduct,
+                                                                        shopCategoryIds: nextIds,
+                                                                        shopCategoryId: nextIds[0] || '',
+                                                                        sectionId: mainCat?.sectionId || (mainCat as any)?.sectionIds?.[0] || '',
+                                                                        category: mainCat?.name || '',
+                                                                        subCategoryId: '' // Reset sub-category when categories change
+                                                                    });
+                                                                }}
+                                                                className="w-4 h-4 text-primary focus:ring-primary rounded"
+                                                            />
+                                                            <span className="text-xs font-semibold text-gray-700">{cat.name}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700">Sub-category</label>
@@ -2431,21 +2595,24 @@ export const Admin: React.FC = () => {
                                                 value={editedProduct.subCategoryId || ''}
                                                 onChange={e => setEditedProduct({ ...editedProduct, subCategoryId: e.target.value })}
                                                 className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                                                disabled={!editedProduct.shopCategoryId}
+                                                disabled={!editedProduct.shopCategoryIds || editedProduct.shopCategoryIds.length === 0}
                                             >
                                                 <option value="">-- Select Sub-category --</option>
                                                 {subCategories
                                                     .filter(sub => {
-                                                        // Robust filtering: Match against selected ID or find the category and match against its alternative ID
-                                                        if (sub.categoryId === editedProduct.shopCategoryId) return true;
-                                                        const selectedCat = shopCategories.find(c => (c.id || c._id) === editedProduct.shopCategoryId);
-                                                        if (selectedCat) {
-                                                            return sub.categoryId === selectedCat.id || sub.categoryId === selectedCat._id;
-                                                        }
-                                                        return false;
+                                                        // Robust filtering: Match against any selected category ID
+                                                        if (!editedProduct.shopCategoryIds || editedProduct.shopCategoryIds.length === 0) return false;
+                                                        return editedProduct.shopCategoryIds.some(catId => {
+                                                            if (sub.categoryId === catId) return true;
+                                                            const cat = shopCategories.find(c => (c.id === catId || (c as any)._id === catId));
+                                                            if (cat) {
+                                                                return sub.categoryId === cat.id || sub.categoryId === (cat as any)._id;
+                                                            }
+                                                            return false;
+                                                        });
                                                     })
                                                     .map(sub => (
-                                                        <option key={sub.id || sub._id} value={sub.id || sub._id}>{sub.name}</option>
+                                                        <option key={sub.id || (sub as any)._id} value={sub.id || (sub as any)._id}>{sub.name}</option>
                                                     ))
                                                 }
                                             </select>
@@ -2666,30 +2833,59 @@ export const Admin: React.FC = () => {
                                                 onClick={() => {
                                                     const sizeVariation = editedProduct.variations?.find(v => v.name === 'Size');
                                                     if (sizeVariation) {
+                                                        const isFirst = sizeVariation.options.length === 0;
                                                         const newOption: VariationOption = {
                                                             id: `size_${Date.now()}`,
                                                             label: 'New Size',
                                                             description: '',
-                                                            priceAdjustment: 0
+                                                            priceAdjustment: 0,
+                                                            isDefault: isFirst
                                                         };
                                                         const updatedVariations = editedProduct.variations?.map(v =>
                                                             v.name === 'Size' ? { ...v, options: [...v.options, newOption] } : v
                                                         );
-                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                        setEditedProduct(prev => {
+                                                            if (!prev) return null;
+                                                            return {
+                                                                ...prev,
+                                                                variations: updatedVariations,
+                                                                ...(isFirst ? {
+                                                                    mrp: newOption.mrp || prev.mrp,
+                                                                    finalPrice: newOption.finalPrice || prev.finalPrice,
+                                                                    discount: newOption.discount || prev.discount,
+                                                                    isManualDiscount: newOption.isManualDiscount || prev.isManualDiscount,
+                                                                    pdfPrice: newOption.mrp || prev.pdfPrice
+                                                                } : {})
+                                                            };
+                                                        });
                                                     } else {
+                                                        const newOption: VariationOption = {
+                                                            id: `size_${Date.now()}`,
+                                                            label: 'New Size',
+                                                            description: '',
+                                                            finalPrice: 0,
+                                                            mrp: 0,
+                                                            discount: 0,
+                                                            isManualDiscount: false,
+                                                            priceAdjustment: 0,
+                                                            isDefault: true
+                                                        };
                                                         const newVariation: Variation = {
                                                             id: 'size_variation',
                                                             name: 'Size',
-                                                            options: [{
-                                                                id: `size_${Date.now()}`,
-                                                                label: 'New Size',
-                                                                description: '',
-                                                                priceAdjustment: 0
-                                                            }]
+                                                            options: [newOption]
                                                         };
-                                                        setEditedProduct({
-                                                            ...editedProduct,
-                                                            variations: [...(editedProduct.variations || []), newVariation]
+                                                        setEditedProduct(prev => {
+                                                            if (!prev) return null;
+                                                            return {
+                                                                ...prev,
+                                                                variations: [...(prev.variations || []), newVariation],
+                                                                mrp: 0,
+                                                                finalPrice: 0,
+                                                                discount: 0,
+                                                                isManualDiscount: false,
+                                                                pdfPrice: prev.pdfPrice
+                                                            };
                                                         });
                                                     }
                                                 }}
@@ -2778,14 +2974,25 @@ export const Admin: React.FC = () => {
                                                                                             ...o,
                                                                                             mrp,
                                                                                             priceAdjustment: mrp || 0,
-                                                                                            discount: o.isManualDiscount ? o.discount : disc
+                                                                                            discount: disc
                                                                                         } : o
                                                                                     )
                                                                                 };
                                                                             }
                                                                             return v;
                                                                         });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        setEditedProduct(prev => {
+                                                                            if (!prev) return null;
+                                                                            return {
+                                                                                ...prev,
+                                                                                variations: updatedVariations,
+                                                                                ...(option.isDefault ? {
+                                                                                    mrp,
+                                                                                    discount: disc,
+                                                                                    pdfPrice: mrp || prev.pdfPrice
+                                                                                } : {})
+                                                                            };
+                                                                        });
                                                                     }}
                                                                     placeholder="MRP"
                                                                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
@@ -2799,25 +3006,41 @@ export const Admin: React.FC = () => {
                                                                     value={option.finalPrice || 0}
                                                                     onChange={(e) => {
                                                                         const rawFinal = parseFloat(e.target.value) || 0;
-                                                                        const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
                                                                         const updatedVariations = editedProduct.variations?.map(v => {
                                                                             if (v.name === 'Size') {
                                                                                 return {
                                                                                     ...v,
-                                                                                    options: v.options.map(o =>
-                                                                                        o.id === option.id ? {
-                                                                                            ...o,
-                                                                                            finalPrice: final,
-                                                                                            mrp: mrp,
-                                                                                            discount: discount,
-                                                                                            priceAdjustment: mrp || 0
-                                                                                        } : o
-                                                                                    )
+                                                                                    options: v.options.map(o => {
+                                                                                        if (o.id === option.id) {
+                                                                                            if (o.isManualDiscount) {
+                                                                                                const mrp = o.mrp || 0;
+                                                                                                const disc = mrp > 0 ? Math.round((1 - rawFinal / mrp) * 100) : 0;
+                                                                                                return { ...o, finalPrice: rawFinal, discount: disc };
+                                                                                            } else {
+                                                                                                const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                                return { ...o, finalPrice: final, mrp: mrp, discount: discount, priceAdjustment: mrp || 0 };
+                                                                                            }
+                                                                                        }
+                                                                                        return o;
+                                                                                    })
                                                                                 };
                                                                             }
                                                                             return v;
                                                                         });
-                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                        setEditedProduct(prev => {
+                                                                            if (!prev) return null;
+                                                                            const matchedOpt = updatedVariations?.find(v => v.name === 'Size')?.options.find(o => o.id === option.id);
+                                                                            return {
+                                                                                ...prev,
+                                                                                variations: updatedVariations,
+                                                                                ...(option.isDefault && matchedOpt ? {
+                                                                                    finalPrice: matchedOpt.finalPrice,
+                                                                                    mrp: matchedOpt.mrp,
+                                                                                    discount: matchedOpt.discount,
+                                                                                    pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                } : {})
+                                                                            };
+                                                                        });
                                                                     }}
                                                                     placeholder="Final"
                                                                     className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
@@ -2832,18 +3055,40 @@ export const Admin: React.FC = () => {
                                                                             type="checkbox"
                                                                             checked={option.isManualDiscount || false}
                                                                             onChange={e => {
+                                                                                const isManual = e.target.checked;
                                                                                 const updatedVariations = editedProduct.variations?.map(v => {
                                                                                     if (v.name === 'Size') {
                                                                                         return {
                                                                                             ...v,
-                                                                                            options: v.options.map(o =>
-                                                                                                o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
-                                                                                            )
+                                                                                            options: v.options.map(o => {
+                                                                                                if (o.id === option.id) {
+                                                                                                    if (!isManual && o.finalPrice) {
+                                                                                                        const { final, mrp, discount } = calculatePremiumPricing(o.finalPrice);
+                                                                                                        return { ...o, isManualDiscount: isManual, finalPrice: final, mrp, discount };
+                                                                                                    }
+                                                                                                    return { ...o, isManualDiscount: isManual };
+                                                                                                }
+                                                                                                return o;
+                                                                                            })
                                                                                         };
                                                                                     }
                                                                                     return v;
                                                                                 });
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                setEditedProduct(prev => {
+                                                                                    if (!prev) return null;
+                                                                                    const matchedOpt = updatedVariations?.find(v => v.name === 'Size')?.options.find(o => o.id === option.id);
+                                                                                    return {
+                                                                                        ...prev,
+                                                                                        variations: updatedVariations,
+                                                                                        ...(option.isDefault && matchedOpt ? {
+                                                                                            isManualDiscount: matchedOpt.isManualDiscount,
+                                                                                            finalPrice: matchedOpt.finalPrice,
+                                                                                            mrp: matchedOpt.mrp,
+                                                                                            discount: matchedOpt.discount,
+                                                                                            pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                        } : {})
+                                                                                    };
+                                                                                });
                                                                             }}
                                                                             className="w-2.5 h-2.5 rounded"
                                                                         /> M
@@ -2999,26 +3244,56 @@ export const Admin: React.FC = () => {
                                                                 id: `lb_${Date.now()}`,
                                                                 label: 'With Light Base',
                                                                 description: '',
-                                                                priceAdjustment: 0
+                                                                finalPrice: 0,
+                                                                mrp: 0,
+                                                                discount: 0,
+                                                                isManualDiscount: false,
+                                                                priceAdjustment: 0,
+                                                                isDefault: lbVariation.options.length === 0
                                                             };
                                                             const updatedVariations = editedProduct.variations?.map(v =>
                                                                 (v.id === 'lb_variation' || v.name === 'Light Base') ? { ...v, options: [...v.options, newOption] } : v
                                                             );
-                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                            setEditedProduct(prev => {
+                                                                if (!prev) return null;
+                                                                return {
+                                                                    ...prev,
+                                                                    variations: updatedVariations,
+                                                                    ...(newOption.isDefault ? {
+                                                                        mrp: 0,
+                                                                        finalPrice: 0,
+                                                                        discount: 0,
+                                                                        isManualDiscount: false
+                                                                    } : {})
+                                                                };
+                                                            });
                                                         } else {
+                                                            const newOption: VariationOption = {
+                                                                id: `lb_${Date.now()}`,
+                                                                label: 'Light Base',
+                                                                description: '',
+                                                                finalPrice: 0,
+                                                                mrp: 0,
+                                                                discount: 0,
+                                                                isManualDiscount: false,
+                                                                priceAdjustment: 0,
+                                                                isDefault: true
+                                                            };
                                                             const newVariation: Variation = {
                                                                 id: 'lb_variation',
                                                                 name: 'Light Base',
-                                                                options: [{
-                                                                    id: `lb_${Date.now()}`,
-                                                                    label: 'With Light Base',
-                                                                    description: '',
-                                                                    priceAdjustment: 0
-                                                                }]
+                                                                options: [newOption]
                                                             };
-                                                            setEditedProduct({
-                                                                ...editedProduct,
-                                                                variations: [...(editedProduct.variations || []), newVariation]
+                                                            setEditedProduct(prev => {
+                                                                if (!prev) return null;
+                                                                return {
+                                                                    ...prev,
+                                                                    variations: [...(prev.variations || []), newVariation],
+                                                                    mrp: 0,
+                                                                    finalPrice: 0,
+                                                                    discount: 0,
+                                                                    isManualDiscount: false
+                                                                };
                                                             });
                                                         }
                                                     }}
@@ -3131,14 +3406,25 @@ export const Admin: React.FC = () => {
                                                                                                 ...o,
                                                                                                 mrp,
                                                                                                 priceAdjustment: mrp || 0,
-                                                                                                discount: o.isManualDiscount ? o.discount : disc
+                                                                                                discount: disc
                                                                                             } : o
                                                                                         )
                                                                                     };
                                                                                 }
                                                                                 return v;
                                                                             });
-                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            setEditedProduct(prev => {
+                                                                                if (!prev) return null;
+                                                                                return {
+                                                                                    ...prev,
+                                                                                    variations: updatedVariations,
+                                                                                    ...(option.isDefault ? {
+                                                                                        mrp,
+                                                                                        discount: disc,
+                                                                                        pdfPrice: mrp || prev.pdfPrice
+                                                                                    } : {})
+                                                                                };
+                                                                            });
                                                                         }}
                                                                         placeholder="MRP"
                                                                         className="w-full border border-gray-300 rounded-md p-2 text-sm"
@@ -3152,25 +3438,41 @@ export const Admin: React.FC = () => {
                                                                         value={option.finalPrice || 0}
                                                                         onChange={(e) => {
                                                                             const rawFinal = parseFloat(e.target.value) || 0;
-                                                                            const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
                                                                             const updatedVariations = editedProduct.variations?.map(v => {
                                                                                 if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                     return {
                                                                                         ...v,
-                                                                                        options: v.options.map(o =>
-                                                                                            o.id === option.id ? {
-                                                                                                ...o,
-                                                                                                finalPrice: final,
-                                                                                                mrp: mrp,
-                                                                                                discount: discount,
-                                                                                                priceAdjustment: mrp || 0
-                                                                                            } : o
-                                                                                        )
+                                                                                        options: v.options.map(o => {
+                                                                                            if (o.id === option.id) {
+                                                                                                if (o.isManualDiscount) {
+                                                                                                    const mrp = o.mrp || 0;
+                                                                                                    const disc = mrp > 0 ? Math.round((1 - rawFinal / mrp) * 100) : 0;
+                                                                                                    return { ...o, finalPrice: rawFinal, discount: disc };
+                                                                                                } else {
+                                                                                                    const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                                    return { ...o, finalPrice: final, mrp: mrp, discount: discount, priceAdjustment: mrp || 0 };
+                                                                                                }
+                                                                                            }
+                                                                                            return o;
+                                                                                        })
                                                                                     };
                                                                                 }
                                                                                 return v;
                                                                             });
-                                                                            setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                            setEditedProduct(prev => {
+                                                                                if (!prev) return null;
+                                                                                const matchedOpt = updatedVariations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.options.find(o => o.id === option.id);
+                                                                                return {
+                                                                                    ...prev,
+                                                                                    variations: updatedVariations,
+                                                                                    ...(option.isDefault && matchedOpt ? {
+                                                                                        finalPrice: matchedOpt.finalPrice,
+                                                                                        mrp: matchedOpt.mrp,
+                                                                                        discount: matchedOpt.discount,
+                                                                                        pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                    } : {})
+                                                                                };
+                                                                            });
                                                                         }}
                                                                         placeholder="Final"
                                                                         className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
@@ -3185,18 +3487,40 @@ export const Admin: React.FC = () => {
                                                                                 type="checkbox"
                                                                                 checked={option.isManualDiscount || false}
                                                                                 onChange={e => {
+                                                                                    const isManual = e.target.checked;
                                                                                     const updatedVariations = editedProduct.variations?.map(v => {
                                                                                         if (v.id === 'lb_variation' || v.name === 'Light Base') {
                                                                                             return {
                                                                                                 ...v,
-                                                                                                options: v.options.map(o =>
-                                                                                                    o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
-                                                                                                )
+                                                                                                options: v.options.map(o => {
+                                                                                                    if (o.id === option.id) {
+                                                                                                        if (!isManual && o.finalPrice) {
+                                                                                                            const { final, mrp, discount } = calculatePremiumPricing(o.finalPrice);
+                                                                                                            return { ...o, isManualDiscount: isManual, finalPrice: final, mrp, discount };
+                                                                                                        }
+                                                                                                        return { ...o, isManualDiscount: isManual };
+                                                                                                    }
+                                                                                                    return o;
+                                                                                                })
                                                                                             };
                                                                                         }
                                                                                         return v;
                                                                                     });
-                                                                                    setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                    setEditedProduct(prev => {
+                                                                                        if (!prev) return null;
+                                                                                        const matchedOpt = updatedVariations?.find(v => v.id === 'lb_variation' || v.name === 'Light Base')?.options.find(o => o.id === option.id);
+                                                                                        return {
+                                                                                            ...prev,
+                                                                                            variations: updatedVariations,
+                                                                                            ...(option.isDefault && matchedOpt ? {
+                                                                                                isManualDiscount: matchedOpt.isManualDiscount,
+                                                                                                finalPrice: matchedOpt.finalPrice,
+                                                                                                mrp: matchedOpt.mrp,
+                                                                                                discount: matchedOpt.discount,
+                                                                                                pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                            } : {})
+                                                                                        };
+                                                                                    });
                                                                                 }}
                                                                                 className="w-2.5 h-2.5 rounded"
                                                                             /> M
@@ -3327,27 +3651,57 @@ export const Admin: React.FC = () => {
                                                                     label: 'New Shape',
                                                                     description: '',
                                                                     size: '',
-                                                                    priceAdjustment: 0
+                                                                    finalPrice: 0,
+                                                                    mrp: 0,
+                                                                    discount: 0,
+                                                                    isManualDiscount: false,
+                                                                    priceAdjustment: 0,
+                                                                    isDefault: shapeVariation.options.length === 0
                                                                 };
                                                                 const updatedVariations = editedProduct.variations?.map(v =>
                                                                     v.name === 'Shape' ? { ...v, options: [...v.options, newOption] } : v
                                                                 );
-                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                setEditedProduct(prev => {
+                                                                    if (!prev) return null;
+                                                                    return {
+                                                                        ...prev,
+                                                                        variations: updatedVariations,
+                                                                        ...(newOption.isDefault ? {
+                                                                            mrp: 0,
+                                                                            finalPrice: 0,
+                                                                            discount: 0,
+                                                                            isManualDiscount: false
+                                                                        } : {})
+                                                                    };
+                                                                });
                                                             } else {
+                                                                const newOption: VariationOption = {
+                                                                    id: `shape_${Date.now()}`,
+                                                                    label: 'Rectangle',
+                                                                    description: '',
+                                                                    size: '',
+                                                                    finalPrice: 0,
+                                                                    mrp: 0,
+                                                                    discount: 0,
+                                                                    isManualDiscount: false,
+                                                                    priceAdjustment: 0,
+                                                                    isDefault: true
+                                                                };
                                                                 const newVariation: Variation = {
                                                                     id: 'shape_variation',
                                                                     name: 'Shape',
-                                                                    options: [{
-                                                                        id: `shape_${Date.now()}`,
-                                                                        label: 'Rectangle',
-                                                                        description: '',
-                                                                        size: '',
-                                                                        priceAdjustment: 0
-                                                                    }]
+                                                                    options: [newOption]
                                                                 };
-                                                                setEditedProduct({
-                                                                    ...editedProduct,
-                                                                    variations: [...(editedProduct.variations || []), newVariation]
+                                                                setEditedProduct(prev => {
+                                                                    if (!prev) return null;
+                                                                    return {
+                                                                        ...prev,
+                                                                        variations: [...(prev.variations || []), newVariation],
+                                                                        mrp: 0,
+                                                                        finalPrice: 0,
+                                                                        discount: 0,
+                                                                        isManualDiscount: false
+                                                                    };
                                                                 });
                                                             }
                                                         }}
@@ -3436,14 +3790,25 @@ export const Admin: React.FC = () => {
                                                                                                     ...o,
                                                                                                     mrp,
                                                                                                     priceAdjustment: mrp || 0,
-                                                                                                    discount: o.isManualDiscount ? o.discount : disc
+                                                                                                    discount: disc
                                                                                                 } : o
                                                                                             )
                                                                                         };
                                                                                     }
                                                                                     return v;
                                                                                 });
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                setEditedProduct(prev => {
+                                                                                    if (!prev) return null;
+                                                                                    return {
+                                                                                        ...prev,
+                                                                                        variations: updatedVariations,
+                                                                                        ...(option.isDefault ? {
+                                                                                            mrp: mrp,
+                                                                                            discount: disc,
+                                                                                            pdfPrice: mrp || prev.pdfPrice
+                                                                                        } : {})
+                                                                                    };
+                                                                                });
                                                                             }}
                                                                             placeholder="MRP"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm"
@@ -3457,25 +3822,41 @@ export const Admin: React.FC = () => {
                                                                             value={option.finalPrice || 0}
                                                                             onChange={(e) => {
                                                                                 const rawFinal = parseFloat(e.target.value) || 0;
-                                                                                const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
                                                                                 const updatedVariations = editedProduct.variations?.map(v => {
                                                                                     if (v.name === 'Shape') {
                                                                                         return {
                                                                                             ...v,
-                                                                                            options: v.options.map(o =>
-                                                                                                o.id === option.id ? {
-                                                                                                    ...o,
-                                                                                                    finalPrice: final,
-                                                                                                    mrp: mrp,
-                                                                                                    discount: discount,
-                                                                                                    priceAdjustment: mrp || 0
-                                                                                                } : o
-                                                                                            )
+                                                                                            options: v.options.map(o => {
+                                                                                                if (o.id === option.id) {
+                                                                                                    if (o.isManualDiscount) {
+                                                                                                        const mrp = o.mrp || 0;
+                                                                                                        const disc = mrp > 0 ? Math.round((1 - rawFinal / mrp) * 100) : 0;
+                                                                                                        return { ...o, finalPrice: rawFinal, discount: disc };
+                                                                                                    } else {
+                                                                                                        const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                                        return { ...o, finalPrice: final, mrp: mrp, discount: discount, priceAdjustment: mrp || 0 };
+                                                                                                    }
+                                                                                                }
+                                                                                                return o;
+                                                                                            })
                                                                                         };
                                                                                     }
                                                                                     return v;
                                                                                 });
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                setEditedProduct(prev => {
+                                                                                    if (!prev) return null;
+                                                                                    const matchedOpt = updatedVariations?.find(v => v.name === 'Shape')?.options.find(o => o.id === option.id);
+                                                                                    return {
+                                                                                        ...prev,
+                                                                                        variations: updatedVariations,
+                                                                                        ...(option.isDefault && matchedOpt ? {
+                                                                                            finalPrice: matchedOpt.finalPrice,
+                                                                                            mrp: matchedOpt.mrp,
+                                                                                            discount: matchedOpt.discount,
+                                                                                            pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                        } : {})
+                                                                                    };
+                                                                                });
                                                                             }}
                                                                             placeholder="Final"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
@@ -3490,21 +3871,43 @@ export const Admin: React.FC = () => {
                                                                                     type="checkbox"
                                                                                     checked={option.isManualDiscount || false}
                                                                                     onChange={e => {
+                                                                                        const isManual = e.target.checked;
                                                                                         const updatedVariations = editedProduct.variations?.map(v => {
                                                                                             if (v.name === 'Shape') {
                                                                                                 return {
                                                                                                     ...v,
-                                                                                                    options: v.options.map(o =>
-                                                                                                        o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
-                                                                                                    )
+                                                                                                    options: v.options.map(o => {
+                                                                                                        if (o.id === option.id) {
+                                                                                                            if (!isManual && o.finalPrice) {
+                                                                                                                const { final, mrp, discount } = calculatePremiumPricing(o.finalPrice);
+                                                                                                                return { ...o, isManualDiscount: isManual, finalPrice: final, mrp, discount };
+                                                                                                            }
+                                                                                                            return { ...o, isManualDiscount: isManual };
+                                                                                                        }
+                                                                                                        return o;
+                                                                                                    })
                                                                                                 };
                                                                                             }
                                                                                             return v;
                                                                                         });
-                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                        setEditedProduct(prev => {
+                                                                                            if (!prev) return null;
+                                                                                            const matchedOpt = updatedVariations?.find(v => v.name === 'Shape')?.options.find(o => o.id === option.id);
+                                                                                            return {
+                                                                                                ...prev,
+                                                                                                variations: updatedVariations,
+                                                                                                ...(option.isDefault && matchedOpt ? {
+                                                                                                    isManualDiscount: matchedOpt.isManualDiscount,
+                                                                                                    finalPrice: matchedOpt.finalPrice,
+                                                                                                    mrp: matchedOpt.mrp,
+                                                                                                    discount: matchedOpt.discount,
+                                                                                                    pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                                } : {})
+                                                                                            };
+                                                                                        });
                                                                                     }}
                                                                                     className="w-2.5 h-2.5 rounded"
-                                                                                /> M
+                                                                                /> Manual
                                                                             </label>
                                                                         </div>
                                                                         <input
@@ -3652,28 +4055,58 @@ export const Admin: React.FC = () => {
                                                                     label: 'New Color',
                                                                     description: '',
                                                                     size: '',
-                                                                    priceAdjustment: 0
+                                                                    finalPrice: 0,
+                                                                    mrp: 0,
+                                                                    discount: 0,
+                                                                    isManualDiscount: false,
+                                                                    priceAdjustment: 0,
+                                                                    isDefault: colorVariation.options.length === 0
                                                                 };
                                                                 const updatedVariations = editedProduct.variations?.map(v =>
                                                                     v.name === 'Color' ? { ...v, options: [...v.options, newOption] } : v
                                                                 );
-                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                setEditedProduct(prev => {
+                                                                    if (!prev) return null;
+                                                                    return {
+                                                                        ...prev,
+                                                                        variations: updatedVariations,
+                                                                        ...(newOption.isDefault ? {
+                                                                            mrp: 0,
+                                                                            finalPrice: 0,
+                                                                            discount: 0,
+                                                                            isManualDiscount: false
+                                                                        } : {})
+                                                                    };
+                                                                });
                                                             } else {
+                                                                const newOption: VariationOption = {
+                                                                    id: `color_${Date.now()}`,
+                                                                    label: 'New Color',
+                                                                    description: '',
+                                                                    size: '',
+                                                                    finalPrice: 0,
+                                                                    mrp: 0,
+                                                                    discount: 0,
+                                                                    isManualDiscount: false,
+                                                                    priceAdjustment: 0,
+                                                                    isDefault: true
+                                                                };
                                                                 const newVariation: Variation = {
                                                                     id: 'color_variation',
                                                                     name: 'Color',
                                                                     disableAutoSelect: false,
-                                                                    options: [{
-                                                                        id: `color_${Date.now()}`,
-                                                                        label: 'New Color',
-                                                                        description: '',
-                                                                        size: '',
-                                                                        priceAdjustment: 0
-                                                                    }]
+                                                                    options: [newOption]
                                                                 };
-                                                                setEditedProduct({
-                                                                    ...editedProduct,
-                                                                    variations: [...(editedProduct.variations || []), newVariation]
+                                                                setEditedProduct(prev => {
+                                                                    if (!prev) return null;
+                                                                    return {
+                                                                        ...prev,
+                                                                        variations: [...(prev.variations || []), newVariation],
+                                                                        mrp: 0,
+                                                                        finalPrice: 0,
+                                                                        discount: 0,
+                                                                        isManualDiscount: false
+                                                                    };
                                                                 });
                                                             }
                                                         }}
@@ -3762,14 +4195,25 @@ export const Admin: React.FC = () => {
                                                                                                     ...o,
                                                                                                     mrp,
                                                                                                     priceAdjustment: mrp || 0,
-                                                                                                    discount: o.isManualDiscount ? o.discount : disc
+                                                                                                    discount: disc
                                                                                                 } : o
                                                                                             )
                                                                                         };
                                                                                     }
                                                                                     return v;
                                                                                 });
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                setEditedProduct(prev => {
+                                                                                    if (!prev) return null;
+                                                                                    return {
+                                                                                        ...prev,
+                                                                                        variations: updatedVariations,
+                                                                                        ...(option.isDefault ? {
+                                                                                            mrp,
+                                                                                            discount: disc,
+                                                                                            pdfPrice: mrp || prev.pdfPrice
+                                                                                        } : {})
+                                                                                    };
+                                                                                });
                                                                             }}
                                                                             placeholder="MRP"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm"
@@ -3783,25 +4227,41 @@ export const Admin: React.FC = () => {
                                                                             value={option.finalPrice || 0}
                                                                             onChange={(e) => {
                                                                                 const rawFinal = parseFloat(e.target.value) || 0;
-                                                                                const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
                                                                                 const updatedVariations = editedProduct.variations?.map(v => {
                                                                                     if (v.name === 'Color') {
                                                                                         return {
                                                                                             ...v,
-                                                                                            options: v.options.map(o =>
-                                                                                                o.id === option.id ? {
-                                                                                                    ...o,
-                                                                                                    finalPrice: final,
-                                                                                                    mrp: mrp,
-                                                                                                    discount: discount,
-                                                                                                    priceAdjustment: mrp || 0
-                                                                                                } : o
-                                                                                            )
+                                                                                            options: v.options.map(o => {
+                                                                                                if (o.id === option.id) {
+                                                                                                    if (o.isManualDiscount) {
+                                                                                                        const mrp = o.mrp || 0;
+                                                                                                        const disc = mrp > 0 ? Math.round((1 - rawFinal / mrp) * 100) : 0;
+                                                                                                        return { ...o, finalPrice: rawFinal, discount: disc };
+                                                                                                    } else {
+                                                                                                        const { final, mrp, discount } = calculatePremiumPricing(rawFinal);
+                                                                                                        return { ...o, finalPrice: final, mrp: mrp, discount: discount, priceAdjustment: mrp || 0 };
+                                                                                                    }
+                                                                                                }
+                                                                                                return o;
+                                                                                            })
                                                                                         };
                                                                                     }
                                                                                     return v;
                                                                                 });
-                                                                                setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                setEditedProduct(prev => {
+                                                                                    if (!prev) return null;
+                                                                                    const matchedOpt = updatedVariations?.find(v => v.name === 'Color')?.options.find(o => o.id === option.id);
+                                                                                    return {
+                                                                                        ...prev,
+                                                                                        variations: updatedVariations,
+                                                                                        ...(option.isDefault && matchedOpt ? {
+                                                                                            finalPrice: matchedOpt.finalPrice,
+                                                                                            mrp: matchedOpt.mrp,
+                                                                                            discount: matchedOpt.discount,
+                                                                                            pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                        } : {})
+                                                                                    };
+                                                                                });
                                                                             }}
                                                                             placeholder="Final"
                                                                             className="w-full border border-gray-300 rounded-md p-2 text-sm font-bold text-green-600 shadow-sm border-green-200"
@@ -3816,21 +4276,43 @@ export const Admin: React.FC = () => {
                                                                                     type="checkbox"
                                                                                     checked={option.isManualDiscount || false}
                                                                                     onChange={e => {
+                                                                                        const isManual = e.target.checked;
                                                                                         const updatedVariations = editedProduct.variations?.map(v => {
                                                                                             if (v.name === 'Color') {
                                                                                                 return {
                                                                                                     ...v,
-                                                                                                    options: v.options.map(o =>
-                                                                                                        o.id === option.id ? { ...o, isManualDiscount: e.target.checked } : o
-                                                                                                    )
+                                                                                                    options: v.options.map(o => {
+                                                                                                        if (o.id === option.id) {
+                                                                                                            if (!isManual && o.finalPrice) {
+                                                                                                                const { final, mrp, discount } = calculatePremiumPricing(o.finalPrice);
+                                                                                                                return { ...o, isManualDiscount: isManual, finalPrice: final, mrp, discount };
+                                                                                                            }
+                                                                                                            return { ...o, isManualDiscount: isManual };
+                                                                                                        }
+                                                                                                        return o;
+                                                                                                    })
                                                                                                 };
                                                                                             }
                                                                                             return v;
                                                                                         });
-                                                                                        setEditedProduct({ ...editedProduct, variations: updatedVariations });
+                                                                                        setEditedProduct(prev => {
+                                                                                            if (!prev) return null;
+                                                                                            const matchedOpt = updatedVariations?.find(v => v.name === 'Color')?.options.find(o => o.id === option.id);
+                                                                                            return {
+                                                                                                ...prev,
+                                                                                                variations: updatedVariations,
+                                                                                                ...(option.isDefault && matchedOpt ? {
+                                                                                                    isManualDiscount: matchedOpt.isManualDiscount,
+                                                                                                    finalPrice: matchedOpt.finalPrice,
+                                                                                                    mrp: matchedOpt.mrp,
+                                                                                                    discount: matchedOpt.discount,
+                                                                                                    pdfPrice: matchedOpt.mrp || prev.pdfPrice
+                                                                                                } : {})
+                                                                                            };
+                                                                                        });
                                                                                     }}
                                                                                     className="w-2.5 h-2.5 rounded"
-                                                                                /> M
+                                                                                /> Manual
                                                                             </label>
                                                                         </div>
                                                                         <input
@@ -4230,7 +4712,7 @@ export const Admin: React.FC = () => {
                                                                                             setEditedProduct({ ...editedProduct, variations: updatedVariations });
                                                                                         }}
                                                                                         className="w-2.5 h-2.5 rounded"
-                                                                                    /> M
+                                                                                    /> Manual
                                                                                 </label>
                                                                             </div>
                                                                             <input

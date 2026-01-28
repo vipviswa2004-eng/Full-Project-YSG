@@ -76,8 +76,8 @@ export const calculatePrice = (
   let baseMRP = Number(product.mrp || product.pdfPrice || 0);
   let baseFinal = Number(product.finalPrice || (product.pdfPrice ? Math.round(product.pdfPrice * (1 - (product.discount || 0) / 100)) : 0));
 
-  // --- RUNTIME FIX: Ensure Base Final is X9 ---
-  if (baseFinal > 0) {
+  // --- RUNTIME FIX: Ensure Base Final is X9 (Skip if Manual) ---
+  if (baseFinal > 0 && !product.isManualDiscount) {
     if ((baseFinal + 1) % 10 !== 0) {
       // Force to X9
       const normalizedFinal = Math.round(baseFinal / 10) * 10 - 1;
@@ -85,9 +85,9 @@ export const calculatePrice = (
     }
   }
 
-  // --- RUNTIME FIX: Ensure Base MRP is X99 AND Diff >= 1000 ---
+  // --- RUNTIME FIX: Ensure Base MRP is X99 AND Diff >= 1000 (Skip if Manual) ---
   // If MRP does not end in 99 OR is less than 1.2x Final Price OR Diff < 1000, force recalculate
-  if (baseFinal > 0) {
+  if (baseFinal > 0 && !product.isManualDiscount) {
     const isPremium = (baseMRP + 1) % 100 === 0 && baseMRP > baseFinal * 1.15 && (baseMRP - baseFinal >= 1000);
     if (!isPremium) {
       // Recalculate Logic: Target 1.6x, round to X99
@@ -133,16 +133,16 @@ export const calculatePrice = (
       let optFinal = Number(option.finalPrice);
       let optMRP = Number(option.mrp);
 
-      // --- RUNTIME FIX: Ensure Variation Final is X9 ---
-      if (optFinal > 0) {
+      // --- RUNTIME FIX: Ensure Variation Final is X9 (Skip if Manual) ---
+      if (optFinal > 0 && !option.isManualDiscount) {
         if ((optFinal + 1) % 10 !== 0) {
           const normalizedOptFinal = Math.round(optFinal / 10) * 10 - 1;
           optFinal = normalizedOptFinal > 0 ? normalizedOptFinal : 9;
         }
       }
 
-      // --- RUNTIME FIX: Ensure Variation MRP is X99 AND Diff >= 1000 ---
-      if (optFinal > 0) {
+      // --- RUNTIME FIX: Ensure Variation MRP is X99 AND Diff >= 1000 (Skip if Manual) ---
+      if (optFinal > 0 && !option.isManualDiscount) {
         const isOptPremium = (optMRP + 1) % 100 === 0 && optMRP > optFinal * 1.15 && (optMRP - optFinal >= 1000);
         if (!isOptPremium) {
           let target = optFinal * 1.6;

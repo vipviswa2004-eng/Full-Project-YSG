@@ -212,11 +212,25 @@ export const Cart: React.FC = () => {
       }
 
       // Include Image URL
-      const imgUrl = item.customImage || item.image;
-      if (imgUrl && !imgUrl.startsWith('data:')) {
-        const fullImgUrl = imgUrl.startsWith('http') ? imgUrl : `${window.location.origin}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
-        const imageLabel = item.customImage ? "Uploaded Photo" : "Product Image";
-        message += `• ${imageLabel}: ${fullImgUrl}\n`;
+      const customImgValue = item.customImage;
+      if (customImgValue) {
+        try {
+          if (customImgValue.startsWith('[')) {
+            const imgs = JSON.parse(customImgValue);
+            imgs.forEach((img: string, i: number) => {
+              const fullImgUrl = img.startsWith('http') ? img : `${window.location.origin}${img.startsWith('/') ? '' : '/'}${img}`;
+              message += `• Uploaded Photo ${i + 1}: ${fullImgUrl}\n`;
+            });
+          } else {
+            const fullImgUrl = customImgValue.startsWith('http') ? customImgValue : `${window.location.origin}${customImgValue.startsWith('/') ? '' : '/'}${customImgValue}`;
+            message += `• Uploaded Photo: ${fullImgUrl}\n`;
+          }
+        } catch (e) {
+          message += `• Uploaded Photo: ${customImgValue}\n`;
+        }
+      } else if (item.image) {
+        const fullImgUrl = item.image.startsWith('http') ? item.image : `${window.location.origin}${item.image.startsWith('/') ? '' : '/'}${item.image}`;
+        message += `• Product Image: ${fullImgUrl}\n`;
       }
 
       message += "\n";
@@ -357,7 +371,19 @@ export const Cart: React.FC = () => {
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                     <div className="h-24 w-24 sm:h-32 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)}>
                       <img
-                        src={item.customDesign?.preview || item.customImage || item.image}
+                        src={(() => {
+                          if (item.customDesign?.preview) return item.customDesign.preview;
+                          if (item.customImage) {
+                            try {
+                              if (item.customImage.startsWith('[')) {
+                                const imgs = JSON.parse(item.customImage);
+                                return imgs[0] || item.image;
+                              }
+                            } catch (e) { }
+                            return item.customImage;
+                          }
+                          return item.image;
+                        })()}
                         alt={item.name}
                         className="h-full w-full object-cover object-center transform transition-transform duration-500 hover:scale-105"
                       />
@@ -573,6 +599,18 @@ export const Cart: React.FC = () => {
                       <span className="font-bold text-green-600">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
+                  {/* Additional Charges Notice */}
+                  <div className="mt-4 mb-4 bg-amber-50/50 border border-amber-100/60 rounded-xl p-3.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-amber-600 text-sm">⚠️</span>
+                      <h4 className="font-bold text-amber-900/80 text-[10px] uppercase tracking-wider">Additional Charges (if applicable)</h4>
+                    </div>
+                    <p className="text-[10px] text-amber-800/70 leading-relaxed font-medium">
+                      Extra images or custom text, if added, may include additional charges.
+                      The final price will be confirmed during WhatsApp design approval.
+                    </p>
+                  </div>
+
                   <div className="flex justify-between items-center border-t border-gray-200 pt-3">
                     <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Total Amount</p>
                     <p className="text-3xl font-extrabold text-primary">{formatPrice(total)}</p>

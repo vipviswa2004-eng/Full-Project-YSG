@@ -182,7 +182,12 @@ export const Shop: React.FC = () => {
         }
 
         if (categoryFilter) {
-            result = result.filter(p => p.category && p.category.toLowerCase() === categoryFilter.toLowerCase());
+            const targetCat = shopCategories.find(c => c.name.toLowerCase() === categoryFilter.toLowerCase());
+            const targetId = targetCat?.id || (targetCat as any)?._id;
+            result = result.filter(p =>
+                (p.category && p.category.toLowerCase() === categoryFilter.toLowerCase()) ||
+                (targetId && p.shopCategoryIds && p.shopCategoryIds.includes(targetId))
+            );
         }
 
         if (occasionFilter) {

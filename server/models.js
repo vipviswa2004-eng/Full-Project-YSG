@@ -27,6 +27,7 @@ const ProductSchema = new mongoose.Schema({
   },
   sectionId: String,
   shopCategoryId: String,
+  shopCategoryIds: [String],
   subCategoryId: String,
   isTrending: { type: Boolean, default: false },
   isBestseller: { type: Boolean, default: false },
@@ -129,6 +130,7 @@ const ShopCategorySchema = new mongoose.Schema({
   image: String,
   sectionId: String, // References Section.id (single parent)
   sectionIds: [String], // References Section.id (multiple parents support)
+  specialOccasionIds: [String], // References SpecialOccasion.id
   order: { type: Number, default: 0 },
   isFeatured: { type: Boolean, default: false }
 }, { collection: 'shopcategories' });

@@ -63,6 +63,7 @@ export interface Product {
   reviewsCount?: number;
   sectionId?: string; // Link to shop section
   shopCategoryId?: string; // Link to shop category
+  shopCategoryIds?: string[]; // Link to multiple shop categories
   subCategoryId?: string; // Link to shop sub-category
   isTrending?: boolean;
   isBestseller?: boolean;
@@ -247,6 +248,7 @@ export interface ShopCategory {
   id: string;
   sectionId?: string;
   sectionIds?: string[];
+  specialOccasionIds?: string[];
   name: string; // e.g., "3D Crystals", "Wooden Plaques"
   image: string; // WebP thumbnail
   order?: number;
