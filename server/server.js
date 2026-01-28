@@ -10,7 +10,7 @@ const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCatego
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://viswakumar2004_db_user:yathes2026@cluster0.5r4mxg9.mongodb.net/yathes_sign_galaxy?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URI = process.env.MONGO_URI;
 console.log("---------------------------------------------------");
 console.log("DEBUG: process.env.MONGO_URI:", process.env.MONGO_URI ? "DEFINED" : "UNDEFINED");
 console.log("DEBUG: Connecting to:", MONGO_URI);
@@ -591,19 +591,15 @@ app.post("/api/cart", async (req, res) => {
       console.error("❌ No email provided in cart update request");
       return res.status(400).json({ error: "Email is required" });
     }
-    let user = await User.findOne({ email });
+    // Use findOneAndUpdate with upsert to handle concurrent updates safely and avoid VersionErrors
+    const updatedUser = await User.findOneAndUpdate(
+      { email },
+      { $set: { cart: cart }, $setOnInsert: { wishlist: [] } },
+      { new: true, upsert: true }
+    );
 
-    if (!user) {
-      console.log("...creating new user record for:", email);
-      user = new User({ email, cart, wishlist: [] });
-    } else {
-      console.log("...updating existing user record for:", email);
-      user.cart = cart;
-    }
-
-    await user.save();
     console.log("✅ Cart updated successfully for:", email);
-    res.json({ success: true, cart: user.cart });
+    res.json({ success: true, cart: updatedUser.cart });
   } catch (e) {
     console.error("❌ POST /api/cart Error:", e);
     res.status(500).json({ error: e.message });
