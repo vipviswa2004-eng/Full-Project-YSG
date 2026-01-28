@@ -268,7 +268,7 @@ export const OccasionLanding: React.FC = () => {
                             <p className="text-gray-400 font-medium">Talk to our design experts for personalized bulk orders or unique creations.</p>
                         </div>
                         <a
-                            href="https://wa.me/919944744447"
+                            href="https://wa.me/916380016798"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="bg-white text-gray-900 px-10 py-4 rounded-full font-black hover:bg-primary hover:text-white transition-all shadow-xl flex items-center gap-2"

@@ -383,7 +383,10 @@ export const Home: React.FC = () => {
 
                     <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: "spring" }}>
                       {slide.type === 'link' ? (
-                        <Link to={slide.link!} className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95">
+                        <Link
+                          to={slide.link!}
+                          className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95"
+                        >
                           {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
                         </Link>
                       ) : (
