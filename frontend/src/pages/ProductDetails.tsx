@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { SEO } from '../components/SEO';
 import { RecentlyViewedDetails } from './RecentlyViewedDetails';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -114,6 +115,18 @@ export const ProductDetails: React.FC = () => {
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Check for review action in URL
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('action') === 'review') {
+            // Wait a bit for page load
+            setTimeout(() => {
+                setIsReviewModalOpen(true);
+                scrollToReviews();
+            }, 1000);
+        }
+    }, [window.location.search]);
 
 
 
@@ -631,7 +644,11 @@ export const ProductDetails: React.FC = () => {
                         >
                             {/* Product Info */}
                             <div className="border-b border-gray-100 pb-6">
-                                <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{product.category}</p>
+                                <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">
+                                    {product.isComboOffer
+                                        ? (!product.category || product.category.toUpperCase() === 'UNCATEGORIZED' ? 'Special Combo Offer' : product.category)
+                                        : (!product.category || product.category.toUpperCase() === 'UNCATEGORIZED' ? 'General Gift' : product.category)}
+                                </p>
                                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mt-1 leading-tight">{product.name}</h1>
 
                                 <div className="flex items-center gap-2 mt-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={scrollToReviews}>
@@ -742,16 +759,84 @@ export const ProductDetails: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* Size Variation - Prominently displayed above Custom Text */}
                                 {(() => {
-                                    const sizeVariation = product.variations?.find(v => v.name.toLowerCase() === 'size');
+                                    // Robust check: Look for 'size' or 'items' or 'bundle' variation
+                                    const sizeVariation = product.variations?.find(v =>
+                                        v.name.toLowerCase().includes('size') ||
+                                        v.name.toLowerCase().includes('item') ||
+                                        v.name.toLowerCase().includes('bundle')
+                                    );
+
+                                    // If it's a combo offer, show it as an inclusion list instead of a selection
+                                    if (product.isComboOffer && sizeVariation) {
+                                        // Calculate total items dynamically
+                                        const totalItems = sizeVariation.options.reduce((sum, opt) => {
+                                            const qty = parseInt(opt.label.match(/\d+/)?.[0] || '1');
+                                            return sum + qty;
+                                        }, 0);
+
+                                        return (
+                                            <div className="bg-gradient-to-br from-white to-purple-50/30 rounded-[2rem] p-6 border-2 border-primary/10 shadow-xl shadow-primary/5 relative overflow-hidden group">
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/10 transition-colors" />
+
+                                                <div className="flex items-center gap-3 mb-6">
+                                                    <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+                                                        <Sparkles className="w-5 h-5 text-white animate-pulse" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-black text-gray-900 leading-tight">What's in the Box?</h3>
+                                                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Premium Combo Set Contents</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    {sizeVariation.options.map((opt, i) => (
+                                                        <motion.div
+                                                            key={opt.id}
+                                                            initial={{ opacity: 0, x: -20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            transition={{ delay: i * 0.1 }}
+                                                            className="flex items-center gap-4 bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-primary/30 transition-all hover:scale-[1.02]"
+                                                        >
+                                                            <div className="relative">
+                                                                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center font-black text-primary text-xl">
+                                                                    {opt.label.match(/\d+/)?.[0] || '1'}
+                                                                </div>
+                                                                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-[10px] font-black px-1.5 rounded-md shadow-sm">PCS</div>
+                                                            </div>
+
+                                                            <div className="flex-1">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="font-black text-gray-800 tracking-tight">{opt.label.replace(/^\d+\s*/, '')}</span>
+                                                                    <div className="bg-green-100 text-green-700 p-1 rounded-full">
+                                                                        <CheckCircle className="w-4 h-4" />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">Size: {opt.size || opt.description || 'Standard'}</span>
+                                                                    {opt.description && opt.size && <span className="text-[10px] text-primary/60 font-medium italic">{opt.description}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="mt-6 pt-5 border-t border-dashed border-primary/20 flex items-center justify-between">
+                                                    <span className="text-sm font-bold text-gray-500">Total Items in Bundle:</span>
+                                                    <span className="text-xl font-black text-primary">{totalItems.toString().padStart(2, '0')} Pieces</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    // Fallback to normal display if not combo or no variation found
                                     if (!sizeVariation) return null;
 
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">Select Size</h3>
                                             <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                                {sizeVariation.options.map((opt) => (
+                                                {sizeVariation.options.map((opt: VariationOption) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(sizeVariation.id, opt, sizeVariation.name)}

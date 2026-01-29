@@ -106,6 +106,8 @@ const HERO_SLIDES = [
   }
 ];
 
+const COMBO_BANNER_BG = 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?q=80&w=2070&auto=format&fit=crop';
+
 const BUDGET_OPTIONS = [
   { label: 'Under ₹499', value: '0-499', color: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600' },
   { label: '₹500 - ₹999', value: '500-999', color: 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600' },
@@ -197,21 +199,19 @@ const ScrollableProductSection: React.FC<{
                   </div>
 
                   <div className="p-1.5 md:p-3 flex flex-col flex-grow">
-                    <div className="flex-1">
+                    <div>
                       <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 line-clamp-1">{product.category}</p>
-                      <h3 className="text-[10px] md:text-sm font-semibold text-gray-800 line-clamp-2 h-7 md:h-9 leading-tight group-hover:text-primary transition-colors">{product.name}</h3>
-                      {(product.reviewsCount || 0) > 0 ? (
-                        <div className="flex items-center gap-2 mt-1">
+                      <h3 className="text-[10px] md:text-sm font-semibold text-gray-800 line-clamp-2 leading-tight group-hover:text-primary transition-colors mb-1">{product.name}</h3>
+                      {(product.reviewsCount || 0) > 0 && (
+                        <div className="flex items-center gap-2 mt-1 mb-2">
                           <div className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
                             {product.rating} <Star className="w-2.5 h-2.5 fill-current" />
                           </div>
                           <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">({product.reviewsCount} reviews)</span>
                         </div>
-                      ) : (
-                        <div className="mt-1 h-[18px]"></div>
                       )}
                     </div>
-                    <div className="mt-1 flex items-baseline gap-1 border-t border-gray-50 pt-1">
+                    <div className="mt-1 flex items-baseline gap-1 border-t border-gray-50 pt-2">
                       <span className="text-xs md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span>
                       {(product.discount !== undefined && product.discount > 0) && (
                         <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
@@ -251,6 +251,30 @@ export const Home: React.FC = () => {
 
   // Use context products (from DB)
   const displayProducts = contextProducts || [];
+
+  // Get Combo Offer Products
+  const comboOffers = displayProducts.filter(p => !!p.isComboOffer);
+  console.log('🔍 Home Debug - Total Products:', displayProducts.length, 'Combo Offers:', comboOffers.length);
+
+  // Dynamically build hero slides including combo offers
+  const dynamicHeroSlides = [...HERO_SLIDES];
+
+  // Add first combo offer to the 2nd position (after Valentine) if it exists
+  if (comboOffers.length > 0) {
+    const firstCombo = comboOffers[0];
+    dynamicHeroSlides.splice(1, 0, {
+      id: `combo-${firstCombo.id}`,
+      image: COMBO_BANNER_BG,
+      productImage: firstCombo.image,
+      title: firstCombo.name,
+      subtitle: firstCombo.description?.substring(0, 100) + '...',
+      cta: 'Get Combo Offer',
+      type: 'link',
+      link: `/product/${firstCombo.id}`,
+      tag: 'Special Combo',
+      color: 'text-yellow-400'
+    } as any);
+  }
 
   // Centralized Data Fetching
   useEffect(() => {
@@ -298,10 +322,10 @@ export const Home: React.FC = () => {
   useEffect(() => {
     if (activeHeroView) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % dynamicHeroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [activeHeroView]);
+  }, [activeHeroView, dynamicHeroSlides.length]);
 
   const isInWishlist = (id: string) => wishlist.some(p => p.id === id);
 
@@ -326,7 +350,7 @@ export const Home: React.FC = () => {
       />
       {!activeHeroView ? (
         <div className="relative h-[180px] md:h-[320px] overflow-hidden group bg-gray-900 mt-4 mx-3 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-2 md:border-4 border-white">
-          {HERO_SLIDES.map((slide, index) => (
+          {dynamicHeroSlides.map((slide, index) => (
             <div key={slide.id} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
               <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10 z-10" />
               <img
@@ -426,7 +450,7 @@ export const Home: React.FC = () => {
 
           {/* Slider Indicators */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-3">
-            {HERO_SLIDES.map((_, idx) => (
+            {dynamicHeroSlides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
@@ -437,13 +461,13 @@ export const Home: React.FC = () => {
 
           {/* Navigation Arrows */}
           <button
-            onClick={() => setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+            onClick={() => setCurrentSlide((prev) => (prev - 1 + dynamicHeroSlides.length) % dynamicHeroSlides.length)}
             className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-30 bg-white/20 md:bg-white/10 hover:bg-white p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md text-white hover:text-black transition-all border border-white/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center shadow-lg"
           >
             <ChevronLeft className="w-5 h-5 md:w-8 md:h-8" />
           </button>
           <button
-            onClick={() => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
+            onClick={() => setCurrentSlide((prev) => (prev + 1) % dynamicHeroSlides.length)}
             className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-30 bg-white/20 md:bg-white/10 hover:bg-white p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md text-white hover:text-black transition-all border border-white/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center shadow-lg"
           >
             <ChevronRight className="w-5 h-5 md:w-8 md:h-8" />
@@ -581,12 +605,13 @@ export const Home: React.FC = () => {
         )
       }
 
+
       {/* Occasions Grid */}
       <FadeInSection>
         <div id="shop-by-occasion-section" className="max-w-7xl mx-auto py-4 md:py-6 px-4">
           <h3 className="text-base md:text-xl font-bold text-gray-900 mb-4 md:mb-6 flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> Shop By Occasion</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {shopOccasions.length > 0 ? shopOccasions.slice(0, 4).map((occ, idx) => {
+            {shopOccasions.length > 0 ? [...shopOccasions].sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 4).map((occ, idx) => {
               const staticOcc = OCCASIONS.find(o => o.name === occ.name) || OCCASIONS[idx % OCCASIONS.length];
               return (
                 <Link to={`/products?occasion=${encodeURIComponent(occ.name)}`} key={occ.id} className="relative h-24 md:h-48 rounded-xl overflow-hidden cursor-pointer group shadow-md block">
@@ -782,6 +807,70 @@ export const Home: React.FC = () => {
           formatPrice={formatPrice}
         />
       </FadeInSection>
+      {/* Special Combo Offer Banner Card */}
+      {comboOffers.length > 0 && !activeHeroView && (
+        <FadeInSection>
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="relative group overflow-hidden rounded-[2rem] shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-900/90 to-pink-900/40 z-10" />
+              <img
+                src={COMBO_BANNER_BG}
+                alt="Combo Offer Background"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-[10s]"
+              />
+
+              <div className="relative z-20 p-8 md:p-16 flex flex-col md:flex-row items-center gap-8">
+                <Link to="/shop?filter=combo" className="block text-center md:text-left hover:opacity-90 transition-opacity">
+                  <span className="inline-block bg-yellow-400 text-purple-900 text-xs font-black px-4 py-1 rounded-full uppercase tracking-widest mb-4 shadow-lg animate-bounce">
+                    Limited Time Offer
+                  </span>
+                  <h2 className="text-3xl md:text-6xl font-black text-white mb-4 tracking-tighter leading-tight drop-shadow-lg">
+                    Special <span className="text-yellow-400">Combo</span> Offers!
+                  </h2>
+                </Link>
+                <p className="text-white/80 text-lg md:text-xl font-medium mb-8 max-w-xl text-center md:text-left">
+                  Double the joy with our hand-picked combo sets. Exclusive designs at unbelievable prices.
+                </p>
+                <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                  {comboOffers.slice(0, 3).map(combo => (
+                    <Link
+                      key={combo.id}
+                      to={`/product/${combo.id}`}
+                      className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white hover:text-purple-900 text-white px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105"
+                    >
+                      View {combo.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 flex justify-center relative">
+                <div className="absolute inset-0 bg-yellow-400/20 blur-[100px] rounded-full animate-pulse" />
+                <div className="relative grid grid-cols-2 gap-4">
+                  {comboOffers.slice(0, 2).map((combo, i) => (
+                    <motion.div
+                      key={combo.id}
+                      initial={{ opacity: 0, y: 50 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.2 }}
+                      className={`bg-white rounded-2xl p-2 shadow-2xl transform ${i % 2 === 0 ? '-rotate-6' : 'rotate-6 marginTop-8'} hover:scale-105 transition-transform cursor-pointer`}
+                      style={{ marginTop: i % 2 === 0 ? '0' : '2rem' }}
+                    >
+                      <Link to={`/product/${combo.id}`} className="block">
+                        <img src={combo.image} alt={combo.name} className="w-32 h-32 md:w-48 md:h-48 object-contain rounded-xl" />
+                        <div className="mt-2 text-center">
+                          <p className="text-xs font-black text-slate-800 line-clamp-1">{combo.name}</p>
+                          <p className="text-primary font-black">₹{combo.finalPrice}</p>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </FadeInSection>
+      )}
 
       {/* Best Sellers */}
       <FadeInSection>

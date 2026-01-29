@@ -360,7 +360,14 @@ app.post("/api/orders", async (req, res) => {
 // Update Order Status
 app.put("/api/orders/:id", async (req, res) => {
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = req.body;
+
+    // Automatically set deliveredAt if status is changed to Delivered
+    if (updateData.status === 'Delivered') {
+      updateData.deliveredAt = new Date();
+    }
+
+    const order = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json(order);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -382,8 +389,8 @@ app.use(compression());
 app.get("/api/products", async (req, res) => {
   console.log("📥 GET /api/products requested");
   try {
-    // Browser Caching (5 minutes)
-    res.set("Cache-Control", "public, max-age=300");
+    // res.set("Cache-Control", "public, max-age=300"); // Disabled for real-time updates
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
 
     // Server-Side In-Memory Cache
     if (productCache && (Date.now() - lastCacheTime < CACHE_DURATION)) {
@@ -394,7 +401,7 @@ app.get("/api/products", async (req, res) => {
     console.log("...Fetching Products from DB...");
     const products = await Product.find()
       .limit(5000) // Increase limit to cover full catalog (2000+)
-      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId description isTrending isBestseller rating reviewsCount occasions')
+      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId description isTrending isBestseller isComboOffer status rating reviewsCount occasions')
       .lean()
       .maxTimeMS(10000); // 10s timeout
 
@@ -484,6 +491,7 @@ app.post("/api/products", async (req, res) => {
     let productData = req.body;
     console.log(`📥 [POST] Received create/upsert:`, {
       name: productData.name,
+      isComboOffer: productData.isComboOffer,
       shopCategoryIds: productData.shopCategoryIds,
       subCategoryId: productData.subCategoryId,
       isUpdate: !!productData._id
@@ -496,19 +504,22 @@ app.post("/api/products", async (req, res) => {
       // Update existing product
       const updated = await Product.findByIdAndUpdate(
         productData._id,
-        productData,
+        { $set: productData }, // Use $set to be safe
         { new: true, upsert: true }
       );
+      console.log('✅ Updated product successfully. isComboOffer:', updated.isComboOffer);
       productCache = null;
       res.json(updated);
     } else {
       // Create new product
       const product = new Product(productData);
       await product.save();
+      console.log('✅ Created product successfully. isComboOffer:', product.isComboOffer);
       productCache = null;
       res.json(product);
     }
   } catch (e) {
+    console.error('❌ POST /api/products Error:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -519,6 +530,7 @@ app.put("/api/products/:id", async (req, res) => {
     let productData = req.body;
     console.log(`📥 [PUT] Received update for ${req.params.id}:`, {
       name: productData.name,
+      isComboOffer: productData.isComboOffer,
       shopCategoryIds: productData.shopCategoryIds,
       subCategoryId: productData.subCategoryId
     });
@@ -528,13 +540,24 @@ app.put("/api/products/:id", async (req, res) => {
 
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
-      productData,
+      { $set: productData },
       { new: true }
     );
 
-    console.log(`✅ [PUT] Updated successfully. Result shopCategoryIds:`, updated ? updated.shopCategoryIds : 'null');
+    console.log(`✅ [PUT] Updated successfully. isComboOffer:`, updated ? updated.isComboOffer : 'null');
     productCache = null;
     res.json(updated);
+  } catch (e) {
+    console.error('❌ PUT /api/products Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Diagnostic endpoint
+app.get("/api/debug/combo-offers", async (req, res) => {
+  try {
+    const combos = await Product.find({ isComboOffer: true }).select('name isComboOffer status');
+    res.json({ count: combos.length, products: combos });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -1914,6 +1937,92 @@ app.delete("/api/sellers/:id", async (req, res) => {
   }
 });
 
+// ---------- REVIEW AUTOMATION ----------
+app.post("/api/admin/run-review-automation", async (req, res) => {
+  console.log("🚀 Starting Review Automation Check...");
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Find orders that:
+    // 1. Are Delivered
+    // 2. Haven't had a review request yet
+    // 3. Were delivered at least 24 hours ago
+    const pendingOrders = await Order.find({
+      status: 'Delivered',
+      hasRequestedReview: false,
+      deliveredAt: { $lte: twentyFourHoursAgo }
+    });
+
+    console.log(`🔍 Found ${pendingOrders.length} orders pending review request.`);
+
+    const results = {
+      total: pendingOrders.length,
+      emailed: 0,
+      failed: 0
+    };
+
+    for (const order of pendingOrders) {
+      const email = order.user?.email;
+      if (!email) continue;
+
+      // Construct Review Link (Directs to the product page with a review query param or just the page)
+      // Since we don't have a specific review-only page, we send them to the product details
+      const firstItem = order.items?.[0];
+      const reviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/product/${firstItem?.productId}?action=review`;
+
+      // Email Content
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `How is your ${firstItem?.name || 'gift'}? - Yathes Sign Galaxy`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 24px;">We hope you love it! 🎁</h1>
+            </div>
+            <div style="padding: 30px; color: #374151; line-height: 1.6;">
+              <p>Hi <strong>${order.user?.displayName || 'there'}</strong>,</p>
+              <p>It's been a few days since your order <strong>#${order.orderId || order._id}</strong> was delivered. We'd love to hear what you think of your new <strong>${firstItem?.name}</strong>!</p>
+              
+              <div style="text-align: center; margin: 40px 0;">
+                <a href="${reviewLink}" style="background-color: #4F46E5; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+                  Leave a Review ⭐️
+                </a>
+              </div>
+
+              <p style="font-size: 14px; color: #6B7280;">Your feedback helps us continue creating personalized magic for everyone.</p>
+            </div>
+            <div style="background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #f0f0f0;">
+              © ${new Date().getFullYear()} Yathes Sign Galaxy. All rights reserved.
+            </div>
+          </div>
+        `
+      };
+
+      try {
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+          await transporter.sendMail(mailOptions);
+          results.emailed++;
+
+          // Mark as requested
+          order.hasRequestedReview = true;
+          await order.save();
+        } else {
+          console.warn("⚠️ Email credentials missing, skipping send.");
+        }
+      } catch (err) {
+        console.error(`❌ Failed to send review email to ${email}:`, err);
+        results.failed++;
+      }
+    }
+
+    res.json({ success: true, ...results });
+  } catch (e) {
+    console.error("❌ Review Automation Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- GIFT GENIE ----------
 
 
@@ -1996,7 +2105,11 @@ const warmUpCaches = async () => {
 
     // 3. Fetch Products (Heaviest Payload) - Do this LAST
     const startProd = Date.now();
-    const products = await Product.find().limit(5000).lean().maxTimeMS(10000);
+    const products = await Product.find()
+      .limit(5000)
+      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId description isTrending isBestseller isComboOffer status rating reviewsCount occasions')
+      .lean()
+      .maxTimeMS(10000);
     productCache = products;
     lastCacheTime = Date.now();
     console.log(`✅ [WarmUp] Products: ${products.length} (took ${Date.now() - startProd}ms)`);

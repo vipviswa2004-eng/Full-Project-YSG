@@ -1,8 +1,8 @@
 
 import React, { useEffect } from 'react';
 import { useCart } from '../context';
-import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User, Loader2, Upload, Percent, Tag } from 'lucide-react';
-import { VariationOption } from '../types';
+import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User, Loader2, Upload, Percent, Tag, Gift } from 'lucide-react';
+import { VariationOption, Coupon } from '../types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { verifyPaymentAmount } from '../services/gemini';
 
@@ -20,25 +20,106 @@ export const Cart: React.FC = () => {
 
   // Coupon State
   const [couponCode, setCouponCode] = React.useState('');
-  const [appliedCoupon, setAppliedCoupon] = React.useState<{ code: string; discount: number; type: 'flat' | 'percentage' } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = React.useState<{ code: string; discount: number; type: 'flat' | 'percentage' | 'B2G1'; maxDiscount?: number; maxPurchase?: number } | null>(null);
   const [couponMessage, setCouponMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleApplyCoupon = () => {
-    if (!couponCode.trim()) return;
+  const [availableCoupons, setAvailableCoupons] = React.useState<Coupon[]>([]);
+  const [isLoadingCoupons, setIsLoadingCoupons] = React.useState(true);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/coupons`);
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Only show active and non-expired coupons
+          const now = new Date();
+          const active = data.filter(c =>
+            c.status === 'Active' &&
+            new Date(c.expiryDate) > now &&
+            (c.usageLimit > c.usedCount)
+          );
+          setAvailableCoupons(active);
+        }
+      } catch (error) {
+        console.error('Error fetching coupons:', error);
+      } finally {
+        setIsLoadingCoupons(false);
+      }
+    };
+    fetchCoupons();
+  }, []);
+
+  const handleApplyCoupon = (overrideCode?: string) => {
+    const codeToApply = (overrideCode || couponCode).trim().toUpperCase();
+    if (!codeToApply) return;
 
     setCouponMessage(null);
-    const code = couponCode.toUpperCase();
 
-    if (code === 'WELCOME15') {
-      // Logic from screenshot: Flat ₹20 off
-      setAppliedCoupon({ code: 'WELCOME15', discount: 20, type: 'flat' });
-      setCouponMessage({ type: 'success', text: "'WELCOME15' applied! Savings will be visible at checkout." });
-    } else if (code === 'SAVE10') {
-      setAppliedCoupon({ code: 'SAVE10', discount: 10, type: 'percentage' });
-      setCouponMessage({ type: 'success', text: "'SAVE10' applied! 10% discount applied." });
+    const coupon = availableCoupons.find(c => c.code.toUpperCase() === codeToApply);
+
+    // Rule: Don't allow coupons if cart has any Special Combo Offer
+    const hasComboOffer = cart.some(item => item.isComboOffer);
+    if (hasComboOffer) {
+      setAppliedCoupon(null);
+      setCouponMessage({
+        type: 'error',
+        text: `Coupons cannot be applied to Special Combo Offers.`
+      });
+      return;
+    }
+
+    if (coupon) {
+      // Check for Minimum & Maximum Purchase Requirements
+      // If code is WELCOME26, it requires 1500. Otherwise use coupon.minPurchase if exists.
+      const minRequired = (codeToApply === 'WELCOME26') ? 1500 : (coupon.minPurchase || 0);
+      const maxAllowed = coupon.maxPurchase || 0;
+
+      if (subtotal < minRequired) {
+        setAppliedCoupon(null);
+        setCouponMessage({
+          type: 'error',
+          text: `Minimum purchase of ₹${minRequired} required for this coupon. Your subtotal is ₹${subtotal}.`
+        });
+        return;
+      }
+
+      if (maxAllowed > 0 && subtotal > maxAllowed) {
+        setAppliedCoupon(null);
+        setCouponMessage({
+          type: 'error',
+          text: `This coupon is only valid for orders up to ₹${maxAllowed}. Your order is ₹${subtotal}.`
+        });
+        return;
+      }
+
+      const totalQuantity = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+      if (coupon.discountType === 'B2G1' && totalQuantity < 3) {
+        setAppliedCoupon(null);
+        setCouponMessage({
+          type: 'error',
+          text: `Buy 2 Get 1 requires at least 3 items in your cart. You have ${totalQuantity}.`
+        });
+        return;
+      }
+
+      setAppliedCoupon({
+        code: coupon.code,
+        discount: coupon.value,
+        type: coupon.discountType === 'B2G1' ? 'B2G1' : (coupon.discountType === 'PERCENTAGE' ? 'percentage' : 'flat'),
+        maxDiscount: coupon.maxDiscount,
+        maxPurchase: coupon.maxPurchase
+      });
+      setCouponMessage({
+        type: 'success',
+        text: coupon.discountType === 'B2G1'
+          ? `'${coupon.code}' applied! Your cheapest item(s) will be free.`
+          : `'${coupon.code}' applied! ${coupon.discountType === 'PERCENTAGE' ? `${coupon.value}%` : `₹${coupon.value}`} discount applied.`
+      });
     } else {
       setAppliedCoupon(null);
-      setCouponMessage({ type: 'error', text: "Invalid coupon code" });
+      setCouponMessage({ type: 'error', text: "Invalid or expired coupon code" });
     }
   };
 
@@ -96,11 +177,31 @@ export const Cart: React.FC = () => {
 
   // Calculate Discount
   let discountAmount = 0;
+  const b2g1FreeCounts: Record<string, number> = {};
+
   if (appliedCoupon) {
     if (appliedCoupon.type === 'flat') {
       discountAmount = appliedCoupon.discount;
-    } else {
+    } else if (appliedCoupon.type === 'percentage') {
       discountAmount = (subtotal * appliedCoupon.discount) / 100;
+    } else if (appliedCoupon.type === 'B2G1') {
+      const allItems = cart.flatMap(item =>
+        Array.from({ length: item.quantity }, () => ({ id: item.cartId, price: item.calculatedPrice }))
+      );
+      allItems.sort((a, b) => a.price - b.price);
+      const numFree = Math.floor(allItems.length / 3);
+      const freeOnes = allItems.slice(0, numFree);
+
+      freeOnes.forEach(f => {
+        b2g1FreeCounts[f.id] = (b2g1FreeCounts[f.id] || 0) + 1;
+      });
+
+      discountAmount = freeOnes.reduce((sum, p) => sum + p.price, 0);
+    }
+
+    // Cap with Maximum Discount limit
+    if (appliedCoupon.maxDiscount && appliedCoupon.maxDiscount > 0) {
+      discountAmount = Math.min(discountAmount, appliedCoupon.maxDiscount);
     }
   }
 
@@ -400,7 +501,31 @@ export const Cart: React.FC = () => {
                           </h3>
                           <p className="text-sm text-gray-500 font-medium">{item.category}</p>
                         </div>
-                        <p className="text-lg font-bold text-primary">{formatPrice(item.calculatedPrice * item.quantity)}</p>
+                        <div className="text-right">
+                          {(() => {
+                            const freeCount = b2g1FreeCounts[item.cartId] || 0;
+                            const itemTotalNormal = item.calculatedPrice * item.quantity;
+                            const itemTotalDiscounted = item.calculatedPrice * (item.quantity - freeCount);
+
+                            if (freeCount > 0) {
+                              return (
+                                <div className="flex flex-col items-end">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-400 line-through font-medium">{formatPrice(itemTotalNormal)}</span>
+                                    <span className="text-lg font-black text-green-600">{itemTotalDiscounted === 0 ? 'FREE' : formatPrice(itemTotalDiscounted)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <Gift className="w-3 h-3 text-green-500" />
+                                    <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest bg-green-50 px-2 py-0.5 rounded-md border border-green-100 shadow-sm">
+                                      {freeCount} {freeCount === 1 ? 'Item' : 'Items'} FREE
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <p className="text-lg font-bold text-primary">{formatPrice(itemTotalNormal)}</p>;
+                          })()}
+                        </div>
                       </div>
 
                       <div className="space-y-2 mb-4">
@@ -514,7 +639,7 @@ export const Cart: React.FC = () => {
                             <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-green-500 transition-colors" />
                           </div>
                           <button
-                            onClick={handleApplyCoupon}
+                            onClick={() => handleApplyCoupon()}
                             className="bg-gray-900 text-white font-bold text-xs px-5 rounded-lg hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-95"
                           >
                             APPLY
@@ -525,24 +650,83 @@ export const Cart: React.FC = () => {
                         <div className="space-y-2.5 relative z-10">
                           <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-2">Available Coupons</p>
 
-                          {/* WELCOME15 */}
-                          <div
-                            onClick={() => setCouponCode('WELCOME15')}
-                            className="flex items-start gap-3 bg-white/80 p-3 rounded-xl border border-green-100 hover:border-green-300 hover:bg-white transition-all cursor-pointer group shadow-sm"
-                          >
-                            <div className="mt-0.5 bg-green-50 p-1.5 rounded-lg group-hover:bg-green-100 transition-colors">
-                              <Tag className="w-3.5 h-3.5 text-green-600" />
+                          {isLoadingCoupons ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="w-5 h-5 text-green-600 animate-spin" />
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-black text-xs text-gray-800 bg-gray-100 px-2 py-0.5 rounded border border-gray-200 border-dashed">WELCOME15</span>
-                                <span className="text-[10px] text-green-700 font-bold bg-green-100 px-2 py-0.5 rounded-full">₹20 OFF</span>
-                              </div>
-                              <p className="text-[11px] text-gray-500 font-medium leading-tight">
-                                Flat ₹20 off on your purchase.
-                              </p>
-                            </div>
-                          </div>
+                          ) : availableCoupons.length > 0 ? (
+                            availableCoupons.map((coupon) => {
+                              const totalQuantity = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+                              const minRequired = (coupon.code.toUpperCase() === 'WELCOME26') ? 1500 : (coupon.minPurchase || 0);
+                              const maxAllowed = coupon.maxPurchase || 0;
+
+                              let isApplicable = subtotal >= minRequired && (maxAllowed === 0 || subtotal <= maxAllowed);
+
+                              // Check quantity for B2G1
+                              if (coupon.discountType === 'B2G1' && totalQuantity < 3) {
+                                isApplicable = false;
+                              }
+
+                              return (
+                                <div
+                                  key={coupon.id || coupon._id}
+                                  onClick={() => {
+                                    if (isApplicable) {
+                                      setCouponCode(coupon.code);
+                                      handleApplyCoupon(coupon.code);
+                                    }
+                                  }}
+                                  className={`flex items-start gap-3 p-3 rounded-xl border transition-all shadow-sm ${isApplicable
+                                    ? 'bg-white/80 border-green-100 hover:border-green-300 hover:bg-white cursor-pointer group'
+                                    : 'bg-gray-50/50 border-gray-100 cursor-not-allowed opacity-60'}`}
+                                >
+                                  <div className={`mt-0.5 p-1.5 rounded-lg transition-colors ${isApplicable ? 'bg-green-50 group-hover:bg-green-100' : 'bg-gray-100'}`}>
+                                    <Tag className={`w-3.5 h-3.5 ${isApplicable ? 'text-green-600' : 'text-gray-400'}`} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className={`font-black text-xs px-2 py-0.5 rounded border border-dashed ${isApplicable ? 'text-gray-800 bg-gray-100 border-gray-200' : 'text-gray-400 bg-gray-50 border-gray-200'}`}>{coupon.code}</span>
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isApplicable ? 'text-green-700 bg-green-100' : 'text-gray-500 bg-gray-100'}`}>
+                                        {coupon.discountType === 'PERCENTAGE' ? `${coupon.value}% OFF` : coupon.discountType === 'B2G1' ? 'FREE ITEM' : `₹${coupon.value} OFF`}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-500 font-medium leading-tight mb-1">
+                                      {coupon.discountType === 'PERCENTAGE'
+                                        ? `${coupon.value}% off on your purchase.`
+                                        : coupon.discountType === 'B2G1' ? 'Buy 2 Get 1 Free (cheapest item)' : `Flat ₹${coupon.value} off on your purchase.`}
+                                    </p>
+
+                                    {/* Availability Status Messages */}
+                                    {coupon.discountType === 'B2G1' && totalQuantity < 3 ? (
+                                      <p className="text-[9px] text-red-500 font-bold flex items-center gap-1">
+                                        <AlertTriangle className="w-2.5 h-2.5" />
+                                        Add {3 - totalQuantity} more item(s) to unlock
+                                      </p>
+                                    ) : subtotal < minRequired ? (
+                                      <p className="text-[9px] text-red-500 font-bold flex items-center gap-1">
+                                        <AlertTriangle className="w-2.5 h-2.5" />
+                                        Add ₹{minRequired - subtotal} more to unlock
+                                      </p>
+                                    ) : maxAllowed > 0 && subtotal > maxAllowed ? (
+                                      <p className="text-[9px] text-amber-600 font-bold flex items-center gap-1">
+                                        <AlertTriangle className="w-2.5 h-2.5" />
+                                        Only for orders below ₹{maxAllowed}
+                                      </p>
+                                    ) : (
+                                      <p className="text-[9px] text-green-600 font-bold">
+                                        {maxAllowed > 0
+                                          ? `Valid on orders ₹${minRequired} - ₹${maxAllowed}`
+                                          : `Valid on orders above ₹${minRequired}`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-[11px] text-gray-400 italic">No coupons available at the moment.</p>
+                          )}
 
 
                         </div>

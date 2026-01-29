@@ -165,6 +165,8 @@ export const Shop: React.FC = () => {
             result = result.filter(p => p.isTrending);
         } else if (filterType === 'bestseller' || filterType === 'bestsellers') {
             result = result.filter(p => p.isBestseller);
+        } else if (filterType === 'combo') {
+            result = result.filter(p => !!p.isComboOffer);
         }
 
         if (searchQuery) {
@@ -292,7 +294,8 @@ export const Shop: React.FC = () => {
                             subCategoryFilter ? `${subCategoryFilter} - ${categoryFilter}` :
                                 categoryFilter ? categoryFilter :
                                     occasionFilter ? `${occasionFilter} Gifts` :
-                                        "Shop Personalized Gifts"
+                                        filterType === 'combo' ? 'Special Combo Offers' :
+                                            "Shop Personalized Gifts"
                 }
                 description={`Browse our collection of ${categoryFilter || 'personalized gifts'}. Top quality, best prices.`}
             />
@@ -429,7 +432,8 @@ export const Shop: React.FC = () => {
                                                         (occasionFilter ? occasionFilter :
                                                             (filterType === 'recent' ? 'Recently Viewed' :
                                                                 (filterType === 'trending' ? 'Trending Gifts' :
-                                                                    (filterType === 'bestseller' || filterType === 'bestsellers' ? 'Bestsellers' : 'Shop All Gifts'))))))}
+                                                                    (filterType === 'bestseller' || filterType === 'bestsellers' ? 'Bestsellers' :
+                                                                        (filterType === 'combo' ? 'Special Combo Offers' : 'Shop All Gifts')))))))}
                                         {processedProducts.length > 0 && (
                                             <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-widest border border-primary/10">
                                                 {processedProducts.length} items

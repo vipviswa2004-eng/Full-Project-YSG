@@ -115,17 +115,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                     </div>
                 </div>
 
-                <div className="p-4 bg-white flex-1 border-t border-gray-50 flex flex-col justify-between">
+                <div className="p-4 bg-white border-t border-gray-50 flex flex-col gap-2">
                     <div>
                         <p className="text-[9px] font-black text-gray-400 min-h-[12px] uppercase tracking-tighter mb-1 line-clamp-2">
-                            {product.category}
+                            {product.isComboOffer
+                                ? (!product.category || product.category.toUpperCase() === 'UNCATEGORIZED' ? 'Special Combo Offer' : product.category)
+                                : (!product.category || product.category.toUpperCase() === 'UNCATEGORIZED' ? 'General Gift' : product.category)}
                         </p>
-                        <h3 className="text-xs font-bold text-gray-900 line-clamp-2 h-9 mb-2 transition-colors group-hover:text-primary leading-tight">
+                        <h3 className="text-xs font-bold text-gray-900 line-clamp-2 transition-colors group-hover:text-primary leading-tight mb-1">
                             {product.name}
                         </h3>
                         {/* Conditionally render rating only if there are reviews */}
-                        {(product.reviewsCount || 0) > 0 ? (
-                            <div className="flex items-center gap-2 mb-3">
+                        {(product.reviewsCount || 0) > 0 && (
+                            <div className="flex items-center gap-2 mb-2">
                                 <div className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm shadow-green-600/10">
                                     {product.rating} <Star className="w-2.5 h-2.5 fill-current" />
                                 </div>
@@ -133,13 +135,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                                     ({product.reviewsCount} reviews)
                                 </span>
                             </div>
-                        ) : (
-                            <div className="mb-3 h-[18px]"></div> // Placeholder to maintain vertical consistent spacing or leave empty
                         )}
                     </div>
-                    <div className="flex items-end justify-between mt-auto">
+                    <div className="flex items-end justify-between">
                         <div className="flex flex-col">
-                            <span className="text-base font-black text-gray-900 leading-none">
+                            <span className="text-sm font-black text-gray-900 leading-none">
                                 {formatPrice(prices.final)}
                             </span>
                             {prices.final < prices.original && (
@@ -148,7 +148,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                                 </span>
                             )}
                         </div>
-
                     </div>
                 </div>
             </Link>

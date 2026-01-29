@@ -55,6 +55,7 @@ export const Admin: React.FC = () => {
     const [editedProduct, setEditedProduct] = useState<Product | null>(null);
     const [editTab, setEditTab] = useState<'vital' | 'images' | 'variations' | 'desc'>('vital'); // Removed ai-studio
     const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
+    const [isAutomating, setIsAutomating] = useState(false);
 
     // Removed unused AI state
 
@@ -256,8 +257,10 @@ export const Admin: React.FC = () => {
     };
 
     const handleSaveCoupon = async () => {
-        if (!newCouponData.code || !newCouponData.value || !newCouponData.expiryDate) {
-            alert("Code, Value, and Expiry Date are required.");
+        const isB2G1 = newCouponData.discountType === 'B2G1';
+
+        if (!newCouponData.code || (!isB2G1 && !newCouponData.value) || !newCouponData.expiryDate) {
+            alert(isB2G1 ? "Code and Expiry Date are required." : "Code, Value, and Expiry Date are required.");
             return;
         }
 
@@ -269,6 +272,7 @@ export const Admin: React.FC = () => {
 
             const payload = {
                 ...newCouponData,
+                value: isB2G1 ? 0 : newCouponData.value, // B2G1 doesnt need a value input
                 id: isEditingCoupon ? isEditingCoupon.id : `coup_${Date.now()}`,
                 status: isEditingCoupon ? isEditingCoupon.status : 'Active',
                 usedCount: isEditingCoupon ? isEditingCoupon.usedCount : 0,
@@ -1447,11 +1451,45 @@ export const Admin: React.FC = () => {
         }
     };
 
+    const handleRunAutomation = async () => {
+        if (!window.confirm("This will send review request emails to all customers whose orders were delivered more than 24 hours ago. Continue?")) return;
+
+        setIsAutomating(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/run-review-automation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert(`Automation complete!\n\nTotal Pending: ${result.total}\nEmailed: ${result.emailed}\nFailed: ${result.failed}`);
+                fetchOrders(); // Refresh status
+            } else {
+                alert("Automation failed: " + (result.error || "Unknown error"));
+            }
+        } catch (error) {
+            console.error("Automation Error:", error);
+            alert("Automation failed. Check console.");
+        } finally {
+            setIsAutomating(false);
+        }
+    };
+
     const renderOrders = () => (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold">Order Management</h2>
-                <button onClick={fetchOrders} className="text-sm text-blue-600 hover:underline">Refresh</button>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleRunAutomation}
+                        disabled={isAutomating}
+                        className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1 transition-all ${isAutomating ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg'}`}
+                    >
+                        <LayoutDashboard className="w-3 h-3" />
+                        {isAutomating ? 'Running Automation...' : 'Run Review Automation'}
+                    </button>
+                    <button onClick={fetchOrders} className="text-sm text-blue-600 hover:underline">Refresh</button>
+                </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -1462,6 +1500,7 @@ export const Admin: React.FC = () => {
                             <th className="px-6 py-3">Items</th>
                             <th className="px-6 py-3">Total</th>
                             <th className="px-6 py-3">Status</th>
+                            <th className="px-6 py-3">Delivery / Review</th>
                             <th className="px-6 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -1506,6 +1545,20 @@ export const Admin: React.FC = () => {
                                             'Cancelled'
                                         ].map(s => <option key={s}>{s}</option>)}
                                     </select>
+                                </td>
+                                <td className="px-6 py-4">
+                                    {o.deliveredAt ? (
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
+                                                <Truck className="w-3 h-3" /> {new Date(o.deliveredAt).toLocaleDateString()}
+                                            </span>
+                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full w-fit ${o.hasRequestedReview ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                {o.hasRequestedReview ? 'Review Requested' : 'Automation Pending'}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400 italic text-[10px]">Not delivered yet</span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 text-right space-x-2">
                                     <button className="text-blue-600 text-xs hover:underline">Details</button>
@@ -2639,6 +2692,16 @@ export const Admin: React.FC = () => {
                                                 className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
                                             />
                                             <label htmlFor="isBestseller" className="font-bold text-gray-700">Bestseller Product (Show on Home)</label>
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-6">
+                                            <input
+                                                type="checkbox"
+                                                id="isComboOffer"
+                                                checked={editedProduct.isComboOffer || false}
+                                                onChange={e => setEditedProduct({ ...editedProduct, isComboOffer: e.target.checked })}
+                                                className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="isComboOffer" className="font-bold text-gray-700">Combo Offer Product (Show on Special Banner)</label>
                                         </div>
 
                                         <div className="pt-6 col-span-2">
@@ -5008,16 +5071,20 @@ export const Admin: React.FC = () => {
                                     >
                                         <option value="FIXED">Flat Amount (₹)</option>
                                         <option value="PERCENTAGE">Percentage (%)</option>
+                                        <option value="B2G1">Buy 2 Get 1 (B2G1)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 mb-1">Value</label>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">
+                                        {newCouponData.discountType === 'B2G1' ? 'Value (Not required for B2G1)' : 'Value'}
+                                    </label>
                                     <input
                                         type="number"
-                                        className="w-full border rounded-lg p-2"
-                                        value={newCouponData.value || ''}
-                                        onChange={e => setNewCouponData({ ...newCouponData, value: parseFloat(e.target.value) })}
-                                        placeholder="e.g. 100"
+                                        className={`w-full border rounded-lg p-2 ${newCouponData.discountType === 'B2G1' ? 'bg-gray-100 opacity-50 cursor-not-allowed' : ''}`}
+                                        value={newCouponData.discountType === 'B2G1' ? '' : (newCouponData.value || '')}
+                                        onChange={e => setNewCouponData({ ...newCouponData, value: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                        placeholder={newCouponData.discountType === 'B2G1' ? 'N/A' : 'e.g. 100'}
+                                        disabled={newCouponData.discountType === 'B2G1'}
                                     />
                                 </div>
                             </div>
@@ -5031,14 +5098,48 @@ export const Admin: React.FC = () => {
                                         onChange={e => setNewCouponData({ ...newCouponData, expiryDate: e.target.value })}
                                     />
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 mb-1">Usage Limit</label>
                                     <input
                                         type="number"
                                         className="w-full border rounded-lg p-2"
                                         value={newCouponData.usageLimit || ''}
-                                        onChange={e => setNewCouponData({ ...newCouponData, usageLimit: parseInt(e.target.value) })}
+                                        onChange={e => setNewCouponData({ ...newCouponData, usageLimit: e.target.value ? parseInt(e.target.value) : undefined })}
                                         placeholder="e.g. 1000"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Min Purchase Amount</label>
+                                    <input
+                                        type="number"
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.minPurchase || ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, minPurchase: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                        placeholder="e.g. 1500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Max Purchase Amount (optional)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.maxPurchase || ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, maxPurchase: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                        placeholder="e.g. 3000"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Max Discount Amount (optional)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full border rounded-lg p-2"
+                                        value={newCouponData.maxDiscount || ''}
+                                        onChange={e => setNewCouponData({ ...newCouponData, maxDiscount: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                        placeholder="e.g. 500"
                                     />
                                 </div>
                             </div>

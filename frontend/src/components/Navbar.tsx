@@ -18,6 +18,7 @@ export const Navbar: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
@@ -123,6 +124,12 @@ export const Navbar: React.FC = () => {
           return;
         }
 
+        if (authMode === 'register' && !acceptTerms) {
+          setAuthError('Please accept the terms and conditions');
+          setAuthLoading(false);
+          return;
+        }
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -149,6 +156,12 @@ export const Navbar: React.FC = () => {
         // Login existing user
         if (!emailInput.trim() || !passwordInput.trim()) {
           setAuthError('Email/phone and password are required');
+          setAuthLoading(false);
+          return;
+        }
+
+        if (!acceptTerms) {
+          setAuthError('Please accept the terms and conditions');
           setAuthLoading(false);
           return;
         }
@@ -202,6 +215,7 @@ export const Navbar: React.FC = () => {
     setPasswordInput('');
     setShowPassword(false);
     setAuthError('');
+    setAcceptTerms(false);
   };
 
   const toggleAuthMode = () => {
@@ -211,6 +225,7 @@ export const Navbar: React.FC = () => {
     setPasswordInput('');
     setShowPassword(false);
     setAuthError('');
+    setAcceptTerms(false);
   };
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement> | { key: string }) => {
@@ -630,10 +645,33 @@ export const Navbar: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-2">
+                    <div className="mt-2 text-center">
+                      <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 mb-6">
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center h-5">
+                            <input
+                              id="acceptTerms"
+                              name="acceptTerms"
+                              type="checkbox"
+                              checked={acceptTerms}
+                              onChange={(e) => setAcceptTerms(e.target.checked)}
+                              className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer transition-all duration-200 accent-purple-600"
+                              required
+                            />
+                          </div>
+                          <div className="text-left text-[11px]">
+                            <label htmlFor="acceptTerms" className="font-bold text-gray-800 cursor-pointer block leading-tight">
+                              I accept all <Link to="/privacy" onClick={() => setIsLoginModalOpen(false)} className="text-purple-600 hover:text-purple-800 underline underline-offset-2">Privacy Policy</Link> & <Link to="/terms" onClick={() => setIsLoginModalOpen(false)} className="text-purple-600 hover:text-purple-800 underline underline-offset-2">Terms and Conditions</Link>
+                            </label>
+                            <p className="text-gray-500 mt-1">This is mandatory to proceed with login or registration.</p>
+                          </div>
+                        </div>
+                      </div>
+
                       <a
-                        href={`${import.meta.env.VITE_API_URL}/auth/google`}
-                        className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-sm group"
+                        href={acceptTerms ? `${import.meta.env.VITE_API_URL}/auth/google` : '#'}
+                        onClick={(e) => { if (!acceptTerms) e.preventDefault(); }}
+                        className={`w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-sm group ${!acceptTerms ? 'opacity-50 cursor-not-allowed filter grayscale' : 'hover:bg-gray-50 hover:border-gray-300'}`}
                       >
                         <svg className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -743,10 +781,11 @@ export const Navbar: React.FC = () => {
                           </div>
                         )}
 
+
                         <button
                           type="submit"
-                          disabled={authLoading}
-                          className="w-full flex justify-center items-center py-3.5 px-6 border border-transparent rounded-xl shadow-lg shadow-purple-500/30 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-4 focus:ring-purple-500/30 disabled:opacity-70 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          disabled={authLoading || !acceptTerms}
+                          className={`w-full flex justify-center items-center py-3.5 px-6 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white transition-all ${(!acceptTerms || authLoading) ? 'bg-gray-400 shadow-none cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]'}`}
                         >
                           {authLoading ? (
                             <div className="flex items-center gap-2">

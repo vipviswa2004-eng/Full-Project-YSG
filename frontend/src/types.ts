@@ -67,6 +67,7 @@ export interface Product {
   subCategoryId?: string; // Link to shop sub-category
   isTrending?: boolean;
   isBestseller?: boolean;
+  isComboOffer?: boolean;
   occasions?: string[];
   symbolNumberConfig?: {
     enabled: boolean;
@@ -112,6 +113,8 @@ export interface Order {
   returnReason?: string;
   shippingAddress?: string;
   items?: any[]; // Order items with product details
+  deliveredAt?: string;
+  hasRequestedReview?: boolean;
 }
 
 export type AdminRole = 'Super Admin' | 'Product Manager' | 'Order Manager' | 'Inventory Operator' | 'Finance Manager' | 'Customer Support' | 'Support Agent';
@@ -159,8 +162,11 @@ export interface Coupon {
   _id?: string;
   id: string;
   code: string;
-  discountType: 'PERCENTAGE' | 'FIXED';
+  discountType: 'PERCENTAGE' | 'FIXED' | 'B2G1';
   value: number;
+  minPurchase?: number;
+  maxPurchase?: number;
+  maxDiscount?: number;
   expiryDate: string;
   usageLimit: number;
   usedCount: number;

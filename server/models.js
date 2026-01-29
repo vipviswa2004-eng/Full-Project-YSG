@@ -31,6 +31,7 @@ const ProductSchema = new mongoose.Schema({
   subCategoryId: String,
   isTrending: { type: Boolean, default: false },
   isBestseller: { type: Boolean, default: false },
+  isComboOffer: { type: Boolean, default: false },
   occasions: [String],
   aboutSections: [{
     id: String,
@@ -77,7 +78,9 @@ const OrderSchema = new mongoose.Schema({
   shippingAddress: Object,
   date: { type: Date, default: Date.now },
   orderId: String,
-  paymentId: String
+  paymentId: String,
+  deliveredAt: Date,
+  hasRequestedReview: { type: Boolean, default: false }
 }, { collection: 'orders' });
 
 // Review Schema
@@ -214,9 +217,11 @@ const ReturnRequestSchema = new mongoose.Schema({
 const CouponSchema = new mongoose.Schema({
   id: String,
   code: String,
-  discountType: { type: String, enum: ['PERCENTAGE', 'FIXED'], default: 'FIXED' },
+  discountType: { type: String, enum: ['PERCENTAGE', 'FIXED', 'B2G1'], default: 'FIXED' },
   value: Number,
   minPurchase: Number,
+  maxPurchase: Number,
+  maxDiscount: Number,
   expiryDate: { type: Date, required: true },
   usageLimit: { type: Number, default: 1 },
   usedCount: { type: Number, default: 0 },
