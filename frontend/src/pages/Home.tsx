@@ -341,6 +341,37 @@ export const Home: React.FC = () => {
     toggleWishlist(product);
   };
 
+  // Mobile Swipe Handlers
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null); // Reset
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Next Slide
+      setCurrentSlide((prev) => (prev + 1) % dynamicHeroSlides.length);
+    }
+    if (isRightSwipe) {
+      // Prev Slide
+      setCurrentSlide((prev) => (prev - 1 + dynamicHeroSlides.length) % dynamicHeroSlides.length);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-0 md:pb-16">
       <SEO
@@ -349,10 +380,15 @@ export const Home: React.FC = () => {
         keywords={['custom gifts', 'personalized items', 'home decor', 'corporate gifts', 'gift shop india', 'unique gifts']}
       />
       {!activeHeroView ? (
-        <div className="relative h-[180px] md:h-[320px] overflow-hidden group bg-gray-900 mt-4 mx-3 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-2 md:border-4 border-white">
+        <div
+          className="relative h-[240px] md:h-[400px] overflow-hidden group bg-gray-900 mt-4 mx-3 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl border-2 md:border-4 border-white touch-pan-y"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           {dynamicHeroSlides.map((slide, index) => (
             <div key={slide.id} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10 z-10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent z-10" />
               <img
                 src={slide.image}
                 alt={slide.title}
@@ -384,23 +420,23 @@ export const Home: React.FC = () => {
                 </div>
               )}
               {index === currentSlide && (
-                <div className="absolute inset-0 z-20 flex items-center justify-between px-6 md:px-20 text-white">
-                  <div className="flex flex-col items-start text-left max-w-xl">
+                <div className="absolute inset-0 z-20 flex items-center justify-between px-6 md:px-28 text-white">
+                  <div className="flex flex-col items-start text-left max-w-[85%] md:max-w-xl">
                     <motion.span
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                      className={`${slide.color} font-black text-[9px] md:text-xs uppercase tracking-[0.3em] mb-1 md:mb-3 drop-shadow-sm`}
+                      className={`${slide.color} font-black text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-3 drop-shadow-sm`}
                     >
                       {slide.tag}
                     </motion.span>
                     <motion.h2
                       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, type: "spring" }}
-                      className="text-2xl md:text-5xl font-black mb-2 md:mb-3 tracking-tighter drop-shadow-2xl leading-tight"
+                      className="text-3xl md:text-6xl font-black mb-2 md:mb-4 tracking-tighter drop-shadow-2xl leading-[0.9]"
                     >
                       {slide.title}
                     </motion.h2>
                     <motion.p
                       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                      className="text-[10px] md:text-lg mb-4 md:mb-6 text-gray-200 font-medium drop-shadow-md max-w-[200px] md:max-w-full leading-tight"
+                      className="text-xs md:text-lg mb-4 md:mb-8 text-gray-200 font-medium drop-shadow-md leading-relaxed line-clamp-2 md:line-clamp-none"
                     >
                       {slide.subtitle}
                     </motion.p>
@@ -409,7 +445,7 @@ export const Home: React.FC = () => {
                       {slide.type === 'link' ? (
                         <Link
                           to={slide.link!}
-                          className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95"
+                          className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-full md:rounded-xl font-bold md:font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-lg md:shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95"
                         >
                           {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
                         </Link>
@@ -423,7 +459,7 @@ export const Home: React.FC = () => {
                               el?.scrollIntoView({ behavior: 'smooth' });
                             }
                           }}
-                          className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95"
+                          className="bg-white text-gray-900 px-5 py-2 md:px-8 md:py-3 rounded-full md:rounded-xl font-bold md:font-black text-[10px] md:text-sm hover:bg-black hover:text-white transition-all shadow-lg md:shadow-xl flex items-center gap-1 md:gap-2 transform hover:scale-105 active:scale-95"
                         >
                           {slide.cta} <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
                         </button>
@@ -449,28 +485,28 @@ export const Home: React.FC = () => {
           ))}
 
           {/* Slider Indicators */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
             {dynamicHeroSlides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`h-2 rounded-full transition-all duration-500 ${idx === currentSlide ? 'bg-white w-10 shadow-lg' : 'bg-white/30 w-2 hover:bg-white/50'}`}
+                className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentSlide ? 'bg-white w-6 md:w-10 shadow-lg' : 'bg-white/30 w-1.5 hover:bg-white/50'}`}
               />
             ))}
           </div>
 
-          {/* Navigation Arrows */}
+          {/* Navigation Arrows - Hidden on Mobile */}
           <button
             onClick={() => setCurrentSlide((prev) => (prev - 1 + dynamicHeroSlides.length) % dynamicHeroSlides.length)}
-            className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-30 bg-white/20 md:bg-white/10 hover:bg-white p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md text-white hover:text-black transition-all border border-white/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center shadow-lg"
+            className="absolute left-6 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-white p-3 rounded-full backdrop-blur-md text-white hover:text-black transition-all border border-white/20 hidden md:flex items-center justify-center shadow-lg group-hover:scale-110"
           >
-            <ChevronLeft className="w-5 h-5 md:w-8 md:h-8" />
+            <ChevronLeft className="w-8 h-8" />
           </button>
           <button
             onClick={() => setCurrentSlide((prev) => (prev + 1) % dynamicHeroSlides.length)}
-            className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-30 bg-white/20 md:bg-white/10 hover:bg-white p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md text-white hover:text-black transition-all border border-white/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center shadow-lg"
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-white p-3 rounded-full backdrop-blur-md text-white hover:text-black transition-all border border-white/20 hidden md:flex items-center justify-center shadow-lg group-hover:scale-110"
           >
-            <ChevronRight className="w-5 h-5 md:w-8 md:h-8" />
+            <ChevronRight className="w-8 h-8" />
           </button>
         </div>
       ) : (
