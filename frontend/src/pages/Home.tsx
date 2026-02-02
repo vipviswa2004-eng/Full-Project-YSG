@@ -259,20 +259,20 @@ export const Home: React.FC = () => {
   // Dynamically build hero slides including combo offers
   const dynamicHeroSlides = [...HERO_SLIDES];
 
-  // Add first combo offer to the 2nd position (after Valentine) if it exists
+  // Add generic Combo Offer slide if combos exist
   if (comboOffers.length > 0) {
     const firstCombo = comboOffers[0];
     dynamicHeroSlides.splice(1, 0, {
-      id: `combo-${firstCombo.id}`,
+      id: "special-combo-offers",
       image: COMBO_BANNER_BG,
       productImage: firstCombo.image,
-      title: firstCombo.name,
-      subtitle: firstCombo.description?.substring(0, 100) + '...',
-      cta: 'Get Combo Offer',
+      title: "Valentine's Special Combos",
+      subtitle: "Share the love! Exclusive hand-picked combo sets for your special ones.",
+      cta: 'View Valentine Combos',
       type: 'link',
-      link: `/product/${firstCombo.id}`,
-      tag: 'Special Combo',
-      color: 'text-yellow-400'
+      link: `/shop?filter=combo`,
+      tag: 'Season of Love',
+      color: 'text-rose-400'
     } as any);
   }
 
@@ -682,13 +682,13 @@ export const Home: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="w-full">
-                <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-5 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-4 md:px-[max(1rem,calc((100vw-80rem)/2+1rem))]">
+              <div className="w-full md:max-w-7xl md:mx-auto md:px-0">
+                <div className="flex md:grid md:grid-cols-5 gap-3 md:gap-5 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide snap-x px-4 md:px-0">
                   {shopRecipients.length > 0 ? (
                     shopRecipients.map((recipient) => (
                       <motion.div
                         key={recipient.id}
-                        className="min-w-[42%] md:min-w-0 snap-start"
+                        className="min-w-[28%] md:min-w-0 snap-start"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         initial={{ opacity: 0, scale: 0.9 }}
@@ -718,7 +718,7 @@ export const Home: React.FC = () => {
                     RECIPIENTS.map((rec, i) => (
                       <motion.div
                         key={rec.id}
-                        className="min-w-[42%] md:min-w-0 snap-start"
+                        className="min-w-[28%] md:min-w-0 snap-start"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         initial={{ opacity: 0, x: 20 }}
@@ -753,20 +753,20 @@ export const Home: React.FC = () => {
 
       {/* Trust Strip */}
       <FadeInSection>
-        <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border-y border-purple-100 py-6 md:py-10 mt-6 md:mt-12">
+        <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border-y border-purple-100 py-4 md:py-10 mt-4 md:mt-12">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center mb-4 md:mb-10">
-              <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-black text-gray-400 block mb-2 md:mb-3">Trusted by 10,000+ Customers</span>
+            <div className="text-center mb-3 md:mb-10">
+              <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-black text-gray-400 block mb-1 md:mb-3">Trusted by 10,000+ Customers</span>
               <div className="flex flex-wrap items-center justify-center gap-2 md:gap-6 text-[8px] md:text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
-                <span className="flex items-center gap-1 md:gap-2"><ShieldCheck className="w-2.5 h-2.5 md:w-4 md:h-4 text-green-500" /> Secure UPI Payments</span>
+                <span className="flex items-center gap-1 md:gap-2"><ShieldCheck className="w-2.5 h-2.5 md:w-4 md:h-4 text-green-500" /> Secure UPI</span>
                 <span className="hidden md:inline text-gray-200">|</span>
-                <span className="flex items-center gap-1 md:gap-2"><Truck className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-500" /> Trusted Delivery</span>
+                <span className="flex items-center gap-1 md:gap-2"><Truck className="w-2.5 h-2.5 md:w-4 md:h-4 text-blue-500" /> Fast Delivery</span>
                 <span className="hidden md:inline text-gray-200">|</span>
                 <span className="flex items-center gap-1 md:gap-2"><Zap className="w-2.5 h-2.5 md:w-4 md:h-4 text-amber-500" /> SSL Secured</span>
               </div>
             </div>
             <motion.div
-              className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8"
+              className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-8"
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
@@ -776,53 +776,53 @@ export const Home: React.FC = () => {
             >
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+                className="flex flex-col md:flex-row items-center justify-center gap-1.5 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
               >
-                <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <Truck className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-1.5 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <Truck className="w-4 h-4 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-xs md:text-lg font-bold text-gray-800 block">Free Delivery</span>
-                  <span className="text-xs text-gray-500 hidden md:block">On all orders</span>
+                  <span className="text-[10px] md:text-lg font-bold text-gray-800 block">Free Delivery</span>
+                  <span className="text-[9px] md:text-xs text-gray-500 hidden md:block">On all orders</span>
                 </div>
               </motion.div>
 
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+                className="flex flex-col md:flex-row items-center justify-center gap-1.5 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
               >
-                <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <ShieldCheck className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                <div className="bg-gradient-to-br from-blue-400 to-indigo-500 p-1.5 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <ShieldCheck className="w-4 h-4 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-xs md:text-lg font-bold text-gray-800 block">100% Quality</span>
-                  <span className="text-xs text-gray-500 hidden md:block">Guaranteed</span>
+                  <span className="text-[10px] md:text-lg font-bold text-gray-800 block">100% Quality</span>
+                  <span className="text-[9px] md:text-xs text-gray-500 hidden md:block">Guaranteed</span>
                 </div>
               </motion.div>
 
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+                className="flex flex-col md:flex-row items-center justify-center gap-1.5 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
               >
-                <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <Gift className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                <div className="bg-gradient-to-br from-pink-400 to-rose-500 p-1.5 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <Gift className="w-4 h-4 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-xs md:text-lg font-bold text-gray-800 block">Premium Packaging</span>
-                  <span className="text-xs text-gray-500 hidden md:block">Luxury boxes</span>
+                  <span className="text-[10px] md:text-lg font-bold text-gray-800 block">Premium Pack</span>
+                  <span className="text-[9px] md:text-xs text-gray-500 hidden md:block">Luxury boxes</span>
                 </div>
               </motion.div>
 
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
+                className="flex flex-col md:flex-row items-center justify-center gap-1.5 md:gap-3 group cursor-pointer hover:scale-105 transition-transform duration-300"
               >
-                <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-2 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
-                  <User className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                <div className="bg-gradient-to-br from-orange-400 to-amber-500 p-1.5 md:p-3 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow">
+                  <User className="w-4 h-4 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="text-center md:text-left">
-                  <span className="text-xs md:text-lg font-bold text-gray-800 block">24/7 Support</span>
-                  <span className="text-xs text-gray-500 hidden md:block">Always here</span>
+                  <span className="text-[10px] md:text-lg font-bold text-gray-800 block">24/7 Support</span>
+                  <span className="text-[9px] md:text-xs text-gray-500 hidden md:block">Always here</span>
                 </div>
               </motion.div>
             </motion.div>
@@ -843,11 +843,11 @@ export const Home: React.FC = () => {
           formatPrice={formatPrice}
         />
       </FadeInSection>
-      {/* Special Combo Offer Banner Card */}
+      {/* Special Combo Offer Banner Card - Enhanced */}
       {comboOffers.length > 0 && !activeHeroView && (
         <FadeInSection>
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="relative group overflow-hidden rounded-[2rem] shadow-2xl">
+          <div className="max-w-7xl mx-auto px-4 py-4 md:py-8">
+            <div className="relative group overflow-hidden rounded-[1.5rem] md:rounded-[2rem] shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-900/90 to-pink-900/40 z-10" />
               <img
                 src={COMBO_BANNER_BG}
@@ -855,52 +855,67 @@ export const Home: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-[10s]"
               />
 
-              <div className="relative z-20 p-8 md:p-16 flex flex-col md:flex-row items-center gap-8">
-                <Link to="/shop?filter=combo" className="block text-center md:text-left hover:opacity-90 transition-opacity">
-                  <span className="inline-block bg-yellow-400 text-purple-900 text-xs font-black px-4 py-1 rounded-full uppercase tracking-widest mb-4 shadow-lg animate-bounce">
-                    Limited Time Offer
-                  </span>
-                  <h2 className="text-3xl md:text-6xl font-black text-white mb-4 tracking-tighter leading-tight drop-shadow-lg">
-                    Special <span className="text-yellow-400">Combo</span> Offers!
-                  </h2>
-                </Link>
-                <p className="text-white/80 text-lg md:text-xl font-medium mb-8 max-w-xl text-center md:text-left">
-                  Double the joy with our hand-picked combo sets. Exclusive designs at unbelievable prices.
-                </p>
-                <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                  {comboOffers.slice(0, 3).map(combo => (
-                    <Link
-                      key={combo.id}
-                      to={`/product/${combo.id}`}
-                      className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white hover:text-purple-900 text-white px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105"
-                    >
-                      View {combo.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+              <div className="relative z-20 p-6 md:p-16 flex flex-col xl:flex-row items-center gap-4 md:gap-8">
+                <div className="flex-1 text-center xl:text-left">
+                  <Link to="/shop?filter=combo" className="block hover:opacity-90 transition-opacity">
+                    <span className="inline-block bg-rose-500 text-white text-[10px] md:text-xs font-black px-3 py-1 md:px-4 md:py-1 rounded-full uppercase tracking-widest mb-2 md:mb-4 shadow-lg animate-bounce">
+                      Valentine's Exclusive
+                    </span>
+                    <h2 className="text-2xl md:text-6xl font-black text-white mb-2 md:mb-4 tracking-tighter leading-tight drop-shadow-lg">
+                      Valentine's <span className="text-rose-400">Special</span> Combos!
+                    </h2>
+                  </Link>
+                  <p className="text-white/80 text-sm md:text-xl font-medium mb-4 md:mb-8 max-w-xl mx-auto xl:mx-0 line-clamp-2 md:line-clamp-none">
+                    Double the joy with our hand-picked combo sets. Exclusive designs at unbelievable prices.
+                  </p>
 
-              <div className="flex-1 flex justify-center relative">
-                <div className="absolute inset-0 bg-yellow-400/20 blur-[100px] rounded-full animate-pulse" />
-                <div className="relative grid grid-cols-2 gap-4">
-                  {comboOffers.slice(0, 2).map((combo, i) => (
-                    <motion.div
-                      key={combo.id}
-                      initial={{ opacity: 0, y: 50 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.2 }}
-                      className={`bg-white rounded-2xl p-2 shadow-2xl transform ${i % 2 === 0 ? '-rotate-6' : 'rotate-6 marginTop-8'} hover:scale-105 transition-transform cursor-pointer`}
-                      style={{ marginTop: i % 2 === 0 ? '0' : '2rem' }}
-                    >
-                      <Link to={`/product/${combo.id}`} className="block">
-                        <img src={combo.image} alt={combo.name} className="w-32 h-32 md:w-48 md:h-48 object-contain rounded-xl" />
-                        <div className="mt-2 text-center">
-                          <p className="text-xs font-black text-slate-800 line-clamp-1">{combo.name}</p>
-                          <p className="text-primary font-black">₹{combo.finalPrice}</p>
-                        </div>
+                  {/* Dynamic Combo Buttons */}
+                  <div className="flex flex-wrap gap-2 md:gap-3 justify-center xl:justify-start">
+                    {comboOffers.slice(0, 6).map(combo => (
+                      <Link
+                        key={combo.id}
+                        to={`/product/${combo.id}`}
+                        className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white hover:text-rose-600 text-white px-3 py-2 md:px-5 md:py-2.5 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all transform hover:scale-105 hover:shadow-lg flex items-center gap-1.5 md:gap-2"
+                      >
+                        <Heart className="w-3 h-3 md:w-4 md:h-4 fill-current" /> {combo.name}
                       </Link>
-                    </motion.div>
-                  ))}
+                    ))}
+                    <Link
+                      to="/shop?filter=combo"
+                      className="bg-rose-500 text-white border border-rose-500 hover:bg-white hover:text-rose-600 px-3 py-2 md:px-5 md:py-2.5 rounded-lg md:rounded-xl font-black text-xs md:text-sm transition-all transform hover:scale-105 hover:shadow-lg flex items-center gap-1.5 md:gap-2"
+                    >
+                      View All <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Enhanced Right Side - Showcase */}
+                <div className="flex-1 w-full max-w-2xl mt-4 md:mt-0">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-yellow-400/20 blur-[100px] rounded-full animate-pulse" />
+                    {/* Display up to 3 combo images in an attractive grid/layout */}
+                    <div className="relative grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                      {comboOffers.slice(0, 3).map((combo, i) => (
+                        <motion.div
+                          key={combo.id}
+                          initial={{ opacity: 0, y: 50 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.2 }}
+                          className={`bg-white rounded-xl md:rounded-2xl p-1.5 md:p-2 shadow-2xl transform hover:scale-105 transition-transform cursor-pointer overflow-hidden ${i === 1 ? 'md:-translate-y-8' : ''} ${i === 2 ? 'hidden md:block' : ''}`}
+                        >
+                          <Link to={`/product/${combo.id}`} className="block">
+                            <div className="aspect-square relative overflow-hidden rounded-lg md:rounded-xl bg-gray-50">
+                              <img src={combo.image} alt={combo.name} className="w-full h-full object-contain" />
+                            </div>
+                            <div className="mt-2 md:mt-3 text-center px-2 pb-1 md:pb-2">
+                              <p className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest line-clamp-1 mb-0.5 md:mb-1">{combo.name}</p>
+                              <p className="text-primary font-black text-xs md:text-sm">₹{combo.finalPrice}</p>
+                            </div>
+                          </Link>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

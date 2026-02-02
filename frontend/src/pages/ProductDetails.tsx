@@ -660,15 +660,32 @@ export const ProductDetails: React.FC = () => {
                                     <span className="text-sm text-gray-500">({product.reviewsCount || 0} reviews)</span>
                                 </div>
 
-                                <div className="mt-4 flex items-baseline gap-3">
-                                    <p className="text-3xl font-bold text-gray-900">{formatPrice(prices.final)}</p>
-                                    {prices.final < prices.original && (
-                                        <>
-                                            <p className="text-sm text-gray-500 line-through">{formatPrice(prices.original)}</p>
-                                            <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">
-                                                {Math.round((1 - prices.final / prices.original) * 100)}% OFF
-                                            </span>
-                                        </>
+                                <div className="mt-4">
+                                    <div className="flex items-baseline gap-3">
+                                        <p className="text-3xl font-bold text-gray-900">{formatPrice(prices.final)}</p>
+
+                                        {/* Standard Display for Non-Combos */}
+                                        {!product.isComboOffer && prices.final < prices.original && (
+                                            <>
+                                                <p className="text-sm text-gray-500 line-through">{formatPrice(prices.original)}</p>
+                                                <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">
+                                                    {Math.round((1 - prices.final / prices.original) * 100)}% OFF
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Special Display for Combo Offers */}
+                                    {product.isComboOffer && prices.final < prices.original && (
+                                        <div className="flex flex-col gap-1 mt-1 animate-in fade-in slide-in-from-left-4 duration-500">
+                                            <p className="text-sm text-gray-500 font-medium flex items-center gap-1">
+                                                Worth <span className="line-through decoration-red-400">{formatPrice(prices.original)}</span>
+                                            </p>
+                                            <p className="text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded-lg self-start border border-green-100 shadow-sm flex items-center gap-1">
+                                                <span className="bg-green-600 text-white rounded-full p-0.5"><CheckCircle className="w-3 h-3" /></span>
+                                                You Save {formatPrice(prices.original - prices.final)}
+                                            </p>
+                                        </div>
                                     )}
                                 </div>
                             </div>

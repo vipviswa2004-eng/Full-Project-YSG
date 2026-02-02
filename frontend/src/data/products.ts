@@ -85,9 +85,10 @@ export const calculatePrice = (
     }
   }
 
-  // --- RUNTIME FIX: Ensure Base MRP is X99 AND Diff >= 1000 (Skip if Manual) ---
+  // --- RUNTIME FIX: Ensure Base MRP is X99 AND Diff >= 1000 (Skip if Manual, UNLESS it's a Combo) ---
   // If MRP does not end in 99 OR is less than 1.2x Final Price OR Diff < 1000, force recalculate
-  if (baseFinal > 0 && !product.isManualDiscount) {
+  // For Combos, we ALWAYS want to show a "Worth" price, so we force this check.
+  if (baseFinal > 0 && (!product.isManualDiscount || product.isComboOffer)) {
     const isPremium = (baseMRP + 1) % 100 === 0 && baseMRP > baseFinal * 1.15 && (baseMRP - baseFinal >= 1000);
     if (!isPremium) {
       // Recalculate Logic: Target 1.6x, round to X99
@@ -141,8 +142,8 @@ export const calculatePrice = (
         }
       }
 
-      // --- RUNTIME FIX: Ensure Variation MRP is X99 AND Diff >= 1000 (Skip if Manual) ---
-      if (optFinal > 0 && !option.isManualDiscount) {
+      // --- RUNTIME FIX: Ensure Variation MRP is X99 AND Diff >= 1000 (Skip if Manual, UNLESS it's a Combo) ---
+      if (optFinal > 0 && (!option.isManualDiscount || product.isComboOffer)) {
         const isOptPremium = (optMRP + 1) % 100 === 0 && optMRP > optFinal * 1.15 && (optMRP - optFinal >= 1000);
         if (!isOptPremium) {
           let target = optFinal * 1.6;

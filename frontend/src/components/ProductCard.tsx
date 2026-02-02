@@ -89,7 +89,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                     )}
 
                     <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                        {prices.final < prices.original && (
+                        {/* Only show % OFF badge for non-combo offers */}
+                        {!product.isComboOffer && prices.final < prices.original && (
                             <div className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg shadow-red-600/20 uppercase tracking-tighter">
                                 {Math.round((1 - prices.final / prices.original) * 100)}% OFF
                             </div>
@@ -142,11 +143,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                             <span className="text-sm font-black text-gray-900 leading-none">
                                 {formatPrice(prices.final)}
                             </span>
-                            {prices.final < prices.original && (
-                                <span className="text-[10px] text-gray-400 line-through font-bold mt-1">
-                                    {formatPrice(prices.original)}
-                                </span>
-                            )}
+                            {/* Enhanced Display for Combo Offers in Card */
+                                product.isComboOffer && prices.final < prices.original ? (
+                                    <div className="flex flex-col mt-0.5">
+                                        <p className="text-[10px] text-gray-500 font-medium leading-none">
+                                            Worth <span className="line-through decoration-red-400">{formatPrice(prices.original)}</span>
+                                        </p>
+                                        <p className="text-green-600 font-bold text-[10px] mt-0.5 leading-none">
+                                            You Save {formatPrice(prices.original - prices.final)}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    /* Standard Inline Display for Regular Products */
+                                    prices.final < prices.original && (
+                                        <span className="text-[10px] text-gray-400 line-through font-bold mt-1">
+                                            {formatPrice(prices.original)}
+                                        </span>
+                                    )
+                                )}
                         </div>
                     </div>
                 </div>
