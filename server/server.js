@@ -217,6 +217,15 @@ const memoryCache = {
   }
 };
 
+// ---------- APP VERSION CHECK (DEPLOY & RELOAD) ----------
+// Generated once when the server process starts. 
+// "Deploy" = git pull + restart, so this timestamp acts as the build ID.
+const APP_VERSION = Date.now().toString();
+
+app.get('/api/app-version', (req, res) => {
+  res.json({ version: APP_VERSION });
+});
+
 // ---------- SITEMAP ----------
 app.get('/sitemap.xml', async (req, res) => {
   const DOMAIN = 'https://signgalaxy.com';

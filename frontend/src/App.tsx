@@ -9,6 +9,7 @@ import { WhatsAppChat } from './components/WhatsAppChat';
 import { LocationRequester } from './components/LocationRequester';
 import { WhatsAppRequestModal } from './components/WhatsAppRequestModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { VersionControl } from './components/VersionControl';
 import { Home } from './pages/Home';
 import { Shop } from './pages/Shop';
 import { Customize } from './pages/Customize';
@@ -115,6 +116,7 @@ const AppContent: React.FC = () => {
       <GiftAdvisor />
       <WhatsAppChat />
       <LocationRequester />
+      <VersionControl />
       {showWhatsAppPrompt && <WhatsAppRequestModal />}
       {!isAdminRoute && !location.pathname.startsWith('/product/') && <MobileBottomNav />}
       {!isAdminRoute && <Footer />}
