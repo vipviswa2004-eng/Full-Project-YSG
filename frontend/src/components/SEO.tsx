@@ -17,7 +17,7 @@ interface SEOProps {
     noindex?: boolean;
 }
 
-const DOMAIN = 'https://signgalaxy.com';
+const DOMAIN = 'https://ucgoc.com';
 const DEFAULT_TITLE = 'Sign Galaxy';
 const DEFAULT_DESCRIPTION = 'Explore Sign Galaxy for premium personalized gifts, hand-crafted masterpieces, and corporate branding solutions. Turn your ideas into memorable keepsakes.';
 const DEFAULT_IMAGE = `${DOMAIN}/logo-large.png`; // Improve this if we have a real og-image

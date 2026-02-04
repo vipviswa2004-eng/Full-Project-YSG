@@ -228,7 +228,7 @@ app.get('/api/app-version', (req, res) => {
 
 // ---------- SITEMAP ----------
 app.get('/sitemap.xml', async (req, res) => {
-  const DOMAIN = 'https://signgalaxy.com';
+  const DOMAIN = 'https://ucgoc.com';
   try {
     const products = await Product.find({ status: 'Active' });
     const categories = await ShopCategory.find();
@@ -1895,7 +1895,7 @@ app.post("/api/sellers", async (req, res) => {
             <br/>
             <div style="border-top: 1px solid #eee; padding-top: 20px; color: #888; font-size: 12px; text-align: center;">
               <p>Best regards,<br/><strong>Yathes Sign Galaxy Team</strong></p>
-              <p>Need help? Contact us at support@yathessigngalaxy.com</p>
+              <p>Need help? Contact us at support@ucgoc.com</p>
             </div>
           </div>
         `

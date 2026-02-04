@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { CategoryNav } from './components/CategoryNav';
 import { Footer } from './components/Footer';
@@ -127,9 +127,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <CartProvider>
-      <HashRouter>
+      <BrowserRouter>
         <AppContent />
-      </HashRouter>
+      </BrowserRouter>
     </CartProvider>
   );
 };

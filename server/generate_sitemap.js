@@ -5,18 +5,18 @@ const { Product, ShopCategory, SubCategory } = require('./models');
 require('dotenv').config();
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yathes_sign_galaxy";
-const DOMAIN = 'https://signgalaxy.com';
+const DOMAIN = 'https://ucgoc.com';
 
 async function generateSitemap() {
-    try {
-        await mongoose.connect(MONGO_URI);
-        console.log("Connected to MongoDB for Sitemap generation");
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("Connected to MongoDB for Sitemap generation");
 
-        const products = await Product.find({ status: 'Active' });
-        const categories = await ShopCategory.find();
-        const subCategories = await SubCategory.find();
+    const products = await Product.find({ status: 'Active' });
+    const categories = await ShopCategory.find();
+    const subCategories = await SubCategory.find();
 
-        let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+    let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Static Pages -->
   <url>
@@ -75,16 +75,16 @@ async function generateSitemap() {
   </url>`).join('')}
 </urlset>`;
 
-        const sitemapPath = path.join(__dirname, '..', 'frontend', 'public', 'sitemap.xml');
-        fs.writeFileSync(sitemapPath, sitemap);
-        console.log(`✅ Sitemap generated successfully at ${sitemapPath}`);
-        console.log(`Total URLs: ${6 + categories.length + subCategories.length + products.length}`);
+    const sitemapPath = path.join(__dirname, '..', 'frontend', 'public', 'sitemap.xml');
+    fs.writeFileSync(sitemapPath, sitemap);
+    console.log(`✅ Sitemap generated successfully at ${sitemapPath}`);
+    console.log(`Total URLs: ${6 + categories.length + subCategories.length + products.length}`);
 
-    } catch (err) {
-        console.error("Error generating sitemap:", err);
-    } finally {
-        await mongoose.disconnect();
-    }
+  } catch (err) {
+    console.error("Error generating sitemap:", err);
+  } finally {
+    await mongoose.disconnect();
+  }
 }
 
 generateSitemap();

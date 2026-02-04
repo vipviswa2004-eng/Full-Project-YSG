@@ -243,7 +243,7 @@ export const Cart: React.FC = () => {
           name: user.displayName || user.email.split('@')[0],
           phone: user.phone || ''
         } : {
-          email: 'guest@signgalaxy.com',
+          email: 'guest@ucgoc.com',
           name: 'Guest User'
         },
         items: cart.map(item => ({
