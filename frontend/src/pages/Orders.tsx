@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context';
 import { Package, Truck, CheckCircle, Clock, ChevronDown, ChevronUp, Star, X, MapPin } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 interface OrderItem {
     productId: string;
@@ -135,6 +136,7 @@ export const Orders: React.FC = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 pt-24 pb-12 flex justify-center">
+                <SEO title="Loading Orders" noindex={true} />
                 <div className="animate-pulse flex flex-col items-center">
                     <div className="h-4 w-32 bg-gray-200 rounded mb-4"></div>
                     <div className="h-64 w-full max-w-2xl bg-gray-200 rounded-xl"></div>
@@ -146,6 +148,7 @@ export const Orders: React.FC = () => {
     if (!user) {
         return (
             <div className="min-h-screen bg-app-bg pt-20 pb-12 flex flex-col items-center justify-center px-4">
+                <SEO title="My Orders" noindex={true} />
                 <div className="text-center">
                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">My Orders</h2>
@@ -157,6 +160,7 @@ export const Orders: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg pt-8 pb-12">
+            <SEO title="My Orders" noindex={true} />
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-black text-gray-900 mb-8">My Orders</h1>
 

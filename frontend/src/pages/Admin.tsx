@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
 import { calculatePrice } from '../data/products';
 import { Product, Variation, VariationOption, Order, Shape, Customer, Review, Coupon, Seller, OrderStatus, Transaction, ReturnRequest, Section, ShopCategory, SubCategory, SpecialOccasion, ShopOccasion, ShopRecipient } from '../types';
+import { SEO } from '../components/SEO';
 // import { generateProductImage, generateProductDescription, enhanceProductImage } from '../services/gemini'; // Unused
 import {
     Plus, Minus, Edit, LayoutDashboard, Package,
@@ -437,7 +438,12 @@ export const Admin: React.FC = () => {
     });
 
     if (!user || !user.isAdmin) {
-        return <div className="min-h-screen flex items-center justify-center text-red-600 font-bold">Access Denied</div>;
+        return (
+            <>
+                <SEO title="Access Denied" noindex={true} />
+                <div className="min-h-screen flex items-center justify-center text-red-600 font-bold">Access Denied</div>
+            </>
+        );
     }
 
     const handleDeleteProduct = async (id: string) => {
@@ -2509,6 +2515,7 @@ export const Admin: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg flex font-sans">
+            <SEO title="Admin Dashboard" noindex={true} />
             <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 hidden md:flex h-screen sticky top-0">
                 <div className="p-4 border-b border-slate-700"><h2 className="text-lg font-bold tracking-tight flex gap-2 items-center"><LayoutDashboard className="text-accent" /> Seller Central</h2></div>
                 <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-hide">{[{ id: 'dashboard', label: 'Dashboard', icon: BarChart3 }, { id: 'orders', label: 'Orders', icon: ShoppingBag }, { id: 'products', label: 'Inventory', icon: Package }, { id: 'shop-sections', label: 'Shop Sections', icon: LayoutDashboard }, { id: 'customers', label: 'Customers', icon: Users }, { id: 'sellers', label: 'Sellers', icon: Users }, { id: 'payments', label: 'Payments', icon: DollarSign }, { id: 'logistics', label: 'Logistics', icon: Truck }, { id: 'returns', label: 'Returns', icon: RotateCcw }, { id: 'reviews', label: 'Reviews', icon: Star }, { id: 'coupons', label: 'Coupons', icon: Ticket }, { id: 'security', label: 'Security', icon: ShieldCheck }].map(item => (<button key={item.id} onClick={() => setActiveTab(item.id as any)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === item.id ? 'bg-slate-800 text-white border-l-4 border-accent' : 'text-slate-400 hover:bg-slate-800 hover:text-gray-200'}`}><item.icon className="w-4 h-4" /> {item.label}</button>))}</nav>

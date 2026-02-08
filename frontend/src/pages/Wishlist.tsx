@@ -1,12 +1,12 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCart } from '../context';
 import { calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Trash2, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, ArrowRight, LogIn } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 export const Wishlist: React.FC = () => {
-    const { wishlist, toggleWishlist, currency } = useCart();
+    const { wishlist, toggleWishlist, currency, user, setIsLoginModalOpen } = useCart();
 
     const formatPrice = (price: number) => {
         return currency === 'INR'
@@ -14,9 +14,39 @@ export const Wishlist: React.FC = () => {
             : `$${(price * 0.012).toFixed(2)}`;
     };
 
+    // SEO: Noindex for Wishlist page as it is private/user-specific
+    // Authentication: Require login
+    useEffect(() => {
+        if (!user) {
+            // setIsLoginModalOpen(true); // Optional: Auto-open login modal
+        }
+    }, [user, setIsLoginModalOpen]);
+
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-4">
+                <SEO title="My Wishlist" noindex={true} />
+                <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+                    <div className="bg-purple-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <LogIn className="w-8 h-8 text-purple-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
+                    <p className="text-gray-500 mb-6">Please login to view your wishlist and save your favorite items.</p>
+                    <button
+                        onClick={() => setIsLoginModalOpen(true)}
+                        className="bg-primary text-white px-8 py-3 rounded-full font-bold inline-flex items-center gap-2 hover:bg-purple-800 transition-colors"
+                    >
+                        Login Now <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (wishlist.length === 0) {
         return (
             <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-4">
+                <SEO title="My Wishlist" noindex={true} />
                 <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
                     <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Heart className="w-8 h-8 text-red-500" />
@@ -33,6 +63,7 @@ export const Wishlist: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg py-12 px-4 sm:px-6 lg:px-8">
+            <SEO title="My Wishlist" noindex={true} />
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-extrabold text-gray-900 mb-8 flex items-center gap-3">
                     <Heart className="w-8 h-8 text-red-500 fill-current" /> My Wishlist ({wishlist.length})

@@ -5,6 +5,7 @@ import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTr
 import { VariationOption, Coupon } from '../types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { verifyPaymentAmount } from '../services/gemini';
+import { SEO } from '../components/SEO';
 
 export const Cart: React.FC = () => {
   const { cart, removeFromCart, updateCartItemQuantity, currency, user, clearCart } = useCart();
@@ -385,6 +386,7 @@ export const Cart: React.FC = () => {
   if (cart.length === 0) {
     return (
       <div className="max-w-7xl mx-auto py-16 px-4 text-center">
+        <SEO title="Shopping Cart" noindex={true} />
         <h2 className="text-2xl font-bold text-gray-900">Your cart is empty</h2>
         <p className="mt-4 text-gray-500">Add some personalized gifts to start!</p>
       </div>
@@ -393,6 +395,7 @@ export const Cart: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <SEO title="Shopping Cart" noindex={true} />
       <h1 className="text-3xl font-extrabold text-gray-900 mb-8 flex items-center gap-3">
         Shopping Cart <span className="text-lg font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{cart.length} items</span>
       </h1>

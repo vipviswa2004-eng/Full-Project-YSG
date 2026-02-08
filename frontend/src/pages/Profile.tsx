@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from '../context';
 import { User, Mail, Phone, ShieldCheck, ClipboardCheck, Edit2, Camera, LogOut, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 
 export const Profile: React.FC = () => {
     const { user, setUser } = useCart();
@@ -105,6 +106,7 @@ export const Profile: React.FC = () => {
     if (!user) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
+                <SEO title="Please Sign In" noindex={true} />
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                     <User className="w-10 h-10 text-gray-400" />
                 </div>
@@ -124,6 +126,7 @@ export const Profile: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-app-bg py-8 animate-fade-in-up">
+            <SEO title="My Profile" noindex={true} />
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 {/* Header Section */}
