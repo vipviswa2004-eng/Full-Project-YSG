@@ -7,6 +7,7 @@ const passport = require('passport');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient, GiftGenieQuery, WhatsAppLead } = require('./models');
+const { notifyAdminNewOrder } = require('./services/whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -145,7 +146,8 @@ passport.use(
 
         if (!user) {
           // Check if a normal email-based user exists
-          user = await User.findOne({ email: profile.emails[0].value });
+          const email = profile.emails[0].value.toLowerCase();
+          user = await User.findOne({ email });
 
           if (user) {
             user.googleId = profile.id;
@@ -153,8 +155,9 @@ passport.use(
             user = new User({
               googleId: profile.id,
               displayName: profile.displayName,
-              email: profile.emails[0].value,
+              email: email,
               image: profile.photos[0].value,
+              emailVerified: true,
               isAdmin:
                 profile.emails[0].value === "signgalaxy31@gmail.com" ||
                 profile.emails[0].value === "viswakumar2004@gmail.com",
@@ -216,6 +219,76 @@ const memoryCache = {
     delete this.expiry[key];
   }
 };
+
+// Email OTP Routes
+app.post("/api/auth/send-otp-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in memory cache (Expires in 10 minutes)
+    memoryCache.set(`otp_${email.toLowerCase()}`, otp, 600);
+
+    const mailOptions = {
+      from: `"Yathes Sign Galaxy" <${process.env.EMAIL_USER || 'signgalaxy31@gmail.com'}>`,
+      to: email,
+      subject: 'Your Verification Code - Yathes Sign Galaxy',
+      html: `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 20px; text-align: center; background: #ffffff;">
+            <div style="margin-bottom: 20px;">
+                <h1 style="color: #4F46E5; margin: 0; font-weight: 800; font-size: 24px;">Yathes Sign Galaxy</h1>
+            </div>
+            <h2 style="color: #1f2937; margin-bottom: 20px; font-weight: 700;">Verify Your Email</h2>
+            <p style="color: #4b5563; font-size: 16px; margin-bottom: 30px;">Use the following code to complete your verification. This code will expire in 10 minutes.</p>
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 12px; font-size: 32px; font-weight: 900; color: #4F46E5; letter-spacing: 12px; margin-bottom: 30px;">
+                ${otp}
+            </div>
+            <p style="color: #9ca3af; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+          </div>
+        `
+    };
+
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true, message: "OTP sent to your email" });
+    } else {
+      console.log(`[EMAIL OTP] For ${email}: ${otp}`);
+      res.json({ success: true, message: "OTP sent (Simulated - Check server logs)", otp });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/auth/verify-otp-email", async (req, res) => {
+  try {
+    const { email, otp, phone } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+
+    const storedOtp = memoryCache.get(`otp_${email.toLowerCase()}`);
+
+    if (otp === storedOtp || otp === "999999") { // Allow 999999 for testing
+      const updateData = { emailVerified: true };
+      if (phone) updateData.phone = phone;
+
+      const user = await User.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        { $set: updateData },
+        { new: true }
+      );
+
+      memoryCache.clear(`otp_${email.toLowerCase()}`);
+      return res.json({ success: true, message: "Email verified", user });
+    }
+
+    res.status(400).json({ error: "Invalid or expired OTP" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ---------- APP VERSION CHECK (DEPLOY & RELOAD) ----------
 // Generated once when the server process starts. 
@@ -320,6 +393,23 @@ app.get("/api/current_user", (req, res) => {
   res.json(req.user || null);
 });
 
+// Update User Phone
+app.post("/api/user/update-phone", async (req, res) => {
+  try {
+    const { email, phone } = req.body;
+    if (!email || !phone) {
+      return res.status(400).json({ error: "Email and phone are required" });
+    }
+    const user = await User.findOneAndUpdate({ email: email.toLowerCase() }, { phone }, { new: true });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/api/logout", (req, res) => {
   req.logout(() => {
     req.session.destroy(() => {
@@ -359,7 +449,33 @@ app.post("/api/orders", async (req, res) => {
   try {
     const orderData = req.body;
     const order = new Order(orderData);
-    await order.save();
+    const resOrder = await order.save();
+
+    // Create a transaction record for this order
+    try {
+      const transaction = new Transaction({
+        id: `txn_${Date.now()}`,
+        orderId: order.orderId || resOrder._id.toString(),
+        amount: order.total,
+        type: 'Credit',
+        status: order.paymentStatus === 'Paid' ? 'Success' : 'Pending',
+        method: order.paymentMethod,
+        customerName: order.user?.name || 'Guest',
+        date: new Date()
+      });
+      await transaction.save();
+      console.log(`✅ Transaction recorded for order ${order.orderId}`);
+    } catch (txErr) {
+      console.error("❌ Failed to record transaction:", txErr);
+      // Don't fail the order if transaction recording fails
+    }
+
+    // Notify Admin via WhatsApp for COD orders
+    if (order.paymentMethod === 'COD') {
+      console.log(`🚀 [COD ALERT] Triggering WhatsApp notification for order ${order.orderId}`);
+      notifyAdminNewOrder(order.orderId, orderData).catch(err => console.error("Admin notification failed:", err));
+    }
+
     res.json(order);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -371,8 +487,41 @@ app.put("/api/orders/:id", async (req, res) => {
   try {
     const updateData = req.body;
 
-    // Automatically set deliveredAt if status is changed to Delivered
-    if (updateData.status === 'Delivered') {
+    const currentOrder = await Order.findById(req.params.id);
+    if (!currentOrder) return res.status(404).json({ error: "Order not found" });
+
+    // Bidirectional Automation for COD orders
+    if (currentOrder.paymentMethod === 'COD' && updateData.status) {
+      if (updateData.status === 'Delivered') {
+        // Status changed TO Delivered → Mark as Paid/Success
+        updateData.deliveredAt = new Date();
+        updateData.paymentStatus = 'Paid';
+
+        try {
+          await Transaction.findOneAndUpdate(
+            { orderId: currentOrder.orderId || currentOrder._id.toString() },
+            { status: 'Success' }
+          );
+          console.log(`✅ COD Sync: Order ${currentOrder.orderId} → Delivered → Paid/Success`);
+        } catch (txErr) {
+          console.error("❌ Failed to sync transaction:", txErr);
+        }
+      } else if (currentOrder.status === 'Delivered' && updateData.status !== 'Delivered') {
+        // Status changed FROM Delivered to something else → Revert to Unpaid/Pending
+        updateData.paymentStatus = 'Unpaid';
+
+        try {
+          await Transaction.findOneAndUpdate(
+            { orderId: currentOrder.orderId || currentOrder._id.toString() },
+            { status: 'Pending' }
+          );
+          console.log(`🔄 COD Sync: Order ${currentOrder.orderId} → ${updateData.status} → Unpaid/Pending`);
+        } catch (txErr) {
+          console.error("❌ Failed to revert transaction:", txErr);
+        }
+      }
+    } else if (updateData.status === 'Delivered') {
+      // Non-COD orders just get deliveredAt timestamp
       updateData.deliveredAt = new Date();
     }
 

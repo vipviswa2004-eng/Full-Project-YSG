@@ -61,9 +61,8 @@ async function loginUser(identifier, password) {
             throw new Error('Invalid email/phone or password');
         }
 
-        // Check if user has a password (might be Google-only user)
         if (!user.password) {
-            throw new Error('This account uses Google Sign-In. Please sign in with Google.');
+            throw new Error('This account was created using Google. Please continue with Google login.');
         }
 
         // Verify password

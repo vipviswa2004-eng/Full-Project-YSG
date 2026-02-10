@@ -55,6 +55,7 @@ const UserSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   phone: String,
   password: { type: String, select: false },
+  emailVerified: { type: Boolean, default: false },
   cart: [Object], // Flexible to store productId, quantity, customization, etc. without strict schema validation for now
   wishlist: [String] // Array of product IDs
 }, { timestamps: true, collection: 'users' });
@@ -75,6 +76,7 @@ const OrderSchema = new mongoose.Schema({
   total: Number,
   status: { type: String, default: 'Design Pending' },
   paymentMethod: String,
+  paymentStatus: { type: String, default: 'Unpaid' },
   shippingAddress: Object,
   date: { type: Date, default: Date.now },
   orderId: String,
@@ -196,6 +198,7 @@ const TransactionSchema = new mongoose.Schema({
   id: String,
   orderId: String,
   amount: Number,
+  type: { type: String, default: 'Credit' }, // Credit, Debit, Payout
   status: { type: String, default: 'Completed' },
   date: { type: Date, default: Date.now },
   method: String,

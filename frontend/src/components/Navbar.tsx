@@ -1,29 +1,36 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, LogIn, LogOut, ShieldCheck, UserPlus, Search, Clock, ArrowUpRight, Gift, Heart, ArrowLeft, Briefcase, ArrowRight, ClipboardCheck, Eye, EyeOff } from 'lucide-react';
+import {
+  Menu, X, Search, ShoppingCart, User, Heart, Gift,
+  LogOut, LogIn, UserPlus, ShieldCheck, ClipboardCheck,
+  Eye, EyeOff, ArrowRight, ArrowLeft, ArrowUpRight, Clock
+} from 'lucide-react';
 import { useCart } from '../context';
 // import { products } from '../data/products';
 import { Product } from '../types';
 
 export const Navbar: React.FC = () => {
-  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products, isLoginModalOpen, setIsLoginModalOpen } = useCart();
+  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products, isLoginModalOpen, setIsLoginModalOpen, currency, setCurrency } = useCart();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [emailInput, setEmailInput] = useState('');
-  const [phoneInput, setPhoneInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authError, setAuthError] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = React.useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [googleAccountError, setGoogleAccountError] = React.useState(false);
+  const [authLoading, setAuthLoading] = React.useState(false);
+  const googleBtnRef = React.useRef<HTMLAnchorElement>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  // ... (rest of search logic omitted for brevity in chunk, but I will include it) ...
 
   // Moving Placeholder Logic
   const [placeholderText, setPlaceholderText] = useState('Search for gifts...');
@@ -113,18 +120,19 @@ export const Navbar: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setGoogleAccountError(false); // Reset Google account error
     setAuthLoading(true);
 
     try {
       if (authMode === 'register') {
         // Register new user
-        if (!emailInput.trim() || !passwordInput.trim() || !phoneInput.trim()) {
-          setAuthError('Email, phone number, and password are required');
+        if (!emailInput.trim() || !passwordInput.trim()) {
+          setAuthError('Email and password are required');
           setAuthLoading(false);
           return;
         }
 
-        if (authMode === 'register' && !acceptTerms) {
+        if (!acceptTerms) {
           setAuthError('Please accept the terms and conditions');
           setAuthLoading(false);
           return;
@@ -136,8 +144,8 @@ export const Navbar: React.FC = () => {
           credentials: 'include',
           body: JSON.stringify({
             email: emailInput.trim(),
-            phone: phoneInput.trim(),
-            password: passwordInput
+            password: passwordInput,
+            phone: phoneInput.trim()
           })
         });
 
@@ -150,8 +158,8 @@ export const Navbar: React.FC = () => {
         setUser(data.user);
         setIsLoginModalOpen(false);
         setEmailInput('');
-        setPhoneInput('');
         setPasswordInput('');
+        setPhoneInput('');
       } else {
         // Login existing user
         if (!emailInput.trim() || !passwordInput.trim()) {
@@ -186,9 +194,18 @@ export const Navbar: React.FC = () => {
         setIsLoginModalOpen(false);
         setEmailInput('');
         setPasswordInput('');
+        setPhoneInput('');
       }
     } catch (error: any) {
-      setAuthError(error.message);
+      if (error.message.toLowerCase().includes('google')) {
+        setGoogleAccountError(true);
+        setAuthError('This account was created using Google. Please continue with Google login.');
+        setTimeout(() => {
+          googleBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      } else {
+        setAuthError(error.message);
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -211,20 +228,22 @@ export const Navbar: React.FC = () => {
     setIsLoginModalOpen(true);
     setAuthMode('login');
     setEmailInput('');
-    setPhoneInput('');
     setPasswordInput('');
+    setPhoneInput('');
     setShowPassword(false);
     setAuthError('');
+    setGoogleAccountError(false); // Reset Google account error
     setAcceptTerms(false);
   };
 
   const toggleAuthMode = () => {
     setAuthMode(prev => prev === 'login' ? 'register' : 'login');
     setEmailInput('');
-    setPhoneInput('');
     setPasswordInput('');
+    setPhoneInput('');
     setShowPassword(false);
     setAuthError('');
+    setGoogleAccountError(false); // Reset Google account error
     setAcceptTerms(false);
   };
 
@@ -240,6 +259,13 @@ export const Navbar: React.FC = () => {
   const handleSuggestionClick = (productId: string) => { navigate(`/product/${productId}`); setSearchQuery(''); setShowSuggestions(false); setIsMenuOpen(false); };
   const handleRecentSearchClick = (term: string) => { setSearchQuery(term); saveRecentSearch(term); navigate(`/products?q=${encodeURIComponent(term)}`); setShowSuggestions(false); };
   const clearRecentSearches = (e: React.MouseEvent) => { e.stopPropagation(); setRecentSearches([]); localStorage.removeItem('recentSearches'); };
+
+  const handleCurrencyChange = (newCurrency: 'INR' | 'USD') => {
+    setCurrency(newCurrency);
+    localStorage.setItem('user_currency', newCurrency);
+    setIsMenuOpen(false);
+  };
+
 
   return (
     <>
@@ -362,15 +388,31 @@ export const Navbar: React.FC = () => {
                 <Link to="/orders" className="text-white hover:text-[#f5ebd0] p-1 hidden md:block" title="Orders">
                   <ClipboardCheck className="h-6 w-6" />
                 </Link>
+                {/* Currency Selector */}
+                <button
+                  onClick={() => handleCurrencyChange(currency === 'INR' ? 'USD' : 'INR')}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-800 text-xs font-bold text-white hover:bg-gray-700 transition-colors border border-gray-700 hidden md:flex"
+                  title="Change Currency"
+                >
+                  <span className={`w-2 h-2 rounded-full ${currency === 'INR' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                  {currency}
+                </button>
+
                 <button type="button" onClick={openLoginModal} className="text-white hover:text-[#f5ebd0] items-center gap-2 transition-colors hidden md:flex">
                   {user ? (
                     <div className="flex items-center gap-1">
-                      {/* <span className="text-xs md:text-sm font-bold text-[#f5ebd0] max-w-[80px] truncate hidden md:block">
-                        {user.email.split('@')[0]}
-                      </span> */}
-                      <div className="w-8 h-8 bg-purple-900 rounded-full flex items-center justify-center text-white font-bold border border-purple-700">
-                        {user.email.charAt(0).toUpperCase()}
-                      </div>
+                      {user.image ? (
+                        <img
+                          src={user.image}
+                          alt={user.displayName || "User"}
+                          className="w-8 h-8 rounded-full object-cover border border-purple-700"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-purple-900 rounded-full flex items-center justify-center text-white font-bold border border-purple-700">
+                          {user.email.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center gap-1">
@@ -537,6 +579,26 @@ export const Navbar: React.FC = () => {
                   Gift Genie
                 </button>
                 {user?.isAdmin && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block px-6 py-3 text-red-400 bg-red-900/20 font-medium">Admin Panel</Link>}
+
+                {/* Mobile Currency Selector */}
+                <div className="px-6 py-3 border-t border-gray-800 mt-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-2">Currency</p>
+                  <div className="flex bg-gray-800 rounded-lg p-1 w-fit">
+                    <button
+                      onClick={() => handleCurrencyChange('INR')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${currency === 'INR' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      INR ₹
+                    </button>
+                    <button
+                      onClick={() => handleCurrencyChange('USD')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${currency === 'USD' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      USD $
+                    </button>
+                  </div>
+                </div>
+
                 <div className="border-t border-gray-800 mt-4 pt-4 px-6">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-2">Account</p>
                   <button
@@ -563,7 +625,7 @@ export const Navbar: React.FC = () => {
 
               <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-              <div className="inline-block align-bottom bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full relative animate-scale-in">
+              <div className="inline-block align-bottom bg-white rounded-2xl sm:rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-[94%] sm:w-full relative animate-scale-in">
                 {/* Modern Header Pattern */}
                 <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-purple-600 to-indigo-800 opacity-10 pattern-grid-lg"></div>
 
@@ -576,12 +638,12 @@ export const Navbar: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="px-6 pt-1 pb-6 relative z-0">
+                <div className="px-4 sm:px-6 pt-1 pb-5 sm:pb-6 relative z-0">
                   <div className="text-center mb-3">
-                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4 animate-bounce-short">
-                      {authMode === 'login' ? <LogIn className="h-6 w-6 text-purple-600" /> : <UserPlus className="h-6 w-6 text-purple-600" />}
+                    <div className="mx-auto flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-purple-100 mb-2 sm:mb-4 animate-bounce-short">
+                      {authMode === 'login' ? <LogIn className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" /> : <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />}
                     </div>
-                    <h3 className="text-2xl font-black text-gray-900 tracking-tight" id="modal-title">
+                    <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight" id="modal-title">
                       {user ? 'Welcome Back!' : (authMode === 'login' ? 'Sign In' : 'Join the Galaxy')}
                     </h3>
                     {!user && (
@@ -646,7 +708,7 @@ export const Navbar: React.FC = () => {
                     </div>
                   ) : (
                     <div className="mt-2 text-center">
-                      <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 mb-6">
+                      <div className="bg-purple-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-purple-100 mb-4 sm:mb-6">
                         <div className="flex items-start gap-3">
                           <div className="flex items-center h-5">
                             <input
@@ -669,20 +731,23 @@ export const Navbar: React.FC = () => {
                       </div>
 
                       <a
+                        ref={googleBtnRef}
                         href={acceptTerms ? `${import.meta.env.VITE_API_URL}/auth/google` : '#'}
                         onClick={(e) => { if (!acceptTerms) e.preventDefault(); }}
-                        className={`w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-sm group ${!acceptTerms ? 'opacity-50 cursor-not-allowed filter grayscale' : 'hover:bg-gray-50 hover:border-gray-300'}`}
+                        className={`w-full flex items-center justify-center gap-2 sm:gap-3 bg-white border-2 text-gray-700 font-bold py-2.5 sm:py-3.5 px-4 rounded-xl transition-all duration-300 shadow-sm group ${!acceptTerms ? 'opacity-50 cursor-not-allowed filter grayscale border-transparent' : googleAccountError ? 'border-purple-600 bg-purple-50 ring-4 ring-purple-500/10 scale-[1.02] shadow-xl' : 'border-gray-100 hover:bg-gray-50 hover:border-gray-200'}`}
                       >
-                        <svg className="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                        <svg className={`h-6 w-6 group-hover:scale-110 transition-transform ${googleAccountError ? 'animate-bounce-short' : ''}`} viewBox="0 0 24 24">
                           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05" />
                           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                         </svg>
-                        Continue with Google
+                        <span className={googleAccountError ? 'text-purple-700' : ''}>
+                          {googleAccountError ? 'Click Here to Sign in with Google' : 'Continue with Google'}
+                        </span>
                       </a>
 
-                      <div className="relative my-6">
+                      <div className="relative my-4 sm:my-6">
                         <div className="absolute inset-0 flex items-center">
                           <div className="w-full border-t border-gray-200"></div>
                         </div>
@@ -713,7 +778,8 @@ export const Navbar: React.FC = () => {
                               <input
                                 type={authMode === 'login' ? 'text' : 'email'}
                                 required
-                                className="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
+                                disabled={googleAccountError}
+                                className={`block w-full pl-9 pr-3 py-2.5 sm:py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400 ${googleAccountError ? 'opacity-50 cursor-not-allowed bg-gray-100 grayscale' : ''}`}
                                 placeholder={authMode === 'login' ? "john@example.com" : "john@example.com"}
                                 value={emailInput}
                                 onChange={(e) => setEmailInput(e.target.value)}
@@ -723,18 +789,21 @@ export const Navbar: React.FC = () => {
 
                           {authMode === 'register' && (
                             <div>
-                              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Mobile Number</label>
+                              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">📱 Phone Number (Required)</label>
+                              <p className="text-[10px] text-gray-500 mb-2 ml-1 leading-relaxed italic">
+                                "Add your phone number to receive order updates, delivery alerts, and faster customer support."
+                              </p>
                               <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <Briefcase className="h-4 w-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
+                                  <ShieldCheck className="h-4 w-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
                                 </div>
                                 <input
                                   type="tel"
                                   required
-                                  className="block w-full pl-9 pr-3 py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
-                                  placeholder="+91 99999 99999"
+                                  className="block w-full pl-9 pr-3 py-2.5 sm:py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
+                                  placeholder="+91 XXXXXXXX"
                                   value={phoneInput}
-                                  onChange={(e) => setPhoneInput(e.target.value)}
+                                  onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
                                 />
                               </div>
                             </div>
@@ -749,7 +818,8 @@ export const Navbar: React.FC = () => {
                               <input
                                 type={showPassword ? "text" : "password"}
                                 required
-                                className="block w-full pl-9 pr-10 py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400"
+                                disabled={googleAccountError}
+                                className={`block w-full pl-9 pr-10 py-2.5 sm:py-3 bg-gray-50 border border-transparent text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all font-medium placeholder-gray-400 ${googleAccountError ? 'opacity-50 cursor-not-allowed bg-gray-100 grayscale' : ''}`}
                                 placeholder="••••••••"
                                 value={passwordInput}
                                 onChange={(e) => setPasswordInput(e.target.value)}
@@ -785,7 +855,7 @@ export const Navbar: React.FC = () => {
                         <button
                           type="submit"
                           disabled={authLoading || !acceptTerms}
-                          className={`w-full flex justify-center items-center py-3.5 px-6 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white transition-all ${(!acceptTerms || authLoading) ? 'bg-gray-400 shadow-none cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]'}`}
+                          className={`w-full flex justify-center items-center py-3 sm:py-3.5 px-6 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white transition-all ${(!acceptTerms || authLoading) ? 'bg-gray-400 shadow-none cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98]'}`}
                         >
                           {authLoading ? (
                             <div className="flex items-center gap-2">

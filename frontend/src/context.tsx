@@ -168,44 +168,60 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
                 const dbUser = await res.json();
 
-                // Hydrate cart/wishlist from DB
-                if (dbUser.cart && dbUser.cart.length > 0) {
+                // Hydrate cart/wishlist from DB and merge with current local state
+                if (dbUser.cart && Array.isArray(dbUser.cart)) {
                     // Reconstruct full CartItem objects with product data
-                    const cartItems: CartItem[] = await Promise.all(
-                        dbUser.cart.map(async (dbItem: any) => {
-                            const product = dbProducts.find(p => p.id === dbItem.productId);
+                    const dbCartPromise = dbUser.cart.map(async (dbItem: any) => {
+                        const product = dbProducts.find(p => p.id === dbItem.productId);
+                        if (!product) return null;
+                        return {
+                            ...product,
+                            cartId: dbItem.cartId || `${dbItem.productId}-${Date.now()}-${Math.random()}`,
+                            quantity: dbItem.quantity || 1,
+                            customName: dbItem.customName || '',
+                            customImage: dbItem.customImage || null,
+                            customDesign: dbItem.customDesign || null,
+                            calculatedPrice: dbItem.calculatedPrice || product.pdfPrice,
+                            originalPrice: dbItem.originalPrice || product.pdfPrice,
+                            extraHeads: dbItem.extraHeads || 0,
+                            selectedVariations: dbItem.selectedVariations || {}
+                        } as CartItem;
+                    });
 
-                            if (!product) {
-                                console.warn(`Product ${dbItem.productId} not found for cart item`);
-                                return null;
+                    const dbCartItems = (await Promise.all(dbCartPromise)).filter(item => item !== null) as CartItem[];
+
+                    setCart(prevLocalCart => {
+                        const mergedCart = [...dbCartItems];
+
+                        // Add local items that aren't already in the DB cart
+                        prevLocalCart.forEach(localItem => {
+                            const isDuplicate = mergedCart.some(dbItem =>
+                                dbItem.id === localItem.id &&
+                                dbItem.customName === localItem.customName &&
+                                JSON.stringify(dbItem.selectedVariations) === JSON.stringify(localItem.selectedVariations)
+                            );
+                            if (!isDuplicate) {
+                                mergedCart.push(localItem);
                             }
+                        });
 
-                            return {
-                                ...product,
-                                cartId: `${dbItem.productId}-${Date.now()}-${Math.random()}`,
-                                quantity: dbItem.quantity || 1,
-                                customName: dbItem.customName || '',
-                                customImage: dbItem.customImage || null,
-                                customDesign: dbItem.customDesign || null,
-                                calculatedPrice: dbItem.calculatedPrice || product.pdfPrice,
-                                originalPrice: dbItem.originalPrice || product.pdfPrice,
-                                extraHeads: dbItem.extraHeads || 0,
-                                selectedVariations: dbItem.selectedVariations || {}
-                            } as CartItem;
-                        })
-                    );
-
-                    const validCartItems = cartItems.filter(item => item !== null) as CartItem[];
-                    setCart(validCartItems);
+                        return mergedCart;
+                    });
                 }
 
-                if (dbUser.wishlist && dbUser.wishlist.length > 0) {
-                    // Fetch full product details for wishlist items from DB products
-                    // Use dbProducts state which should be populated by now if app is loaded
-                    const wishlistProducts = dbProducts.filter(p =>
-                        dbUser.wishlist.includes(p.id)
-                    );
-                    setWishlist(wishlistProducts);
+                if (dbUser.wishlist && Array.isArray(dbUser.wishlist)) {
+                    setWishlist(prevLocalWishlist => {
+                        const dbWishlistItems = dbProducts.filter(p => dbUser.wishlist.includes(p.id));
+                        const mergedWishlist = [...dbWishlistItems];
+
+                        prevLocalWishlist.forEach(localItem => {
+                            if (!mergedWishlist.some(dbItem => dbItem.id === localItem.id)) {
+                                mergedWishlist.push(localItem);
+                            }
+                        });
+
+                        return mergedWishlist;
+                    });
                 }
 
                 // Update user state with admin status from DB

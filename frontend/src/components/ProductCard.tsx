@@ -13,7 +13,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, formatPrice }) => {
-    const { wishlist, toggleWishlist } = useCart();
+    const { wishlist, toggleWishlist, user, setIsLoginModalOpen } = useCart();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
 
@@ -53,6 +53,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
     const handleWishlistClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (!user) {
+            setIsLoginModalOpen(true);
+            return;
+        }
         toggleWishlist(product);
     };
 

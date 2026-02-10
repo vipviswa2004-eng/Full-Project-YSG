@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useCart } from '../context';
-import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User, Loader2, Upload, Percent, Tag, Gift } from 'lucide-react';
+import { Trash2, Phone, QrCode, ArrowRight, Minus, Plus, MapPin, PenBox, AlertTriangle, User, Loader2, Upload, Percent, Tag, Gift, Banknote, Wallet, Truck } from 'lucide-react';
 import { VariationOption, Coupon } from '../types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { verifyPaymentAmount } from '../services/gemini';
@@ -23,6 +23,11 @@ export const Cart: React.FC = () => {
   const [couponCode, setCouponCode] = React.useState('');
   const [appliedCoupon, setAppliedCoupon] = React.useState<{ code: string; discount: number; type: 'flat' | 'percentage' | 'B2G1'; maxDiscount?: number; maxPurchase?: number } | null>(null);
   const [couponMessage, setCouponMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Payment Method State
+  const [paymentMethod, setPaymentMethod] = React.useState<'UPI' | 'COD'>('UPI');
+ 
+  const COD_FEE = 70;
 
   const [availableCoupons, setAvailableCoupons] = React.useState<Coupon[]>([]);
   const [isLoadingCoupons, setIsLoadingCoupons] = React.useState(true);
@@ -206,7 +211,7 @@ export const Cart: React.FC = () => {
     }
   }
 
-  const total = Math.max(0, subtotal - discountAmount);
+  const total = Math.max(0, subtotal - discountAmount + (paymentMethod === 'COD' ? COD_FEE : 0));
 
   // UPI Configuration
   const UPI_ID = "Pos.11391465@indus";
@@ -232,9 +237,15 @@ export const Cart: React.FC = () => {
   }, [searchParams]);
 
   const handleCheckout = async () => {
-    if (!window.confirm("Have you completed the payment? Click OK to confirm order and send details.")) {
+    const confirmMessage = paymentMethod === 'COD'
+      ? "Confirm your order with Cash on Delivery?"
+      : "Have you completed the payment? Click OK to confirm order and send details.";
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
+
+    const generatedOrderId = `ORD-${Date.now()}`;
 
     try {
       // 1. Create Order in Database
@@ -247,6 +258,15 @@ export const Cart: React.FC = () => {
           email: 'guest@ucgoc.com',
           name: 'Guest User'
         },
+        shippingAddress: user ? {
+          name: user.displayName || user.email.split('@')[0],
+          address: user.address || '',
+          city: user.city || '',
+          state: user.state || '',
+          pincode: user.pincode || '',
+          addressType: user.addressType || '',
+          phone: user.phone || ''
+        } : null,
         items: cart.map(item => ({
           productId: item.id,
           name: item.name,
@@ -258,10 +278,11 @@ export const Cart: React.FC = () => {
           selectedVariations: item.selectedVariations
         })),
         total: total,
-        status: 'Design Pending',
-        paymentMethod: 'UPI',
-        paymentScreenshot: paymentScreenshot,
-        orderId: `ORD-${Date.now()}`,
+        status: paymentMethod === 'COD' ? 'COD Pending Confirmation' : 'Design Pending',
+        paymentMethod: paymentMethod,
+        paymentStatus: paymentMethod === 'COD' ? 'Unpaid' : 'Paid',
+        paymentScreenshot: paymentMethod === 'COD' ? null : paymentScreenshot,
+        orderId: generatedOrderId,
         date: new Date()
       };
 
@@ -285,10 +306,15 @@ export const Cart: React.FC = () => {
     // 2. Send Details via WhatsApp to MULTIPLE numbers
     const adminNumbers = ['916380016798']; // Admin phone numbers
 
-    let message = "Hello Sign Galaxy 👋\n";
-    message += "I’ve placed an order successfully.\n\n";
-    message += "*ORDER DETAILS*\n";
-    message += "--------------------------------\n";
+    let message = `Hello Sign Galaxy 👋\n`;
+    message += `I’ve placed a *${paymentMethod}* order successfully.\n\n`;
+    message += `*ORDER ID:* ${generatedOrderId}\n`;
+    message += `*ORDER DETAILS*\n`;
+    message += `--------------------------------\n`;
+    if (paymentMethod === 'COD') {
+      message += `⚠️ *PAYMENT METHOD: CASH ON DELIVERY*\n`;
+      message += `--------------------------------\n`;
+    }
 
     cart.forEach((item, idx) => {
       message += `*Item ${idx + 1}: ${item.name}*\n`;
@@ -349,11 +375,21 @@ export const Cart: React.FC = () => {
       message += `*Discount:* -${formatPrice(discountAmount)}\n`;
     }
 
-    message += `*💰 Grand Total: ${formatPrice(total)}*\n`;
-    message += "✅ *Payment Status:* Paid via UPI\n";
-    if (paymentScreenshot) {
-      message += `📄 *Payment Proof:* ${paymentScreenshot}\n`;
+    if (paymentMethod === 'COD') {
+      message += `*COD Handling Fee:* +${formatPrice(70)}\n`;
     }
+
+    message += `*💰 Grand Total: ${formatPrice(total)}*\n`;
+
+    if (paymentMethod === 'COD') {
+      message += "⏳ *Payment Status:* COD (Pending Verification)\n";
+    } else {
+      message += "✅ *Payment Status:* Paid via UPI\n";
+      if (paymentScreenshot) {
+        message += `📄 *Payment Proof:* ${paymentScreenshot}\n`;
+      }
+    }
+
     message += "--------------------------------\n\n";
     message += "📍 *Delivery Details:*\n";
     if (user) {
@@ -460,7 +496,7 @@ export const Cart: React.FC = () => {
           className="group/btn relative px-6 py-2.5 bg-white text-indigo-600 font-bold text-sm rounded-xl border-2 border-indigo-100 hover:border-indigo-600 hover:text-indigo-700 transition-all shadow-sm hover:shadow-md shrink-0 self-start sm:self-center"
         >
           <span className="flex items-center gap-2">
-            <PenBox className="w-4 h-4Group-hover:text-indigo-600" />
+            <PenBox className="w-4 h-4 group-hover:text-indigo-600" />
             {user ? 'Change' : 'Login'}
           </span>
         </button>
@@ -606,14 +642,84 @@ export const Cart: React.FC = () => {
             </div>
             <div className="p-6 space-y-6">
               <div className="text-center bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <span className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-primary/20">1</span>
-                  <h3 className="font-bold text-gray-900">Scan to Pay</h3>
+                {/* Payment Method Selection */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-primary/20">1</span>
+                    <h3 className="font-bold text-gray-900">Select Payment Method</h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod('UPI');
+                        setIsPaymentConfirmed(false);
+                      }}
+                      className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${paymentMethod === 'UPI' ? 'border-primary bg-purple-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                    >
+                      <QrCode className={`w-6 h-6 mb-2 ${paymentMethod === 'UPI' ? 'text-primary' : 'text-gray-400'}`} />
+                      <span className={`text-xs font-bold ${paymentMethod === 'UPI' ? 'text-primary' : 'text-gray-600'}`}>Online UPI</span>
+                    </button>
+
+                  <button
+  type="button"
+  onClick={() => {
+    setPaymentMethod('COD');
+    setIsPaymentConfirmed(false);
+    setPaymentScreenshot(null);
+  }}
+  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
+    paymentMethod === 'COD'
+      ? 'border-primary bg-purple-50'
+      : 'border-gray-100 bg-white hover:border-gray-200'
+  }`}
+>
+  <Wallet className={`w-6 h-6 mb-2 ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-400'}`} />
+  <span className={`text-xs font-bold ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-600'}`}>
+    Cash on Delivery
+  </span>
+</button>
+
+                  </div>
+                
                 </div>
 
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 inline-block mb-3">
-                  <img src={qrCodeUrl} alt="Payment QR Code" className="w-40 h-40 object-contain mx-auto" />
-                </div>
+                {paymentMethod === 'UPI' ? (
+                  <>
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      <span className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-primary/20 text-[10px]">2</span>
+                      <h3 className="font-bold text-gray-900">Scan to Pay</h3>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 inline-block mb-3">
+                      <img src={qrCodeUrl} alt="Payment QR Code" className="w-40 h-40 object-contain mx-auto" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-purple-50 rounded-xl p-5 border border-purple-100 mb-6 text-left">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
+                        <Banknote className="w-4 h-4 text-primary" />
+                      </div>
+                      <h4 className="font-bold text-gray-900 text-sm">COD Benefits</h4>
+                    </div>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2 text-xs text-gray-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0"></div>
+                        Pay only when you receive your order
+                      </li>
+                      <li className="flex items-start gap-2 text-xs text-gray-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0"></div>
+                        Quality check at your doorstep
+                      </li>
+                      <li className="flex items-start gap-2 text-xs text-gray-600">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shrink-0"></div>
+                        Handling fee of ₹{COD_FEE} applies for COD orders
+                      </li>
+                    </ul>
+                  </div>
+                )}
 
                 {/* Coupon Section */}
                 <div className="mb-6 text-left border-b border-gray-200 pb-6">
@@ -786,8 +892,22 @@ export const Cart: React.FC = () => {
                       <span className="font-bold text-green-600">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
+                  {/* Shipping & Handling Breakup */}
+                  <div className="space-y-1 mt-4 mb-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">Shipping Charges</span>
+                      <span className="font-bold text-green-600 uppercase text-[10px]">Free</span>
+                    </div>
+                    {paymentMethod === 'COD' && (
+                      <div className="flex justify-between items-center text-sm animate-fade-in">
+                        <span className="text-gray-500">COD Handling Fee</span>
+                        <span className="font-bold text-gray-900">{formatPrice(COD_FEE)}</span>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Additional Charges Notice */}
-                  <div className="mt-4 mb-4 bg-amber-50/50 border border-amber-100/60 rounded-xl p-3.5">
+                  <div className="mb-4 bg-amber-50/50 border border-amber-100/60 rounded-xl p-3.5">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-amber-600 text-sm">⚠️</span>
                       <h4 className="font-bold text-amber-900/80 text-[10px] uppercase tracking-wider">Additional Charges (if applicable)</h4>
@@ -809,101 +929,103 @@ export const Cart: React.FC = () => {
                   <span className="font-mono select-all truncate">{UPI_ID}</span>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 lg:hidden">
-                  {(() => {
-                    // Generate a unique transaction ref
-                    const tr = `TRX${Date.now()}`;
-                    const tn = `Order Payment`;
-                    const amount = total.toFixed(2);
-                    const commonParams = `pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(tn)}&tr=${tr}`;
+                {paymentMethod === 'UPI' && (
+                  <div className="mt-4 grid grid-cols-2 gap-3 lg:hidden">
+                    {(() => {
+                      // Generate a unique transaction ref
+                      const tr = `TRX${Date.now()}`;
+                      const tn = `Order Payment`;
+                      const amount = total.toFixed(2);
+                      const commonParams = `pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(tn)}&tr=${tr}`;
 
-                    return (
-                      <>
-                        <a
-                          href={`tez://upi/pay?${commonParams}`}
-                          onClick={(e) => {
-                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                              e.preventDefault();
-                              alert('This feature works on mobile devices with the Google Pay app installed. On desktop, please scan the QR code.');
-                            }
-                          }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                        >
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png"
-                            alt="Google Pay"
-                            className="h-6 object-contain"
-                          />
-                        </a>
-                        <a
-                          href={`phonepe://pay?${commonParams}`}
-                          onClick={(e) => {
-                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                              e.preventDefault();
-                              alert('This feature works on mobile devices with the PhonePe app installed. On desktop, please scan the QR code.');
-                            }
-                          }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                        >
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1280px-PhonePe_Logo.svg.png"
-                            alt="PhonePe"
-                            className="h-6 object-contain"
-                          />
-                        </a>
-                        <a
-                          href={`paytmmp://pay?${commonParams}`}
-                          onClick={(e) => {
-                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                              e.preventDefault();
-                              alert('This feature works on mobile devices with the Paytm app installed. On desktop, please scan the QR code.');
-                            }
-                          }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                        >
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/512px-Paytm_Logo_%28standalone%29.svg.png"
-                            alt="Paytm"
-                            className="h-5 object-contain"
-                          />
-                        </a>
-                        <a
-                          href={`upi://pay?${commonParams}`}
-                          onClick={(e) => {
-                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                              e.preventDefault();
-                              alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
-                            }
-                          }}
-                          className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                        >
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Amazon_Pay_logo.svg/1024px-Amazon_Pay_logo.svg.png"
-                            alt="Amazon Pay"
-                            className="h-4 object-contain" // Adjusted height for Amazon Pay's wide logo
-                          />
-                        </a>
-                        <a
-                          href={`upi://pay?${commonParams}`}
-                          onClick={(e) => {
-                            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                              e.preventDefault();
-                              alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
-                            }
-                          }}
-                          className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-gray-800 transition-colors shadow-md gap-2"
-                        >
-                          <span>Other UPI Apps</span>
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/512px-UPI-Logo-vector.svg.png"
-                            alt="UPI"
-                            className="h-4 bg-white rounded p-0.5"
-                          />
-                        </a>
-                      </>
-                    );
-                  })()}
-                </div>
+                      return (
+                        <>
+                          <a
+                            href={`tez://upi/pay?${commonParams}`}
+                            onClick={(e) => {
+                              if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                                e.preventDefault();
+                                alert('This feature works on mobile devices with the Google Pay app installed. On desktop, please scan the QR code.');
+                              }
+                            }}
+                            className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                          >
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png"
+                              alt="Google Pay"
+                              className="h-6 object-contain"
+                            />
+                          </a>
+                          <a
+                            href={`phonepe://pay?${commonParams}`}
+                            onClick={(e) => {
+                              if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                                e.preventDefault();
+                                alert('This feature works on mobile devices with the PhonePe app installed. On desktop, please scan the QR code.');
+                              }
+                            }}
+                            className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                          >
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1280px-PhonePe_Logo.svg.png"
+                              alt="PhonePe"
+                              className="h-6 object-contain"
+                            />
+                          </a>
+                          <a
+                            href={`paytmmp://pay?${commonParams}`}
+                            onClick={(e) => {
+                              if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                                e.preventDefault();
+                                alert('This feature works on mobile devices with the Paytm app installed. On desktop, please scan the QR code.');
+                              }
+                            }}
+                            className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                          >
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/512px-Paytm_Logo_%28standalone%29.svg.png"
+                              alt="Paytm"
+                              className="h-5 object-contain"
+                            />
+                          </a>
+                          <a
+                            href={`upi://pay?${commonParams}`}
+                            onClick={(e) => {
+                              if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                                e.preventDefault();
+                                alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
+                              }
+                            }}
+                            className="flex flex-col items-center justify-center bg-white border border-gray-200 p-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                          >
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Amazon_Pay_logo.svg/1024px-Amazon_Pay_logo.svg.png"
+                              alt="Amazon Pay"
+                              className="h-4 object-contain" // Adjusted height for Amazon Pay's wide logo
+                            />
+                          </a>
+                          <a
+                            href={`upi://pay?${commonParams}`}
+                            onClick={(e) => {
+                              if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                                e.preventDefault();
+                                alert('This feature works on mobile devices with UPI apps installed. On desktop, please scan the QR code.');
+                              }
+                            }}
+                            className="col-span-2 flex items-center justify-center bg-gray-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-gray-800 transition-colors shadow-md gap-2"
+                          >
+                            <span>Other UPI Apps</span>
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/512px-UPI-Logo-vector.svg.png"
+                              alt="UPI"
+                              className="h-4 bg-white rounded p-0.5"
+                            />
+                          </a>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
               <div className="relative">
@@ -921,37 +1043,39 @@ export const Cart: React.FC = () => {
                   <h3 className="font-bold text-gray-900">Confirm Order</h3>
                 </div>
 
-                {/* Payment Screenshot Upload */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Upload Payment Screenshot <span className="text-red-500">*</span></label>
-                  <div className="flex items-center justify-center w-full">
-                    <label htmlFor="payment-screenshot" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${paymentScreenshot ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}`}>
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        {isUploadingPayment ? (
-                          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
-                        ) : paymentScreenshot ? (
-                          <>
-                            <img src={paymentScreenshot} alt="Payment Proof" className="h-20 object-contain mb-1 rounded shadow-sm" />
-                            <p className="text-xs text-green-600 font-semibold">Screenshot Uploaded!</p>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                            <p className="text-xs text-gray-500"><span className="font-semibold">Click to upload</span> payment proof</p>
-                          </>
-                        )}
-                      </div>
-                      <input
-                        id="payment-screenshot"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handlePaymentScreenshotUpload}
-                        disabled={isUploadingPayment}
-                      />
-                    </label>
+                {/* Payment Screenshot Upload (Only for UPI) */}
+                {paymentMethod === 'UPI' && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Upload Payment Screenshot <span className="text-red-500">*</span></label>
+                    <div className="flex items-center justify-center w-full">
+                      <label htmlFor="payment-screenshot" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${paymentScreenshot ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}`}>
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          {isUploadingPayment ? (
+                            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                          ) : paymentScreenshot ? (
+                            <>
+                              <img src={paymentScreenshot} alt="Payment Proof" className="h-20 object-contain mb-1 rounded shadow-sm" />
+                              <p className="text-xs text-green-600 font-semibold">Screenshot Uploaded!</p>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                              <p className="text-xs text-gray-500"><span className="font-semibold">Click to upload</span> payment proof</p>
+                            </>
+                          )}
+                        </div>
+                        <input
+                          id="payment-screenshot"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handlePaymentScreenshotUpload}
+                          disabled={isUploadingPayment}
+                        />
+                      </label>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex items-center justify-center gap-2 mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-100 relative">
                   {isVerifying && (
@@ -967,53 +1091,60 @@ export const Cart: React.FC = () => {
                     checked={isPaymentConfirmed}
                     onChange={async (e) => {
                       if (e.target.checked) {
-                        if (!paymentScreenshot) {
+                        if (paymentMethod === 'UPI' && !paymentScreenshot) {
                           alert("Please upload the payment screenshot first!");
+                          e.target.checked = false;
                           return;
                         }
                         if (!user) {
                           setMissingDetails(["Please login to proceed with your order"]);
                           setShowMissingDetailsModal(true);
+                          e.target.checked = false;
                           return;
                         }
 
                         const missing = [];
-                        if (!user.displayName) missing.push("Display Name");
-                        if (!user.email) missing.push("Email Address");
+                        if (!user.displayName) missing.push("Name");
                         if (!user.phone) missing.push("Phone Number");
-                        if (!user.gender) missing.push("Gender");
+
+                        // Address Details - Crucial for delivery
                         if (!user.address) missing.push("Street Address");
                         if (!user.city) missing.push("City");
                         if (!user.state) missing.push("State");
                         if (!user.pincode) missing.push("Pincode");
-                        if (!user.addressType) missing.push("Address Type");
+                        if (!user.addressType) missing.push("Address Type (Home/Work)");
 
                         if (missing.length > 0) {
                           setMissingDetails(missing);
                           setShowMissingDetailsModal(true);
+                          e.target.checked = false; // Prevent checking the box
                           return;
                         }
 
-                        // Verify Payment Amount
-                        setIsVerifying(true);
-                        const result = await verifyPaymentAmount(paymentScreenshot, total);
-                        setIsVerifying(false);
+                        if (paymentMethod === 'UPI') {
+                          // Verify Payment Amount
+                          setIsVerifying(true);
+                          const result = await verifyPaymentAmount(paymentScreenshot!, total);
+                          setIsVerifying(false);
 
-                        if (!result.verified) {
-                          setVerificationAlert({
-                            title: "Payment couldn't be verified yet",
-                            message: "Don't worry— sometimes this happens if the screenshot isn't clear.",
-                            details: "Please upload a screenshot where:\n1. The paid amount matches your order total.\n2. The recipient name 'YATHES SIGN GALAXY' is visible.\n3. The payment details are not blurred or cropped."
-                          });
-                          e.target.checked = false; // Uncheck
-                          return;
+                          if (!result.verified) {
+                            setVerificationAlert({
+                              title: "Payment couldn't be verified yet",
+                              message: "Don't worry— sometimes this happens if the screenshot isn't clear.",
+                              details: "Please upload a screenshot where:\n1. The paid amount matches your order total.\n2. The recipient name 'YATHES SIGN GALAXY' is visible.\n3. The payment details are not blurred or cropped."
+                            });
+                            e.target.checked = false; // Uncheck
+                            return;
+                          }
                         }
+                        setIsPaymentConfirmed(true);
+                      } else {
+                        setIsPaymentConfirmed(false);
                       }
-                      setIsPaymentConfirmed(e.target.checked);
                     }}
                   />
-                  <label htmlFor="payment-confirmed" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
-                    I have completed the payment of <span className="font-bold text-gray-900">{formatPrice(total)}</span>
+                  <label htmlFor="payment-confirmed" className="text-xs font-bold text-gray-700 cursor-pointer select-none">
+                    {paymentMethod === 'COD' ? 'I agree to pay on delivery & confirmed my address' : 'I have completed the payment with correct amount'}
                   </label>
                 </div>
 
@@ -1096,7 +1227,7 @@ export const Cart: React.FC = () => {
                           }}
                           className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-colors text-sm shadow-lg"
                         >
-                          Upload Again
+                          Try Again
                         </button>
                       </div>
                     </div>
@@ -1112,8 +1243,12 @@ export const Cart: React.FC = () => {
                   {isPaymentConfirmed && (
                     <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
                   )}
-                  <Phone className={`w-5 h-5 mr-2 ${isPaymentConfirmed ? 'animate-bounce-subtle' : ''}`} />
-                  <span>Confirm Payment & Order</span>
+                  {paymentMethod === 'COD' ? (
+                    <Truck className={`w-5 h-5 mr-2 ${isPaymentConfirmed ? 'animate-bounce-subtle' : ''}`} />
+                  ) : (
+                    <Phone className={`w-5 h-5 mr-2 ${isPaymentConfirmed ? 'animate-bounce-subtle' : ''}`} />
+                  )}
+                  <span>{paymentMethod === 'COD' ? 'Confirm COD Order' : 'Confirm Payment & Order'}</span>
                 </button>
                 <p className="mt-3 text-[10px] text-gray-400">Order Ref: #{Date.now().toString().slice(-6)} • Protected with Advanced Cyber Security & Secure Encryption</p>
               </div>

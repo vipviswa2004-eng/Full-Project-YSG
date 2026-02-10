@@ -24,6 +24,7 @@ interface Order {
     total: number;
     items: OrderItem[];
     orderId: string;
+    paymentMethod?: string;
     paymentStatus?: 'Paid' | 'Unpaid' | 'Refunded';
 }
 
@@ -85,6 +86,7 @@ export const Orders: React.FC = () => {
             case 'Shipped': return 'text-blue-600 bg-blue-50 border-blue-200';
             case 'Processing': return 'text-amber-600 bg-amber-50 border-amber-200';
             case 'Cancelled': return 'text-red-600 bg-red-50 border-red-200';
+            case 'COD Pending Confirmation': return 'text-purple-600 bg-purple-50 border-purple-200';
             default: return 'text-gray-600 bg-gray-50 border-gray-200';
         }
     };
@@ -215,7 +217,9 @@ export const Orders: React.FC = () => {
                                                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Total Amount</p>
                                                 <p className="font-extrabold text-gray-900 text-2xl">₹{order.total?.toLocaleString()}</p>
                                                 <div className="flex justify-end mt-1">
-                                                    {(order.paymentStatus === 'Unpaid') ? (
+                                                    {order.paymentMethod === 'COD' ? (
+                                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-wide">Payment: Cash on Delivery</span>
+                                                    ) : order.paymentStatus === 'Unpaid' ? (
                                                         <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 uppercase tracking-wide">Payment: Unpaid</span>
                                                     ) : (
                                                         <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100 uppercase tracking-wide">Payment: Paid</span>

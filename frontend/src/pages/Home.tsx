@@ -392,6 +392,7 @@ export const Home: React.FC = () => {
               <img
                 src={slide.image}
                 alt={slide.title}
+                loading={index === 0 ? "eager" : "lazy"}
                 className={`w-full h-full object-cover transition-transform duration-[10s] ease-linear ${index === currentSlide ? 'scale-110' : 'scale-100'}`}
               />
               {/* Dynamic Heart Rain for Valentine Slide */}

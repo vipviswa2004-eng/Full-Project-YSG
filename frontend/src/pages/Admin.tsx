@@ -8,7 +8,7 @@ import { SEO } from '../components/SEO';
 import {
     Plus, Minus, Edit, LayoutDashboard, Package,
     ShoppingBag, Search, Trash2, X, Filter,
-    DollarSign, Truck, AlertCircle, CheckCircle, BarChart3, Users,
+    DollarSign, Truck, AlertCircle, CheckCircle, Clock, BarChart3, Users,
     Star, Eye, ShieldCheck,
     RotateCcw, Ticket, Ban, ImagePlus
 } from 'lucide-react';
@@ -56,7 +56,10 @@ export const Admin: React.FC = () => {
     const [editedProduct, setEditedProduct] = useState<Product | null>(null);
     const [editTab, setEditTab] = useState<'vital' | 'images' | 'variations' | 'desc'>('vital'); // Removed ai-studio
     const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
+    const [viewOrder, setViewOrder] = useState<Order | null>(null);
     const [isAutomating, setIsAutomating] = useState(false);
+    const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
+    const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
     // Removed unused AI state
 
@@ -190,6 +193,20 @@ export const Admin: React.FC = () => {
         }
     };
 
+    const fetchTransactions = async () => {
+        try {
+            console.log('🔄 Fetching transactions...');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions`);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setTransactions(data);
+                console.log(`✅ Transactions updated: ${data.length} records`);
+            }
+        } catch (error) {
+            console.error("Failed to fetch transactions", error);
+        }
+    };
+
 
 
 
@@ -312,23 +329,6 @@ export const Admin: React.FC = () => {
         } catch (e) { console.error(e); alert("Failed to delete coupon"); }
     };
 
-    useEffect(() => {
-        console.log('🔄 Loading products from database...');
-        fetch(`${import.meta.env.VITE_API_URL}/api/products?t=${Date.now()}`, {
-            headers: { 'Cache-Control': 'no-cache' }
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    setProductList(data);
-                }
-            })
-            .catch(err => console.error("❌ Failed to load products:", err));
-
-        fetchReviews();
-        fetchShopData();
-        fetchSellerList();
-    }, []);
 
     const handleShopItemSave = async (type: 'sections' | 'categories' | 'sub-categories' | 'special-occasions' | 'shop-occasions' | 'shop-recipients', data: any) => {
         try {
@@ -531,18 +531,40 @@ export const Admin: React.FC = () => {
     const updateOrderStatus = async (id: string, status: OrderStatus) => {
         try {
             const order = orders.find(o => o.id === id);
-            if (!order || !(order as any)._id) return; // Need _id for API
+            if (!order || !(order as any)._id) return;
 
-            await fetch(`${import.meta.env.VITE_API_URL}/api/orders/${(order as any)._id}`, {
+            // Set loading state
+            setUpdatingOrderId(id);
+
+            // Optimistically update UI immediately for instant feedback
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+
+            // Send update to backend
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/${(order as any)._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             });
 
-            // Optimistic update or fetch
-            setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+            if (!response.ok) {
+                throw new Error('Failed to update order status');
+            }
+
+            // Wait for both data refreshes to complete in parallel
+            await Promise.all([
+                fetchOrders(),
+                fetchTransactions()
+            ]);
+
+            console.log(`✅ Order ${order.orderId || id} status updated to ${status}`);
         } catch (error) {
             console.error("Failed to update order status", error);
+            // Revert optimistic update on error
+            fetchOrders();
+            alert('Failed to update order status. Please try again.');
+        } finally {
+            // Clear loading state
+            setUpdatingOrderId(null);
         }
     };
 
@@ -1325,14 +1347,18 @@ export const Admin: React.FC = () => {
     };
 
     const fetchOrders = async () => {
+        setIsRefreshingOrders(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders?t=${Date.now()}`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setOrders(data);
             }
         } catch (error) {
             console.error("Failed to fetch orders", error);
+        } finally {
+            // Artificial delay for visual feedback
+            setTimeout(() => setIsRefreshingOrders(false), 500);
         }
     };
 
@@ -1379,20 +1405,6 @@ export const Admin: React.FC = () => {
             name: newName,
             occasions: Array.from(currentOccasions)
         });
-    };
-
-
-
-    const fetchTransactions = async () => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions`);
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setTransactions(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch transactions", error);
-        }
     };
 
     const fetchReturns = async () => {
@@ -1494,7 +1506,23 @@ export const Admin: React.FC = () => {
                         <LayoutDashboard className="w-3 h-3" />
                         {isAutomating ? 'Running Automation...' : 'Run Review Automation'}
                     </button>
-                    <button onClick={fetchOrders} className="text-sm text-blue-600 hover:underline">Refresh</button>
+                    <button
+                        onClick={fetchOrders}
+                        disabled={isRefreshingOrders}
+                        className={`text-sm font-bold px-4 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${isRefreshingOrders ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-blue-600 border-blue-100 hover:border-blue-300 hover:bg-blue-50 shadow-sm'}`}
+                    >
+                        {isRefreshingOrders ? (
+                            <>
+                                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                                Refreshing...
+                            </>
+                        ) : (
+                            <>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Refresh
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
@@ -1513,8 +1541,13 @@ export const Admin: React.FC = () => {
                     <tbody className="divide-y divide-gray-200">
                         {orders.map(o => (
                             <tr key={o.id}>
-                                <td className="px-6 py-4 font-bold text-primary">{o.id}</td>
-                                <td className="px-6 py-4">{o.customerName}</td>
+                                <td className="px-6 py-4 font-bold text-primary">{o.orderId || o.id}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-gray-900">{o.user?.name || 'N/A'}</span>
+                                        <span className="text-xs text-gray-500">{o.user?.email}</span>
+                                    </div>
+                                </td>
                                 <td className="px-6 py-4">
                                     <div className="space-y-2">
                                         {o.items?.map((item, idx) => (
@@ -1538,9 +1571,18 @@ export const Admin: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4">₹{o.total}</td>
                                 <td className="px-6 py-4">
-                                    <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value as OrderStatus)} className="border rounded text-xs p-1 bg-gray-50 max-w-[120px]">
+                                    <select
+                                        value={o.status}
+                                        onChange={(e) => updateOrderStatus(o.id, e.target.value as OrderStatus)}
+                                        disabled={updatingOrderId === o.id}
+                                        className={`border rounded text-xs p-1 max-w-[120px] transition-all ${updatingOrderId === o.id
+                                            ? 'bg-blue-50 border-blue-300 cursor-wait opacity-75'
+                                            : 'bg-gray-50 hover:bg-white cursor-pointer'
+                                            }`}
+                                    >
                                         {[
                                             'Payment Confirmed',
+                                            'COD Pending Confirmation',
                                             'Design Pending',
                                             'Design Sent',
                                             'Design Approved',
@@ -1566,14 +1608,212 @@ export const Admin: React.FC = () => {
                                         <span className="text-gray-400 italic text-[10px]">Not delivered yet</span>
                                     )}
                                 </td>
-                                <td className="px-6 py-4 text-right space-x-2">
-                                    <button className="text-blue-600 text-xs hover:underline">Details</button>
+                                <td className="px-6 py-4 text-right">
+                                    <button
+                                        onClick={() => setViewOrder(o)}
+                                        className="text-blue-600 text-xs font-bold hover:underline bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 hover:bg-blue-100"
+                                    >
+                                        Details
+                                    </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* Order Details Modal */}
+            {viewOrder && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-100 animate-scale-in">
+                        {/* Header */}
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div>
+                                <h3 className="text-xl font-black text-gray-900">Order Details</h3>
+                                <p className="text-sm text-gray-500 font-mono">ID: {viewOrder.orderId || viewOrder.id}</p>
+                            </div>
+                            <button
+                                onClick={() => setViewOrder(null)}
+                                className="p-2 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200"
+                            >
+                                <X className="w-6 h-6 text-gray-400" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-8 pb-32">
+                            {/* Customer & Shipping Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <Users className="w-3.5 h-3.5" /> Customer Info
+                                    </h4>
+                                    <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500 text-xs">Name</span>
+                                            <span className="text-gray-900 font-bold text-sm">{viewOrder.user?.name || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500 text-xs">Email</span>
+                                            <span className="text-gray-900 font-bold text-sm truncate ml-2" title={viewOrder.user?.email}>{viewOrder.user?.email || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500 text-xs">Phone</span>
+                                            <span className="text-gray-900 font-bold text-sm">{viewOrder.user?.phone || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <Truck className="w-3.5 h-3.5" /> Shipping Address
+                                    </h4>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 h-full">
+                                        {(() => {
+                                            const addr = viewOrder.shippingAddress;
+                                            if (typeof addr === 'string' && addr.trim()) return <p className="text-sm text-gray-700 leading-relaxed">{addr}</p>;
+                                            if (typeof addr === 'object' && addr !== null && Object.keys(addr).length > 0) {
+                                                const hasDetails = addr.address || addr.city || addr.state;
+                                                if (!hasDetails) return <p className="text-sm text-gray-400 italic">Address details missing</p>;
+                                                return (
+                                                    <div className="text-sm text-gray-700 space-y-1">
+                                                        <p className="font-bold">{addr.name}</p>
+                                                        <p>{addr.address}</p>
+                                                        <p>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state} {addr.pincode ? `- ${addr.pincode}` : ''}</p>
+                                                        {addr.phone && <p className="text-xs text-gray-500 mt-1">Phone: {addr.phone}</p>}
+                                                        {addr.addressType && <p className="pt-2 text-[10px] font-bold text-indigo-600 uppercase">Type: {addr.addressType}</p>}
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div className="flex flex-col items-center justify-center h-full py-4 opacity-60">
+                                                    <AlertCircle className="w-5 h-5 text-gray-400 mb-1" />
+                                                    <p className="text-sm text-gray-400 italic">No address provided</p>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Items Section */}
+                            <div>
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Order Items</h4>
+                                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left">Product</th>
+                                                <th className="px-4 py-3 text-center">Qty</th>
+                                                <th className="px-4 py-3 text-right">Price</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {viewOrder.items?.map((item, idx) => {
+                                                if (!item) return null;
+                                                return (
+                                                    <tr key={idx} className="bg-white hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-start gap-4">
+                                                                <img
+                                                                    src={item.customImage || item.image}
+                                                                    className="w-16 h-16 rounded-lg object-cover border border-gray-100 shadow-sm"
+                                                                    alt=""
+                                                                />
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="font-bold text-gray-900">{item.name || 'Unknown Product'}</span>
+                                                                    {item.customName && (
+                                                                        <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded border border-purple-100 w-fit">
+                                                                            Custom Text: "{item.customName}"
+                                                                        </span>
+                                                                    )}
+                                                                    {item.selectedVariations && Object.entries(item.selectedVariations).map(([key, val]: [string, any]) => (
+                                                                        <span key={key} className="text-[10px] text-gray-500 truncate max-w-[200px]" title={typeof val === 'object' ? (val.label || val.name || val.description || '') : String(val)}>
+                                                                            {key}: <span className="text-gray-900 font-medium">
+                                                                                {typeof val === 'object'
+                                                                                    ? (val.label || val.name || val.description || 'Selected')
+                                                                                    : val}
+                                                                            </span>
+                                                                        </span>
+                                                                    ))}
+                                                                    {item.customImage && (
+                                                                        <a
+                                                                            href={item.customImage}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-1 font-bold"
+                                                                        >
+                                                                            <Eye className="w-3 h-3" /> View Custom Photo
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-center font-bold text-gray-700">x{item.quantity || 0}</td>
+                                                        <td className="px-4 py-4 text-right font-black text-gray-900">₹{(item.price || 0) * (item.quantity || 0)}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                        <tfoot className="bg-gray-50 font-black">
+                                            <tr>
+                                                <td colSpan={2} className="px-4 py-4 text-right text-gray-500 uppercase tracking-widest text-[10px]">Grand Total</td>
+                                                <td className="px-4 py-4 text-right text-primary text-lg font-black">₹{viewOrder.total}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Payment Info */}
+                            <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-blue-100">
+                                        <DollarSign className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Payment Status</p>
+                                        <p className="text-sm font-black text-gray-900">
+                                            {viewOrder.paymentStatus || 'Design Pending'} • {viewOrder.paymentMethod}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 w-full md:w-auto">
+                                    {viewOrder.paymentScreenshot && (
+                                        <a
+                                            href={viewOrder.paymentScreenshot}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex-1 md:flex-none px-6 py-3 bg-white text-blue-600 border border-blue-200 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                        >
+                                            <Eye className="w-4 h-4" /> Screenshot
+                                        </a>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            const msg = `Hello! Regarding your Order #${viewOrder.orderId || viewOrder.id}, I need some clarification...`;
+                                            window.open(`https://wa.me/${viewOrder.user?.phone || ''}?text=${encodeURIComponent(msg)}`, '_blank');
+                                        }}
+                                        className="flex-1 md:flex-none px-6 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-md"
+                                    >
+                                        WhatsApp Customer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => setViewOrder(null)}
+                                className="px-8 py-2.5 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-300 transition-all"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
     const renderCustomers = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Customer Management</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Name</th><th className="px-6 py-3">Contact</th><th className="px-6 py-3">Orders</th><th className="px-6 py-3">Spent</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{customers.map(c => (<tr key={c.id}><td className="px-6 py-4 font-medium">{c.name}</td><td className="px-6 py-4">{c.email}<br /><span className="text-xs text-gray-500">{c.phone}</span></td><td className="px-6 py-4">{c.totalOrders}</td><td className="px-6 py-4">₹{c.totalSpent}</td><td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs ${c.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{c.status}</span></td><td className="px-6 py-4 text-right space-x-2"><button onClick={() => setViewCustomer(c)} className="text-blue-600 hover:underline"><Eye className="w-4 h-4" /></button><button onClick={() => toggleCustomerStatus(c.id)} className={`${c.status === 'Active' ? 'text-red-600' : 'text-green-600'}`}>{c.status === 'Active' ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}</button></td></tr>))}</tbody></table></div>{viewCustomer && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white p-6 rounded-lg w-96 shadow-xl"><h3 className="text-xl font-bold mb-4">Customer Profile</h3><div className="space-y-2 text-sm"><p><strong>ID:</strong> {viewCustomer.id}</p><p><strong>Name:</strong> {viewCustomer.name}</p><p><strong>Address:</strong> {viewCustomer.address}</p><div className="mt-4 pt-4 border-t"><h4 className="font-bold">Order History</h4><p className="text-gray-500 text-xs">Last 5 orders would appear here...</p></div></div><button onClick={() => setViewCustomer(null)} className="mt-6 w-full bg-gray-200 py-2 rounded hover:bg-gray-300">Close</button></div></div>)}</div>);
@@ -1684,7 +1924,53 @@ export const Admin: React.FC = () => {
             </div>
         </div>
     );
-    const renderPayments = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Payments</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Txn ID</th><th className="px-6 py-3">Ref</th><th className="px-6 py-3">Type</th><th className="px-6 py-3">Amount</th><th className="px-6 py-3">Status</th></tr></thead><tbody className="divide-y divide-gray-200">{transactions.map(t => (<tr key={t.id}><td className="px-6 py-4 font-mono text-xs">{t.id}</td><td className="px-6 py-4">{t.orderId}</td><td className="px-6 py-4">{t.type}</td><td className="px-6 py-4 font-bold">₹{t.amount}</td><td className="px-6 py-4"><span className="text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t.status}</span></td></tr>))}</tbody></table></div></div>);
+    const renderPayments = () => (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Payments</h2>
+                <button
+                    onClick={fetchTransactions}
+                    className="text-sm font-bold px-4 py-1.5 rounded-lg border transition-all flex items-center gap-2 bg-white text-blue-600 border-blue-100 hover:border-blue-300 hover:bg-blue-50 shadow-sm"
+                >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Refresh
+                </button>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left">Txn ID</th>
+                            <th className="px-6 py-3">Ref</th>
+                            <th className="px-6 py-3">Type</th>
+                            <th className="px-6 py-3">Amount</th>
+                            <th className="px-6 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {transactions.map(t => (
+                            <tr key={t.id}>
+                                <td className="px-6 py-4 font-mono text-xs">{t.id}</td>
+                                <td className="px-6 py-4">{t.orderId}</td>
+                                <td className="px-6 py-4">{t.type}</td>
+                                <td className="px-6 py-4 font-bold">₹{t.amount}</td>
+                                <td className="px-6 py-4">
+                                    <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs w-fit ${t.status === 'Success' ? 'bg-green-100 text-green-700' :
+                                        t.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                        {t.status === 'Success' ? <CheckCircle className="w-3 h-3" /> :
+                                            t.status === 'Pending' ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                                        {t.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+
     const renderLogistics = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Logistics</h2><div className="grid gap-4">{orders.filter(o => o.status === 'Shipped' || o.status === 'Packed').map(o => (<div key={o.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center"><div><p className="font-bold text-lg">{o.id}</p><p className="text-sm text-gray-500">To: {o.shippingAddress}</p><div className="mt-2 flex gap-2"><span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">{o.status}</span>{o.trackingNumber && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{o.courier}: {o.trackingNumber}</span>}</div></div><div className="flex flex-col gap-2"><button className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-100">Assign Courier</button></div></div>))}</div></div>);
     const renderReturns = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Return Requests</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Return ID</th><th className="px-6 py-3">Product</th><th className="px-6 py-3">Reason</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{returns.map(r => (<tr key={r.id}><td className="px-6 py-4">{r.id}</td><td className="px-6 py-4">{r.productName}</td><td className="px-6 py-4 text-red-500">{r.reason}</td><td className="px-6 py-4 font-bold">{r.status}</td><td className="px-6 py-4 text-right space-x-2">{r.status === 'Pending' && (<><button className="text-green-600 hover:underline text-xs">Approve</button><button className="text-red-600 hover:underline text-xs">Reject</button></>)}</td></tr>))}</tbody></table></div></div>);
     const renderReviews = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Reviews Moderation</h2><div className="grid gap-4">{reviews.map(r => (<div key={r._id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex justify-between"><div className="flex items-center gap-2"><div className="flex text-yellow-400">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div><span className="font-bold text-gray-800">{r.productName}</span></div><span className={`text-xs px-2 py-0.5 rounded ${r.status === 'Flagged' || r.status === 'Rejected' ? 'bg-red-100 text-red-800' : r.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100'}`}>{r.status}</span></div><p className="text-gray-600 mt-2 text-sm">"{r.comment}"</p><div className="mt-3 flex justify-end gap-2"><button onClick={() => handleReviewAction(r._id, 'Delete')} className="text-gray-600 text-xs font-bold hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button></div></div>))}</div></div>);

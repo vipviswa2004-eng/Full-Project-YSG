@@ -11,7 +11,7 @@ import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowL
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { addToCart, currency, wishlist, toggleWishlist, user, products } = useCart();
+    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen } = useCart();
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
@@ -107,7 +107,7 @@ export const ProductDetails: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
 
     // Description Tab State
-    const [descriptionTab, setDescriptionTab] = useState<string | null>(null);
+    const [descriptionTab, setDescriptionTab] = useState<string | null>('description');
 
     // Show All Reviews State
     const [showAllReviews, setShowAllReviews] = useState(false);
@@ -378,25 +378,82 @@ export const ProductDetails: React.FC = () => {
         if (option.image) { setActiveImage(option.image); }
     };
 
-    const executeAddToCart = (redirect: boolean, finalCustomImage: string | null, finalCustomText: string) => {
+    const executeAddToCart = (
+        redirect: boolean,
+        finalCustomImage: string | null,
+        finalCustomText: string,
+        overrides?: {
+            extraHeads?: number,
+            symbolNumber?: string,
+            selectedVariations?: Record<string, VariationOption>,
+            receiverLocation?: string,
+            receiverCountry?: string
+        }
+    ) => {
+        console.log("🛒 executeAddToCart triggered", {
+            hasUser: !!user,
+            redirect,
+            hasImage: !!finalCustomImage,
+            overrides: !!overrides
+        });
+
         try {
+            // Use overrides or current state
+            const currentExtraHeads = overrides?.extraHeads !== undefined ? overrides.extraHeads : extraHeads;
+            const currentSymbolNumber = overrides?.symbolNumber !== undefined ? overrides.symbolNumber : symbolNumber;
+            const currentSelectedVariations = overrides?.selectedVariations || selectedVariations;
+            const currentReceiverLocation = overrides?.receiverLocation || receiverLocation;
+            const currentReceiverCountry = overrides?.receiverCountry || receiverCountry;
+
+            // Recalculate prices if using overrides to be safe
+            const currentPrices = calculatePrice(product, currentExtraHeads, currentSelectedVariations);
+
             const finalCustomName = [
                 finalCustomText ? `"${finalCustomText}"` : '',
-                receiverLocation ? `[Location: ${receiverCountry} - ${receiverLocation}]` : ''
+                currentReceiverLocation ? `[Location: ${currentReceiverCountry} - ${currentReceiverLocation}]` : ''
             ].filter(Boolean).join(' ');
 
+            // ADD TO CART ALWAYS (for guest or user)
             addToCart({
                 ...product,
                 cartId: Date.now().toString(),
                 customName: finalCustomName,
                 customImage: finalCustomImage,
-                calculatedPrice: prices.final,
-                originalPrice: prices.original,
+                calculatedPrice: currentPrices.final,
+                originalPrice: currentPrices.original,
                 quantity: 1,
-                extraHeads,
-                symbolNumber,
-                selectedVariations
+                extraHeads: currentExtraHeads,
+                symbolNumber: currentSymbolNumber,
+                selectedVariations: currentSelectedVariations
             });
+
+            if (!user) {
+                // Save pending customization as a backup to localStorage
+                const pendingData = {
+                    productId: product.id,
+                    customText: finalCustomText,
+                    customImages: finalCustomImage ? JSON.parse(finalCustomImage) : [],
+                    selectedVariations: currentSelectedVariations,
+                    extraHeads: currentExtraHeads,
+                    symbolNumber: currentSymbolNumber,
+                    receiverLocation: currentReceiverLocation,
+                    receiverCountry: currentReceiverCountry,
+                    timestamp: Date.now()
+                };
+                console.log("💾 Saving pending customization backup", pendingData);
+                // Use route parameter 'id' for the key to be consistent across reloads
+                localStorage.setItem(`pending_customization_${id}`, JSON.stringify(pendingData));
+                setIsLoginModalOpen(true);
+                return;
+            }
+
+            // Clear any pending data if logged in
+            localStorage.removeItem(`pending_customization_${id}`);
+            localStorage.removeItem(`pending_customization_${product.id}`);
+
+            // Clear any pending customization for this product after successful add
+            localStorage.removeItem(`pending_customization_${id}`);
+            localStorage.removeItem(`pending_customization_${product.id}`); // Clear old key format too if exists
 
             if (redirect) {
                 navigate(`/cart${redirect ? '?buyNow=true' : ''}`);
@@ -408,6 +465,58 @@ export const ProductDetails: React.FC = () => {
             showNotification("Failed to add to cart. Please try again.", "error");
         }
     };
+
+    // Restore pending customization after login
+    useEffect(() => {
+        // We use 'id' from useParams as it's available immediately on mount
+        if (user && id) {
+            const pendingKey = `pending_customization_${id}`;
+            const savedData = localStorage.getItem(pendingKey) || (product?.id ? localStorage.getItem(`pending_customization_${product.id}`) : null);
+
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    console.log("🔄 Found pending customization to restore:", data);
+
+                    // Only restore if it's reasonably fresh (last 1 hour)
+                    if (Date.now() - data.timestamp < 3600000) {
+                        // Restore state for UI
+                        if (data.customText) setCustomText(data.customText);
+                        if (data.customImages) setCustomImages(data.customImages);
+                        if (data.selectedVariations) setSelectedVariations(data.selectedVariations);
+                        if (data.extraHeads !== undefined) setExtraHeads(data.extraHeads);
+                        if (data.symbolNumber) setSymbolNumber(data.symbolNumber);
+                        if (data.receiverLocation) setReceiverLocation(data.receiverLocation);
+                        if (data.receiverCountry) setReceiverCountry(data.receiverCountry);
+
+                        // Small delay to ensure state hydration is processed and then execute
+                        setTimeout(() => {
+                            const finalImageValue = data.customImages && data.customImages.length > 0
+                                ? JSON.stringify(data.customImages)
+                                : null;
+
+                            console.log("🚀 Executing auto-add-to-cart after restoration");
+                            executeAddToCart(false, finalImageValue, data.customText || "", {
+                                extraHeads: data.extraHeads,
+                                symbolNumber: data.symbolNumber,
+                                selectedVariations: data.selectedVariations,
+                                receiverLocation: data.receiverLocation,
+                                receiverCountry: data.receiverCountry
+                            });
+
+                            showNotification("Restored and added your customized product to cart!", "success");
+                        }, 2500);
+                    } else {
+                        console.log("⌛ Pending customization too old, clearing");
+                        localStorage.removeItem(pendingKey);
+                    }
+                } catch (e) {
+                    console.error("❌ Failed to restore pending customization", e);
+                }
+            }
+        }
+    }, [user, id, product?.id]);
+
 
     const handleAddToCartClick = () => {
         setIsCustomizeModalOpen(true);
@@ -438,6 +547,10 @@ export const ProductDetails: React.FC = () => {
     };
 
     const handleWishlistToggle = () => {
+        if (!user) {
+            setIsLoginModalOpen(true);
+            return;
+        }
         toggleWishlist(product);
         const isAdded = !isInWishlist;
         showNotification(
@@ -564,7 +677,7 @@ export const ProductDetails: React.FC = () => {
                                         onClick={() => setActiveImage(img)}
                                         className={`border-2 rounded-lg overflow-hidden aspect-square ${activeImage === img ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
                                     >
-                                        <img src={img} alt="" className="w-full h-full object-cover" />
+                                        <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                                     </button>
                                 ))}
                             </div>

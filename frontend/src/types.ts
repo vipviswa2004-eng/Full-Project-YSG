@@ -96,7 +96,7 @@ export interface CartItem extends Product {
   selectedVariations?: Record<string, VariationOption>; // variationId -> selectedOption
 }
 
-export type OrderStatus = 'Payment Confirmed' | 'Design Pending' | 'Design Sent' | 'Design Approved' | 'Design Changes Requested' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Refunded';
+export type OrderStatus = 'Payment Confirmed' | 'COD Pending Confirmation' | 'Design Pending' | 'Design Sent' | 'Design Approved' | 'Design Changes Requested' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Refunded';
 
 export interface Order {
   id: string;
@@ -111,10 +111,17 @@ export interface Order {
   trackingNumber?: string;
   courier?: string;
   returnReason?: string;
-  shippingAddress?: string;
+  shippingAddress?: any;
   items?: any[]; // Order items with product details
   deliveredAt?: string;
   hasRequestedReview?: boolean;
+  orderId?: string;
+  paymentScreenshot?: string;
+  user?: {
+    email: string;
+    name: string;
+    phone: string;
+  };
 }
 
 export type AdminRole = 'Super Admin' | 'Product Manager' | 'Order Manager' | 'Inventory Operator' | 'Finance Manager' | 'Customer Support' | 'Support Agent';
@@ -127,6 +134,7 @@ export interface User {
   displayName?: string;
   image?: string;
   phone?: string;
+  emailVerified?: boolean;
   address?: string; // Added address field
   pincode?: string; // Added pincode field
   state?: string;
