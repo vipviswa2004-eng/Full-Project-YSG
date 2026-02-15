@@ -331,7 +331,7 @@ export const GiftAdvisor: React.FC = () => {
     const scoredProducts = filtered.map(p => {
       let score = 0;
       let matchReason = '';
-      const meta = (p.name + ' ' + p.category + ' ' + p.description + ' ' + p.shape).toLowerCase();
+      const meta = (p.name + ' ' + p.category + ' ' + (p.description || '') + ' ' + (p.shape || '')).toLowerCase();
       const normalizedMeta = normalizeText(meta);
 
       // --- Direct Keyword Matching (Vital for "Type your own") ---

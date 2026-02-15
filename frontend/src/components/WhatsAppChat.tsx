@@ -3,8 +3,9 @@ import { MessageCircle, X, Send, Phone } from 'lucide-react';
 import { useCart } from '../context';
 
 export const WhatsAppChat: React.FC = () => {
-    const { isGiftAdvisorOpen } = useCart();
+    const { isGiftAdvisorOpen, user } = useCart();
     const [isOpen, setIsOpen] = useState(false);
+    const [name, setName] = useState(user?.displayName || '');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [message, setMessage] = useState('');
     const [isHovered, setIsHovered] = useState(false);
@@ -12,9 +13,10 @@ export const WhatsAppChat: React.FC = () => {
 
     // Auto-open logic removed to favor Login Modal
     useEffect(() => {
-        // We keep this to track if they've seen the chat icon pulse or something in the future
-        // but no longer auto-opening.
-    }, []);
+        if (user?.displayName) {
+            setName(user.displayName);
+        }
+    }, [user]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,6 +27,8 @@ export const WhatsAppChat: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    name,
+                    email: user?.email,
                     phoneNumber,
                     message
                 })
@@ -39,8 +43,8 @@ export const WhatsAppChat: React.FC = () => {
 
         // Construct the message
         const text = message
-            ? `Hi, I need help with: ${message}. My number is: ${phoneNumber}`
-            : `Hi, I need help. My number is: ${phoneNumber}`;
+            ? `Hi, I'm ${name || 'Customer'}. I need help with: ${message}. My number is: ${phoneNumber}`
+            : `Hi, I'm ${name || 'Customer'}. I need help. My number is: ${phoneNumber}`;
 
         // Redirect to WhatsApp
         const url = `https://wa.me/${supportNumber}?text=${encodeURIComponent(text)}`;
@@ -90,6 +94,19 @@ export const WhatsAppChat: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-2">
+                            <div>
+                                <label htmlFor="wa-name" className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5 ml-1">
+                                    Your Name
+                                </label>
+                                <input
+                                    id="wa-name"
+                                    type="text"
+                                    placeholder="Your Name"
+                                    className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#25D366] focus:border-transparent outline-none transition-all"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
                             <div>
                                 <label htmlFor="wa-phone" className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5 ml-1">
                                     Your WhatsApp Number

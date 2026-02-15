@@ -241,6 +241,8 @@ const GiftGenieQuerySchema = new mongoose.Schema({
 
 // WhatsApp Lead Schema
 const WhatsAppLeadSchema = new mongoose.Schema({
+  name: String,
+  email: String,
   phoneNumber: String,
   message: String,
   date: { type: Date, default: Date.now }

@@ -43,7 +43,7 @@ export interface Product {
   customShapeCost?: number; // Used when shape is CUSTOM
   image: string;
   gallery?: string[]; // Additional images
-  description: string;
+  description?: string;
   size?: string;
   mrp?: number; // Base MRP
   finalPrice?: number; // Base Final Price

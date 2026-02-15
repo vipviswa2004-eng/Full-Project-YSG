@@ -559,7 +559,7 @@ app.get("/api/products", async (req, res) => {
     console.log("...Fetching Products from DB...");
     const products = await Product.find()
       .limit(5000) // Increase limit to cover full catalog (2000+)
-      .select('id name pdfPrice mrp finalPrice isManualDiscount image gallery variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId description isTrending isBestseller isComboOffer status rating reviewsCount occasions')
+      .select('id name pdfPrice mrp finalPrice isManualDiscount image variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId isTrending isBestseller isComboOffer status rating reviewsCount occasions shape')
       .lean()
       .maxTimeMS(10000); // 10s timeout
 
@@ -575,6 +575,24 @@ app.get("/api/products", async (req, res) => {
 
     // Fallback: If DB fails, return empty array to prevent frontend crash
     // but typically we want the error. frontend is handled now though.
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/products/:id", async (req, res) => {
+  try {
+    let query = { id: req.params.id };
+    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      // Check if it's a valid ObjectId, if so allow finding by _id OR id
+      // But simpler to just check:
+      const byId = await Product.findById(req.params.id);
+      if (byId) return res.json(byId);
+    }
+    const product = await Product.findOne({ id: req.params.id });
+
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    res.json(product);
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -961,13 +979,15 @@ app.post("/api/auth/change-password", async (req, res) => {
 // ---------- WHATSAPP LEADS ----------
 app.post("/api/whatsapp-leads", async (req, res) => {
   try {
-    const { phoneNumber, message } = req.body;
+    const { name, email, phoneNumber, message } = req.body;
 
     if (!phoneNumber) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
 
     const lead = new WhatsAppLead({
+      name,
+      email,
       phoneNumber,
       message
     });

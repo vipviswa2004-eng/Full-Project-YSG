@@ -35,7 +35,7 @@ const RECIPIENTS = [
 const HERO_SLIDES = [
   {
     id: 'valentine',
-    image: 'https://images.unsplash.com/photo-1549465220-1d8c9d9c6703?q=80&w=2070&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=2070&auto=format&fit=crop',
     productImage: specialProduct,
     title: "Valentine's Special",
     subtitle: 'Surprise your special one with our exclusive "Season of Love" collection.',

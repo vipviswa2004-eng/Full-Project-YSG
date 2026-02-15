@@ -27,11 +27,36 @@ export const ProductDetails: React.FC = () => {
     const [product, setProduct] = useState(initialProduct);
 
     // Update product when products context changes
+    // Unified Product Fetching Logic (Context + API Fallback)
     useEffect(() => {
-        const updatedProduct = products.find(p => p.id === id || (p as any)._id === id) || localProducts.find(p => p.id === id);
-        if (updatedProduct) {
-            setProduct(updatedProduct);
-        }
+        const loadProduct = async () => {
+            // 1. Try finding in Context (Fastest)
+            const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
+
+            // If context has full details (e.g. description), use it
+            if (ctxProduct && ctxProduct.description) {
+                setProduct(ctxProduct);
+                return;
+            }
+
+            // 2. If context missing or "lite" version (no description), fetch full details
+            try {
+                // Show lite version immediately if available
+                if (ctxProduct) setProduct(ctxProduct);
+
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
+                if (res.ok) {
+                    const fullProduct = await res.json();
+                    setProduct(fullProduct);
+                } else {
+                    console.error("Product not found in API");
+                }
+            } catch (err) {
+                console.error("Failed to fetch full product details:", err);
+            }
+        };
+
+        if (id) loadProduct();
     }, [products, id]);
 
     const [extraHeads, setExtraHeads] = useState(0);
