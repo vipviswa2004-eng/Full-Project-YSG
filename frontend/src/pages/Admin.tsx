@@ -59,6 +59,7 @@ export const Admin: React.FC = () => {
     const [viewOrder, setViewOrder] = useState<Order | null>(null);
     const [isAutomating, setIsAutomating] = useState(false);
     const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
+    const [isRefreshingTransactions, setIsRefreshingTransactions] = useState(false);
     const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
     // Removed unused AI state
@@ -194,9 +195,13 @@ export const Admin: React.FC = () => {
     };
 
     const fetchTransactions = async () => {
+        setIsRefreshingTransactions(true);
         try {
             console.log('🔄 Fetching transactions...');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions`);
+            // Add timestamp to prevent caching
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions?t=${Date.now()}`);
+            if (!res.ok) throw new Error('Failed to fetch transactions');
+
             const data = await res.json();
             if (Array.isArray(data)) {
                 setTransactions(data);
@@ -204,6 +209,8 @@ export const Admin: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to fetch transactions", error);
+        } finally {
+            setIsRefreshingTransactions(false);
         }
     };
 
@@ -1930,10 +1937,14 @@ export const Admin: React.FC = () => {
                 <h2 className="text-xl font-bold">Payments</h2>
                 <button
                     onClick={fetchTransactions}
-                    className="text-sm font-bold px-4 py-1.5 rounded-lg border transition-all flex items-center gap-2 bg-white text-blue-600 border-blue-100 hover:border-blue-300 hover:bg-blue-50 shadow-sm"
+                    disabled={isRefreshingTransactions}
+                    className={`text-sm font-bold px-4 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${isRefreshingTransactions
+                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                            : 'bg-white text-blue-600 border-blue-100 hover:border-blue-300 hover:bg-blue-50 shadow-sm'
+                        }`}
                 >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Refresh
+                    <RotateCcw className={`w-3.5 h-3.5 ${isRefreshingTransactions ? 'animate-spin' : ''}`} />
+                    {isRefreshingTransactions ? 'Refreshing...' : 'Refresh'}
                 </button>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">

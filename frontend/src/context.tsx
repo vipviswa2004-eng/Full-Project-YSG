@@ -20,6 +20,7 @@ interface AppContextType {
     isLoginModalOpen: boolean;
     setIsLoginModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     products: Product[]; // Exposed products from DB
+    isLoadingProducts: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -65,6 +66,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // import { products as localProducts } from './data/products'; 
 
     const [dbProducts, setDbProducts] = useState<Product[]>([]); // Default to empty
+    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
     const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
     const [isGiftAdvisorOpen, setIsGiftAdvisorOpen] = useState(false);
@@ -90,6 +92,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             } catch (err) {
                 console.log("Backend not connected or empty, using empty list.", err);
+            } finally {
+                setIsLoadingProducts(false);
             }
 
             // 2. Check for Session User
@@ -318,7 +322,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, isLoginModalOpen, setIsLoginModalOpen, products: dbProducts }}>
+        <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, isLoginModalOpen, setIsLoginModalOpen, products: dbProducts, isLoadingProducts }}>
             {children}
         </AppContext.Provider>
     );

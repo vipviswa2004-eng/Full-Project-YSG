@@ -3,6 +3,7 @@ import { Gift, Send, X, Loader2, Sparkles, RefreshCw, ArrowRight } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context';
 import { Product } from '../types';
+import { calculatePrice } from '../data/products';
 
 interface GiftAdvisorProduct extends Product {
   matchScore?: number;
@@ -30,12 +31,7 @@ const ProductRecommendationList: React.FC<{
   const [expanded, setExpanded] = useState(false);
   const displayProducts = expanded ? products : products.slice(0, 5);
 
-  const calculateFinalPrice = (product: Product) => {
-    if (product.discount && product.discount > 0) {
-      return Math.round(product.pdfPrice * (1 - product.discount / 100));
-    }
-    return product.pdfPrice;
-  };
+  // Removed local calculateFinalPrice to use the imported utility one for consistency
 
   const getRankBadge = (index: number) => {
     const rank = index + 1;
@@ -56,7 +52,9 @@ const ProductRecommendationList: React.FC<{
   return (
     <div className="mt-4 space-y-4">
       {displayProducts.map((product, index) => {
-        const finalPrice = calculateFinalPrice(product);
+        const prices = calculatePrice(product);
+        const finalPrice = prices.final;
+
         return (
           <div
             key={product.id}
@@ -95,8 +93,8 @@ const ProductRecommendationList: React.FC<{
                 <div className="flex items-end justify-between mt-1">
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-gray-900">₹{finalPrice}</span>
-                    {product.discount && product.discount > 0 && (
-                      <span className="text-[9px] text-gray-400 line-through">₹{product.pdfPrice}</span>
+                    {prices.final < prices.original && (
+                      <span className="text-[9px] text-gray-400 line-through">₹{prices.original}</span>
                     )}
                   </div>
                   <div className="bg-gray-900 text-white px-2 py-1 rounded-lg text-[10px] font-bold group-hover:bg-purple-600 transition-colors flex items-center gap-1">
@@ -236,7 +234,31 @@ export const GiftAdvisor: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (!scrollRef.current) return;
+
+    // Smart scroll logic
+    const len = messages.length;
+    if (len === 0) return;
+
+    // Check if recent messages are "Top Recommendations" (which have showRank=true)
+    // We strictly check for showRank to avoid affecting standard "Let me help you choose" results
+    let targetIndex = -1;
+    if (messages[len - 1].showRank) {
+      targetIndex = len - 1;
+    } else if (len > 1 && messages[len - 2].showRank) {
+      targetIndex = len - 2;
+    }
+
+    if (targetIndex !== -1) {
+      // Found a "Top Recommendations" message. Scroll to it so user sees the start.
+      setTimeout(() => {
+        const el = document.getElementById(`msg-${targetIndex}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    } else {
+      // Default: Scroll to bottom (for questions and standard results)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
@@ -688,7 +710,7 @@ export const GiftAdvisor: React.FC = () => {
           {/* Chat Area */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-purple-50/30 to-pink-50/30 custom-scrollbar">
             {messages.map((m, idx) => (
-              <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={idx} id={`msg-${idx}`} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {m.role === 'bot' && (
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm mr-2 shrink-0 shadow-md mt-1">
                     🧞‍♂️

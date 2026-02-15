@@ -11,7 +11,7 @@ import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowL
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen } = useCart();
+    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen, isLoadingProducts } = useCart();
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
@@ -331,7 +331,27 @@ export const ProductDetails: React.FC = () => {
         }
     }, [showToast]);
 
-    if (!product) return <div className="p-10 text-center text-gray-500">Product not found</div>;
+    if (isLoadingProducts) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen pt-20">
+                <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                <p className="text-gray-500 text-sm font-medium">Loading details...</p>
+            </div>
+        );
+    }
+
+    if (!product) return (
+        <div className="flex flex-col items-center justify-center min-h-screen pt-20 text-center px-4">
+            <div className="text-xl font-bold text-gray-800 mb-2">Product Not Found</div>
+            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for.</p>
+            <button
+                onClick={() => navigate('/products')}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
+            >
+                Browse All Products
+            </button>
+        </div>
+    );
 
     const prices = calculatePrice(product, extraHeads, selectedVariations);
     const isInWishlist = wishlist.some(p => p.id === product.id);
