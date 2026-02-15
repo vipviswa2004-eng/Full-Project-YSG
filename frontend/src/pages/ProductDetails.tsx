@@ -42,7 +42,16 @@ export const ProductDetails: React.FC = () => {
             // 2. If context missing or "lite" version (no description), fetch full details
             try {
                 // Show lite version immediately if available
-                if (ctxProduct) setProduct(ctxProduct);
+                // CRITICAL FIX: Only set lite product if we don't already have full details to prevent downgrading
+                if (ctxProduct) {
+                    setProduct(prev => {
+                        // If current state matches ID and has description (is full), keep it
+                        if (prev && (prev.id === id || (prev as any)._id === id) && prev.description) {
+                            return prev;
+                        }
+                        return ctxProduct;
+                    });
+                }
 
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
                 if (res.ok) {
