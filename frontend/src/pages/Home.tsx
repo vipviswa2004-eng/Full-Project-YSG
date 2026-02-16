@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { SEO } from '../components/SEO';
-import { calculatePrice } from '../data/products';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context';
-import { Star, ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Sparkles, ArrowRight, Wallet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Sparkles, ArrowRight, Wallet } from 'lucide-react';
 import birthdayImg from '../assets/birthday.png';
 import corporateBg from '../assets/corporate_bg.png';
 import corporateProduct from '../assets/corporate_gift_product.png';
@@ -16,6 +15,7 @@ import occasionBg from '../assets/occasion_bg.png';
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion, SubCategory } from '../types';
 import { RecentlyViewedDetails } from './RecentlyViewedDetails';
+import { ProductCard } from '../components/ProductCard';
 
 const OCCASIONS = [
   { id: 'birthday', name: 'Birthday', image: birthdayImg, color: 'from-pink-500 to-rose-500' },
@@ -138,12 +138,10 @@ const ScrollableProductSection: React.FC<{
   icon?: React.ReactNode;
   products: any[];
   viewAllLink: string;
-  currency: string;
-  isInWishlist: (id: string) => boolean;
-  onWishlistToggle: (e: React.MouseEvent, product: any) => void;
   formatPrice: (price: number) => string;
-}> = ({ title, subtitle, icon, products, viewAllLink, isInWishlist, onWishlistToggle, formatPrice }) => {
+}> = ({ title, subtitle, icon, products, viewAllLink, formatPrice }) => {
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -184,50 +182,15 @@ const ScrollableProductSection: React.FC<{
             msOverflowStyle: 'none'
           }}
         >
-          {products.map((product) => {
-            const prices = calculatePrice(product);
-            return (
-              <div key={product.id} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
-                <Link to={`/product/${product.id}`} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full overflow-hidden">
-                  <div className="relative aspect-square bg-white overflow-hidden">
-                    <img className="w-full h-full object-contain p-0 md:p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
-                    {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}
-
-                    <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-sm py-2 text-center translate-y-full group-hover:translate-y-0 transition-transform duration-300 hidden md:block">
-                      <span className="text-primary font-bold text-sm flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Personalize</span>
-                    </div>
-                  </div>
-
-                  <div className="p-1.5 md:p-3 flex flex-col flex-grow">
-                    <div>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 line-clamp-1">{product.category}</p>
-                      <h3 className="text-[10px] md:text-sm font-semibold text-gray-800 line-clamp-2 leading-tight group-hover:text-primary transition-colors mb-1">{product.name}</h3>
-                      {(product.reviewsCount || 0) > 0 && (
-                        <div className="flex items-center gap-2 mt-1 mb-2">
-                          <div className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
-                            {product.rating} <Star className="w-2.5 h-2.5 fill-current" />
-                          </div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">({product.reviewsCount} reviews)</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-1 flex items-baseline gap-1 border-t border-gray-50 pt-2">
-                      <span className="text-xs md:text-lg font-bold text-gray-900">{formatPrice(prices.final)}</span>
-                      {(product.discount !== undefined && product.discount > 0) && (
-                        <span className="text-[10px] text-gray-400 line-through">{formatPrice(prices.original)}</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-                <button
-                  onClick={(e) => onWishlistToggle(e, product)}
-                  className={`absolute top-1 right-1 p-1 md:p-1.5 bg-white rounded-full shadow-md transition-all transform hover:scale-110 z-20 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
-                >
-                  <Heart className={`w-3 h-3 md:w-4 md:h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                </button>
-              </div>
-            );
-          })}
+          {products.map((product) => (
+            <div key={product.id} className="w-[30vw] min-w-[30vw] max-w-[30vw] md:w-[240px] md:min-w-[240px] md:max-w-[240px] flex-none snap-start relative group">
+              <ProductCard
+                product={product}
+                formatPrice={formatPrice}
+                onProductClick={(id) => navigate(`/product/${id}`)}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -235,7 +198,7 @@ const ScrollableProductSection: React.FC<{
 };
 
 export const Home: React.FC = () => {
-  const { currency, wishlist, toggleWishlist, setIsGiftAdvisorOpen, products: contextProducts } = useCart();
+  const { currency, setIsGiftAdvisorOpen, products: contextProducts } = useCart();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Shop Data State - No LocalStorage
@@ -327,18 +290,11 @@ export const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, [activeHeroView, dynamicHeroSlides.length]);
 
-  const isInWishlist = (id: string) => wishlist.some(p => p.id === id);
 
   const formatPrice = (price: number) => {
     return currency === 'INR'
       ? `₹${price.toLocaleString('en-IN')}`
       : `$${(price * 0.012).toFixed(2)}`;
-  };
-
-  const handleWishlistToggle = (e: React.MouseEvent, product: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleWishlist(product);
   };
 
   // Mobile Swipe Handlers
@@ -838,9 +794,6 @@ export const Home: React.FC = () => {
           subtitle="Latest favorites everyone is talking about"
           products={displayProducts.filter(p => p.isTrending)}
           viewAllLink="/products?filter=trending"
-          currency={currency}
-          isInWishlist={isInWishlist}
-          onWishlistToggle={handleWishlistToggle}
           formatPrice={formatPrice}
         />
       </FadeInSection>
@@ -931,9 +884,6 @@ export const Home: React.FC = () => {
           subtitle="Our most popular products loved by everyone"
           products={displayProducts.filter(p => p.isBestseller)}
           viewAllLink="/products?filter=bestseller"
-          currency={currency}
-          isInWishlist={isInWishlist}
-          onWishlistToggle={handleWishlistToggle}
           formatPrice={formatPrice}
         />
       </FadeInSection>

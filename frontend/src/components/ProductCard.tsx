@@ -4,6 +4,7 @@ import { Star, Heart } from 'lucide-react';
 import { Product } from '../types';
 import { calculatePrice } from '../data/products';
 import { useCart } from '../context';
+import { prefetchProduct } from '../utils/productCache';
 
 interface ProductCardProps {
     product: Product;
@@ -60,11 +61,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
         toggleWishlist(product);
     };
 
+    const handleMouseEnter = () => {
+        setIsHovered(true);
+        // Prefetch full details on hover (instant subsequent load)
+        if (productId) {
+            prefetchProduct(productId, import.meta.env.VITE_API_URL);
+        }
+    };
+
+    const handleMouseDown = () => {
+        // Backup prefetch on click start for even faster response
+        if (productId) {
+            prefetchProduct(productId, import.meta.env.VITE_API_URL);
+        }
+    };
+
     return (
         <div
             className="relative group bg-white border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 rounded-lg overflow-hidden flex flex-col h-full transform-gpu hover:-translate-y-1"
-            onMouseEnter={() => setIsHovered(true)}
+            onMouseEnter={handleMouseEnter}
             onMouseLeave={() => setIsHovered(false)}
+            onMouseDown={handleMouseDown}
         >
             <Link
                 to={`/product/${productId}`}

@@ -7,6 +7,8 @@ import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { VariationOption, Review } from '../types';
 import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search } from 'lucide-react';
+import { getCachedProduct, setCachedProduct } from '../utils/productCache';
+import { ProductCard } from '../components/ProductCard';
 
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -33,19 +35,25 @@ export const ProductDetails: React.FC = () => {
             // 1. Try finding in Context (Fastest)
             const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
 
+            // 2. Try Cache (Prefetched data)
+            const cachedProduct = getCachedProduct(id!);
+            if (cachedProduct && cachedProduct.description) {
+                setProduct(cachedProduct);
+                return;
+            }
+
             // If context has full details (e.g. description), use it
             if (ctxProduct && ctxProduct.description) {
                 setProduct(ctxProduct);
                 return;
             }
 
-            // 2. If context missing or "lite" version (no description), fetch full details
+            // 3. If missing full version, fetch from API
             try {
-                // Show lite version immediately if available
-                // CRITICAL FIX: Only set lite product if we don't already have full details to prevent downgrading
+                // Show lite version immediately as placeholder
                 if (ctxProduct) {
                     setProduct(prev => {
-                        // If current state matches ID and has description (is full), keep it
+                        // Don't downgrade if we already have full details
                         if (prev && (prev.id === id || (prev as any)._id === id) && prev.description) {
                             return prev;
                         }
@@ -57,6 +65,8 @@ export const ProductDetails: React.FC = () => {
                 if (res.ok) {
                     const fullProduct = await res.json();
                     setProduct(fullProduct);
+                    // Store in cache for next time
+                    setCachedProduct(id!, fullProduct);
                 } else {
                     console.error("Product not found in API");
                 }
@@ -1305,28 +1315,46 @@ export const ProductDetails: React.FC = () => {
                                     <h4 className="font-bold text-gray-900 mb-4 text-lg">About the product</h4>
 
                                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                        {(product.aboutSections?.filter(s => !s.isHidden).length ? product.aboutSections.filter(s => !s.isHidden) : [
-                                            { id: 'description', title: 'Description' },
-                                            { id: 'instructions', title: 'Instructions' },
-                                            { id: 'delivery', title: 'Delivery Info' }
-                                        ]).map((tab) => (
-                                            <button
-                                                key={tab.id}
-                                                onClick={() => setDescriptionTab(descriptionTab === tab.id ? null : tab.id)}
-                                                className={`
-                                                    px-3 py-1.5 md:px-6 md:py-2.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-all border-2
-                                                    ${descriptionTab === tab.id
-                                                        ? 'bg-[#E8F5E9] border-[#4CAF50] text-[#1B5E20]'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}
-                                                `}
-                                            >
-                                                {tab.title}
-                                            </button>
-                                        ))}
+                                        {(() => {
+                                            const standardTabs = [
+                                                { id: 'description', title: 'Description' },
+                                                { id: 'instructions', title: 'Instructions' },
+                                                { id: 'delivery', title: 'Delivery Info' }
+                                            ];
+
+                                            // Get custom sections that aren't one of the standard three (by checking aliases)
+                                            const customSections = (product.aboutSections || []).filter(s =>
+                                                !s.isHidden &&
+                                                !['description', 'desc', 'instructions', 'instr', 'inst', 'delivery', 'del'].includes(s.id.toLowerCase())
+                                            );
+
+                                            return [...standardTabs, ...customSections].map((tab) => (
+                                                <button
+                                                    key={tab.id}
+                                                    onClick={() => setDescriptionTab(descriptionTab === tab.id ? null : tab.id)}
+                                                    className={`
+                                                        px-3 py-1.5 md:px-6 md:py-2.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-all border-2
+                                                        ${(
+                                                            descriptionTab === tab.id ||
+                                                            (['description', 'desc'].includes(descriptionTab!) && ['description', 'desc'].includes(tab.id)) ||
+                                                            (['instructions', 'instr', 'inst'].includes(descriptionTab!) && ['instructions', 'instr', 'inst'].includes(tab.id)) ||
+                                                            (['delivery', 'del'].includes(descriptionTab!) && ['delivery', 'del'].includes(tab.id))
+                                                        )
+                                                            ? 'bg-[#E8F5E9] border-[#4CAF50] text-[#1B5E20]'
+                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'}
+                                                    `}
+                                                >
+                                                    {tab.title}
+                                                </button>
+                                            ));
+                                        })()}
                                     </div>
 
                                     {descriptionTab && (
-                                        <div className="text-gray-600 leading-relaxed space-y-4 text-sm md:text-base min-h-[100px] bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 animate-fade-in">
+                                        <div
+                                            key={descriptionTab}
+                                            className="text-gray-600 leading-relaxed space-y-4 text-sm md:text-base min-h-[100px] bg-gray-50/50 p-4 rounded-xl border border-gray-100/50 animate-fade-in"
+                                        >
                                             {(() => {
                                                 const dynamic = (() => {
                                                     const cat = (product.category || '').toLowerCase();
@@ -1425,16 +1453,15 @@ export const ProductDetails: React.FC = () => {
                                                 })();
 
                                                 const currentSection = product.aboutSections?.find(s => s.id === descriptionTab);
-                                                const useManual = currentSection?.isManual && currentSection.content;
+                                                const dbContent = currentSection?.content;
 
-
-                                                if (descriptionTab === 'description') {
+                                                if (descriptionTab === 'description' || descriptionTab === 'desc') {
                                                     return (
                                                         <div className="animate-fade-in">
                                                             <h5 className="font-bold text-gray-900 mb-2">Product Details:</h5>
                                                             <div className="space-y-2 mb-4">
-                                                                {useManual ? (
-                                                                    currentSection!.content.split('\n').map((line, idx) => (
+                                                                {dbContent ? (
+                                                                    dbContent.split('\n').map((line, idx) => (
                                                                         <p key={idx} className="flex gap-2">
                                                                             <span className="text-gray-400 mt-1.5">•</span>
                                                                             <span>{line}</span>
@@ -1456,11 +1483,11 @@ export const ProductDetails: React.FC = () => {
                                                         </div>
                                                     );
                                                 }
-                                                if (descriptionTab === 'instructions') {
+                                                if (descriptionTab === 'instructions' || descriptionTab === 'inst' || descriptionTab === 'instr') {
                                                     return (
                                                         <div className="animate-fade-in space-y-3">
-                                                            {useManual ? (
-                                                                currentSection!.content.split('\n').map((line, idx) => (
+                                                            {dbContent ? (
+                                                                dbContent.split('\n').map((line, idx) => (
                                                                     <p key={idx} className="flex gap-2">
                                                                         <span className="text-gray-400 mt-1.5">•</span>
                                                                         <span>{line}</span>
@@ -1478,30 +1505,49 @@ export const ProductDetails: React.FC = () => {
                                                     );
                                                 }
 
-                                                if (descriptionTab === 'delivery') {
+                                                if (descriptionTab === 'delivery' || descriptionTab === 'del') {
                                                     return (
                                                         <div className="animate-fade-in space-y-4">
-                                                            <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100">
-                                                                <Truck className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                                                            <div className="flex items-start gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:shadow-md group/delivery">
+                                                                <div className="bg-green-50 p-2.5 rounded-lg group-hover/delivery:bg-green-100 transition-colors">
+                                                                    <Truck className="w-5 h-5 text-green-600 shrink-0" />
+                                                                </div>
                                                                 <div>
-                                                                    <p className="font-bold text-gray-900">Shipping</p>
-                                                                    <p className="text-xs text-gray-500">Delivery in 5-7 business days across India.</p>
+                                                                    <p className="font-bold text-gray-900 text-base">Shipping</p>
+                                                                    <p className="text-sm text-gray-500 mt-0.5">Delivery in 5-7 business days across India.</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100">
-                                                                <Clock className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                                                            <div className="flex items-start gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:shadow-md group/delivery">
+                                                                <div className="bg-purple-50 p-2.5 rounded-lg group-hover/delivery:bg-purple-100 transition-colors">
+                                                                    <Clock className="w-5 h-5 text-purple-600 shrink-0" />
+                                                                </div>
                                                                 <div>
-                                                                    <p className="font-bold text-gray-900">Processing</p>
-                                                                    <p className="text-xs text-gray-500">Delivery time depends on location and courier partner.</p>
+                                                                    <p className="font-bold text-gray-900 text-base">Processing</p>
+                                                                    <p className="text-sm text-gray-500 mt-0.5">Delivery time depends on location and courier partner.</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-100">
-                                                                <RefreshCcw className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                                                            <div className="flex items-start gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:shadow-md group/delivery">
+                                                                <div className="bg-orange-50 p-2.5 rounded-lg group-hover/delivery:bg-orange-100 transition-colors">
+                                                                    <RefreshCcw className="w-5 h-5 text-orange-600 shrink-0" />
+                                                                </div>
                                                                 <div>
-                                                                    <p className="font-bold text-gray-900">Returns</p>
-                                                                    <p className="text-xs text-gray-500">7-day replacement policy for damaged items.</p>
+                                                                    <p className="font-bold text-gray-900 text-base">Returns</p>
+                                                                    <p className="text-sm text-gray-500 mt-0.5">7-day replacement policy for damaged items.</p>
                                                                 </div>
                                                             </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                // Final Fallback for custom sections from DB
+                                                if (currentSection?.content) {
+                                                    return (
+                                                        <div className="animate-fade-in whitespace-pre-wrap">
+                                                            {currentSection.content.split('\n').map((line, idx) => (
+                                                                <p key={idx} className="flex gap-2 mb-2 last:mb-0">
+                                                                    <span className="text-gray-400 mt-1.5">•</span>
+                                                                    <span>{line}</span>
+                                                                </p>
+                                                            ))}
                                                         </div>
                                                     );
                                                 }
@@ -1919,56 +1965,15 @@ export const ProductDetails: React.FC = () => {
                             {products
                                 .filter(p => p.category === product.category && p.id !== product.id)
                                 .slice(0, 10)
-                                .map(related => {
-                                    const relatedPrices = calculatePrice(related);
-                                    return (
-                                        <div key={related.id} className="min-w-[160px] md:min-w-[220px] snap-start relative group">
-                                            <div
-                                                onClick={() => { navigate(`/product/${related.id}`); window.scrollTo(0, 0); }}
-                                                className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer"
-                                            >
-                                                <div className="relative aspect-square bg-white overflow-hidden">
-                                                    <img
-                                                        className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
-                                                        src={related.image}
-                                                        alt={related.name}
-                                                        loading="lazy"
-                                                    />
-                                                    {related.discount && (
-                                                        <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">
-                                                            {related.discount}% OFF
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="p-2.5 flex flex-col flex-grow">
-                                                    <div className="flex-1">
-                                                        <h3 className="text-xs font-semibold text-gray-800 line-clamp-2 h-8 leading-4 group-hover:text-primary transition-colors">{related.name}</h3>
-                                                    </div>
-                                                    <div className="mt-2 flex items-baseline gap-1.5">
-                                                        <span className="text-sm font-bold text-gray-900">{formatPrice(relatedPrices.final)}</span>
-                                                        {(related.discount !== undefined && related.discount > 0) && (
-                                                            <span className="text-[10px] text-gray-400 line-through">{formatPrice(relatedPrices.original)}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleWishlist(related);
-                                                    const isAdded = !wishlist.some(p => p.id === related.id);
-                                                    showNotification(isAdded ? "❤️ Added to Wishlist" : "💔 Removed from Wishlist", isAdded ? "success" : "info");
-                                                }}
-                                                className={`absolute top-1.5 right-1.5 p-1 bg-white rounded-full shadow-sm transition-all hover:scale-110 z-20 ${wishlist.some(p => p.id === related.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
-                                            >
-                                                <Heart className={`w-3.5 h-3.5 ${wishlist.some(p => p.id === related.id) ? 'fill-current' : ''}`} />
-                                            </button>
-                                        </div>
-                                    );
-                                })
-                            }
+                                .map(related => (
+                                    <div key={related.id} className="min-w-[160px] md:min-w-[220px] snap-start relative group">
+                                        <ProductCard
+                                            product={related}
+                                            formatPrice={formatPrice}
+                                            onProductClick={(id) => { navigate(`/product/${id}`); window.scrollTo(0, 0); }}
+                                        />
+                                    </div>
+                                ))}
                         </div>
 
                         <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="w-full md:hidden flex justify-center items-center gap-2 text-primary font-bold py-3 bg-gray-50 rounded-xl mt-4 border border-gray-100">
