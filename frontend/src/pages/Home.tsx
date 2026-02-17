@@ -34,18 +34,6 @@ const RECIPIENTS = [
 
 const HERO_SLIDES = [
   {
-    id: 'valentine',
-    image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=2070&auto=format&fit=crop',
-    productImage: specialProduct,
-    title: "Valentine's Special",
-    subtitle: 'Surprise your special one with our exclusive "Season of Love" collection.',
-    cta: 'Shop the Collection',
-    type: 'link',
-    link: '/occasion/valentine',
-    tag: 'Limited Edition',
-    color: 'text-rose-500'
-  },
-  {
     id: 'personalized',
     image: personalizedBg,
     productImage: personalizedProduct,
@@ -229,13 +217,13 @@ export const Home: React.FC = () => {
       id: "special-combo-offers",
       image: COMBO_BANNER_BG,
       productImage: firstCombo.image,
-      title: "Valentine's Special Combos",
-      subtitle: "Share the love! Exclusive hand-picked combo sets for your special ones.",
-      cta: 'View Valentine Combos',
+      title: "Special Combo Offers",
+      subtitle: "Amazing savings on our hand-picked curated gift combo sets.",
+      cta: 'View All Combos',
       type: 'link',
       link: `/shop?filter=combo`,
-      tag: 'Season of Love',
-      color: 'text-rose-400'
+      tag: 'Limited Time Offer',
+      color: 'text-amber-400'
     } as any);
   }
 
@@ -331,9 +319,8 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-0 md:pb-16">
       <SEO
-        title="Premium Personalized Gifts & Custom Creations"
-        description="Discover the best personalized gifts, hand-crafted masterpieces, and corporate branding solutions at Sign Galaxy. Hand-crafted with love for every occasion."
-        keywords={['custom gifts', 'personalized items', 'home decor', 'corporate gifts', 'gift shop india', 'unique gifts']}
+        description="Shop India's most loved personalized gifts, custom neon signs, photo frames, and hand-crafted keepsakes. Discover unique customized gifts for every occasion with express delivery."
+        keywords={['custom gifts', 'personalized items', 'home decor', 'corporate gifts', 'gift shop india', 'unique gifts', 'neon signs india', 'custom photo frames']}
       />
       {!activeHeroView ? (
         <div
@@ -351,31 +338,6 @@ export const Home: React.FC = () => {
                 loading={index === 0 ? "eager" : "lazy"}
                 className={`w-full h-full object-cover transition-transform duration-[10s] ease-linear ${index === currentSlide ? 'scale-110' : 'scale-100'}`}
               />
-              {/* Dynamic Heart Rain for Valentine Slide */}
-              {slide.id === 'valentine' && index === currentSlide && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-                  {[...Array(15)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 500, x: Math.random() * 800 }}
-                      animate={{
-                        opacity: [0, 1, 0],
-                        y: -300,
-                        x: `calc(${Math.random() * 100}vw + ${Math.sin(i) * 100}px)`
-                      }}
-                      transition={{
-                        duration: Math.random() * 5 + 7,
-                        repeat: Infinity,
-                        delay: Math.random() * 10,
-                        ease: "easeOut"
-                      }}
-                      className="absolute text-rose-400/30 text-2xl md:text-3xl"
-                    >
-                      ❤️
-                    </motion.div>
-                  ))}
-                </div>
-              )}
               {index === currentSlide && (
                 <div className="absolute inset-0 z-20 flex items-center justify-between px-6 md:px-28 text-white">
                   <div className="flex flex-col items-start text-left max-w-[85%] md:max-w-xl">
@@ -813,10 +775,10 @@ export const Home: React.FC = () => {
                 <div className="flex-1 text-center xl:text-left">
                   <Link to="/shop?filter=combo" className="block hover:opacity-90 transition-opacity">
                     <span className="inline-block bg-rose-500 text-white text-[10px] md:text-xs font-black px-3 py-1 md:px-4 md:py-1 rounded-full uppercase tracking-widest mb-2 md:mb-4 shadow-lg animate-bounce">
-                      Valentine's Exclusive
+                      Combo Offer Exclusive
                     </span>
                     <h2 className="text-2xl md:text-6xl font-black text-white mb-2 md:mb-4 tracking-tighter leading-tight drop-shadow-lg">
-                      Valentine's <span className="text-rose-400">Special</span> Combos!
+                      Special <span className="text-rose-400">Combo</span> Offers!
                     </h2>
                   </Link>
                   <p className="text-white/80 text-sm md:text-xl font-medium mb-4 md:mb-8 max-w-xl mx-auto xl:mx-0 line-clamp-2 md:line-clamp-none">

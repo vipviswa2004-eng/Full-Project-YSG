@@ -10,6 +10,7 @@ import { VerificationModal } from './components/VerificationModal';
 import { LocationManager } from './components/LocationManager';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { VersionControl } from './components/VersionControl';
+import { AnnouncementBar } from './components/AnnouncementBar';
 import { CartProvider, useCart } from './context';
 import { Loader2 } from 'lucide-react';
 
@@ -88,6 +89,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`flex flex-col min-h-screen bg-app-bg`}>
+      <AnnouncementBar />
       <SEO />
       <Navbar />
       {!isAdminRoute && <CategoryNav />}

@@ -5,10 +5,10 @@ import { RecentlyViewedDetails } from './RecentlyViewedDetails';
 import { useParams, useNavigate } from 'react-router-dom';
 import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
-import { VariationOption, Review } from '../types';
-import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search, Tag } from 'lucide-react';
 import { getCachedProduct, setCachedProduct } from '../utils/productCache';
 import { ProductCard } from '../components/ProductCard';
+import { Coupon, VariationOption, Review } from '../types';
 
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -153,8 +153,30 @@ export const ProductDetails: React.FC = () => {
     // Description Tab State
     const [descriptionTab, setDescriptionTab] = useState<string | null>('description');
 
+    // Available Coupons State
+    const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
+    const [isLoadingCoupons, setIsLoadingCoupons] = useState(true);
+
     // Show All Reviews State
     const [showAllReviews, setShowAllReviews] = useState(false);
+
+    // Fetch Coupons
+    useEffect(() => {
+        const fetchCoupons = async () => {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/coupons`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setAvailableCoupons(Array.isArray(data) ? data.filter(c => c.status === 'Active') : []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch coupons:", err);
+            } finally {
+                setIsLoadingCoupons(false);
+            }
+        };
+        fetchCoupons();
+    }, []);
 
 
 
@@ -1561,6 +1583,60 @@ export const ProductDetails: React.FC = () => {
 
 
                             </div>
+
+                            {/* Available Offers Box */}
+                            {!product.isComboOffer && (
+                                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 animate-fade-in">
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-orange-50 p-1.5 rounded-lg">
+                                            <Tag className="w-4 h-4 text-orange-600" />
+                                        </div>
+                                        <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">Available Offers</h3>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {isLoadingCoupons ? (
+                                            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                                {[1, 2].map(i => (
+                                                    <div key={i} className="min-w-[220px] h-24 bg-gray-50 animate-pulse rounded-2xl border border-gray-100" />
+                                                ))}
+                                            </div>
+                                        ) : availableCoupons.length > 0 ? (
+                                            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                                {availableCoupons.map((coupon) => (
+                                                    <div
+                                                        key={coupon.id}
+                                                        className="min-w-[220px] p-4 rounded-2xl border-2 border-dashed border-primary/10 bg-gradient-to-br from-white to-purple-50/30 flex flex-col gap-2 relative overflow-hidden group hover:border-primary/30 transition-all"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[11px] font-black text-primary px-2.5 py-1 bg-white border border-primary/20 rounded shadow-sm uppercase tracking-widest">
+                                                                {coupon.code}
+                                                            </span>
+                                                            <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                                                {coupon.discountType === 'PERCENTAGE' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 font-bold leading-tight line-clamp-2 min-h-[1.5rem]">
+                                                            {coupon.discountType === 'B2G1' ? 'Buy 2 Get 1 FREE' : `Get ${coupon.discountType === 'PERCENTAGE' ? `${coupon.value}%` : `₹${coupon.value}`} off ${coupon.minPurchase ? `on orders above ₹${coupon.minPurchase}` : 'on your purchase'}.`}
+                                                        </p>
+                                                        <button
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(coupon.code);
+                                                                showNotification(`Code '${coupon.code}' copied!`, "success");
+                                                            }}
+                                                            className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mt-1 hover:text-purple-800 flex items-center gap-1.5 transition-colors group/btn"
+                                                        >
+                                                            Copy Code <ArrowRight className="w-2.5 h-2.5 group-hover/btn:translate-x-1 transition-transform" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-gray-400 italic font-medium ml-1">No special offers available at the moment.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Action Buttons - Fixed at bottom for mobile, docked at bottom for desktop */}

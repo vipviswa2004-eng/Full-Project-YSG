@@ -18,9 +18,9 @@ interface SEOProps {
 }
 
 const DOMAIN = 'https://ucgoc.com';
-const DEFAULT_TITLE = 'Sign Galaxy';
-const DEFAULT_DESCRIPTION = 'Explore Sign Galaxy for premium personalized gifts, hand-crafted masterpieces, and corporate branding solutions. Turn your ideas into memorable keepsakes.';
-const DEFAULT_IMAGE = `${DOMAIN}/logo-large.png`; // Improve this if we have a real og-image
+const DEFAULT_TITLE = 'Sign Galaxy | Premium Personalized Gifts & Custom Creations';
+const DEFAULT_DESCRIPTION = "Shop premium personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Sign Galaxy. Discover customized gifts for birthdays, anniversaries, and special occasions with fast delivery across India.";
+const DEFAULT_IMAGE = `${DOMAIN}/logo-large.png`;
 
 export const SEO: React.FC<SEOProps> = ({
     title,
@@ -32,11 +32,22 @@ export const SEO: React.FC<SEOProps> = ({
     noindex = false,
 }) => {
     const location = useLocation();
-    const canonicalUrl = `${DOMAIN}${location.pathname}`;
-    const fullTitle = title ? `Sign Galaxy | ${title}` : DEFAULT_TITLE;
+
+    // Ensure homepage canonical is always the root domain
+    const isHome = location.pathname === '/' || location.pathname === '';
+    const canonicalUrl = isHome ? DOMAIN : `${DOMAIN}${location.pathname}`;
+
+    // Priority title logic: Brand first on home, Brand last on subpages
+    let fullTitle = '';
+    if (isHome) {
+        fullTitle = title ? `Sign Galaxy | ${title}` : DEFAULT_TITLE;
+    } else {
+        fullTitle = title ? `${title} | Sign Galaxy` : `${DEFAULT_TITLE}`;
+    }
+
     const fullImage = image ? (image.startsWith('http') ? image : `${DOMAIN}${image}`) : DEFAULT_IMAGE;
 
-    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'home decor', 'corporate gifts', 'gift shop india'];
+    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'home decor', 'corporate gifts', 'gift shop india', 'Sign Galaxy India'];
     const allKeywords = [...new Set([...defaultKeywords, ...keywords])].join(', ');
 
     const structuredData = productData
@@ -58,12 +69,25 @@ export const SEO: React.FC<SEOProps> = ({
                 availability: `https://schema.org/${productData.availability}`,
             },
         }
-        : {
-            '@context': 'https://schema.org',
-            '@type': 'WebSite',
-            name: 'Sign Galaxy',
-            url: DOMAIN,
-        };
+        : isHome
+            ? {
+                '@context': 'https://schema.org',
+                '@type': 'WebSite',
+                name: 'Sign Galaxy',
+                url: DOMAIN,
+                potentialAction: {
+                    '@type': 'SearchAction',
+                    target: `${DOMAIN}/products?q={search_term_string}`,
+                    'query-input': 'required name=search_term_string',
+                },
+            }
+            : {
+                '@context': 'https://schema.org',
+                '@type': 'WebPage',
+                name: fullTitle,
+                description: description,
+                url: canonicalUrl,
+            };
 
     return (
         <Helmet>
