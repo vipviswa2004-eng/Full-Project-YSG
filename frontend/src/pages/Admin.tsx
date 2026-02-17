@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context';
 import { calculatePrice } from '../data/products';
@@ -197,7 +197,7 @@ export const Admin: React.FC = () => {
     const fetchTransactions = async () => {
         setIsRefreshingTransactions(true);
         try {
-            console.log('🔄 Fetching transactions...');
+            console.log('ðŸ”„ Fetching transactions...');
             // Add timestamp to prevent caching
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions?t=${Date.now()}`);
             if (!res.ok) throw new Error('Failed to fetch transactions');
@@ -205,12 +205,39 @@ export const Admin: React.FC = () => {
             const data = await res.json();
             if (Array.isArray(data)) {
                 setTransactions(data);
-                console.log(`✅ Transactions updated: ${data.length} records`);
+                console.log(`âœ… Transactions updated: ${data.length} records`);
             }
         } catch (error) {
             console.error("Failed to fetch transactions", error);
         } finally {
             setIsRefreshingTransactions(false);
+        }
+    };
+
+    const handleUpdateTransactionStatus = async (txnId: string, newStatus: 'Success' | 'Failed' | 'Pending') => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transactions/${txnId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                // Update local state
+                setTransactions(prev => prev.map(t => t.id === txnId ? { ...t, status: newStatus } : t));
+                // If it was marked Success, refresh orders too as they might have synced
+                if (newStatus === 'Success') {
+                    const resOrders = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`);
+                    if (resOrders.ok) {
+                        const data = await resOrders.json();
+                        setOrders(data);
+                    }
+                }
+            } else {
+                alert('Failed to update transaction status');
+            }
+        } catch (error) {
+            console.error("Error updating transaction", error);
         }
     };
 
@@ -343,7 +370,7 @@ export const Admin: React.FC = () => {
 
             // If image is base64, upload to Cloudinary first
             if (finalData.image && finalData.image.startsWith('data:')) {
-                console.log('📤 Uploading base64 image to Cloudinary...');
+                console.log('ðŸ“¤ Uploading base64 image to Cloudinary...');
                 try {
                     // Convert base64 to blob
                     const response = await fetch(finalData.image);
@@ -362,14 +389,14 @@ export const Admin: React.FC = () => {
                     if (uploadResponse.ok) {
                         const uploadData = await uploadResponse.json();
                         finalData.image = uploadData.url;
-                        console.log('✅ Image uploaded successfully:', uploadData.url);
+                        console.log('âœ… Image uploaded successfully:', uploadData.url);
                     } else {
-                        console.warn('⚠️ Cloudinary upload failed, using base64 as fallback');
+                        console.warn('âš ï¸ Cloudinary upload failed, using base64 as fallback');
                         // Keep base64 as fallback
                     }
                 } catch (uploadError) {
-                    console.error('❌ Image upload error:', uploadError);
-                    console.warn('⚠️ Using base64 as fallback');
+                    console.error('âŒ Image upload error:', uploadError);
+                    console.warn('âš ï¸ Using base64 as fallback');
                     // Keep base64 as fallback
                 }
             }
@@ -563,7 +590,7 @@ export const Admin: React.FC = () => {
                 fetchTransactions()
             ]);
 
-            console.log(`✅ Order ${order.orderId || id} status updated to ${status}`);
+            console.log(`âœ… Order ${order.orderId || id} status updated to ${status}`);
         } catch (error) {
             console.error("Failed to update order status", error);
             // Revert optimistic update on error
@@ -776,7 +803,7 @@ export const Admin: React.FC = () => {
     const saveProduct = async () => {
         if (!editedProduct) return;
 
-        console.log('💾 Saving product:', editedProduct.name, 'ID:', editedProduct.id, 'MongoID:', (editedProduct as any)._id);
+        console.log('ðŸ’¾ Saving product:', editedProduct.name, 'ID:', editedProduct.id, 'MongoID:', (editedProduct as any)._id);
 
         let finalProduct = { ...editedProduct };
 
@@ -818,7 +845,7 @@ export const Admin: React.FC = () => {
             }
 
             const savedProduct = await response.json();
-            console.log('✅ Product saved successfully:', savedProduct);
+            console.log('âœ… Product saved successfully:', savedProduct);
 
             // Merge server response with sent data to ensure fields aren't lost if server strips them (e.g. schema desync)
             const finalSaved = {
@@ -1781,7 +1808,7 @@ export const Admin: React.FC = () => {
                                     <div>
                                         <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Payment Status</p>
                                         <p className="text-sm font-black text-gray-900">
-                                            {viewOrder.paymentStatus || 'Design Pending'} • {viewOrder.paymentMethod}
+                                            {viewOrder.paymentStatus || 'Design Pending'} â€¢ {viewOrder.paymentMethod}
                                         </p>
                                     </div>
                                 </div>
@@ -1934,45 +1961,89 @@ export const Admin: React.FC = () => {
     const renderPayments = () => (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Payments</h2>
+                <div>
+                    <h2 className="text-xl font-bold">Payments & Transactions</h2>
+                    <p className="text-xs text-gray-500">Track and verify all incoming payments</p>
+                </div>
                 <button
                     onClick={fetchTransactions}
                     disabled={isRefreshingTransactions}
                     className={`text-sm font-bold px-4 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${isRefreshingTransactions
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                            : 'bg-white text-blue-600 border-blue-100 hover:border-blue-300 hover:bg-blue-50 shadow-sm'
+                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                        : 'bg-white text-blue-600 border-blue-100 hover:border-blue-300 hover:bg-blue-50 shadow-sm'
                         }`}
                 >
                     <RotateCcw className={`w-3.5 h-3.5 ${isRefreshingTransactions ? 'animate-spin' : ''}`} />
                     {isRefreshingTransactions ? 'Refreshing...' : 'Refresh'}
                 </button>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-md">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left">Txn ID</th>
-                            <th className="px-6 py-3">Ref</th>
-                            <th className="px-6 py-3">Type</th>
-                            <th className="px-6 py-3">Amount</th>
-                            <th className="px-6 py-3">Status</th>
+                            <th className="px-6 py-3 text-left font-bold text-gray-600">Transaction</th>
+                            <th className="px-6 py-3 text-left font-bold text-gray-600">Customer & Ref</th>
+                            <th className="px-6 py-3 text-left font-bold text-gray-600">Method</th>
+                            <th className="px-6 py-3 text-right font-bold text-gray-600">Amount</th>
+                            <th className="px-6 py-3 text-center font-bold text-gray-600">Status</th>
+                            <th className="px-6 py-3 text-right font-bold text-gray-600">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                         {transactions.map(t => (
-                            <tr key={t.id}>
-                                <td className="px-6 py-4 font-mono text-xs">{t.id}</td>
-                                <td className="px-6 py-4">{t.orderId}</td>
-                                <td className="px-6 py-4">{t.type}</td>
-                                <td className="px-6 py-4 font-bold">₹{t.amount}</td>
+                            <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-6 py-4">
-                                    <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs w-fit ${t.status === 'Success' ? 'bg-green-100 text-green-700' :
-                                        t.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                                        }`}>
-                                        {t.status === 'Success' ? <CheckCircle className="w-3 h-3" /> :
-                                            t.status === 'Pending' ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                                        {t.status}
-                                    </span>
+                                    <p className="font-mono text-[10px] text-gray-400">{t.id}</p>
+                                    <p className="text-[10px] text-gray-500 mt-1">{new Date(t.date).toLocaleString()}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <p className="font-bold text-gray-900">{t.customerName}</p>
+                                    <p className="text-[10px] text-primary font-bold">REF: {t.orderId}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 rounded-full w-fit">{t.method || 'UPI'}</span>
+                                        {t.screenshot && (
+                                            <a href={t.screenshot} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 font-bold">
+                                                <Eye className="w-3 h-3" /> View Proof
+                                            </a>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <p className={`font-black ${t.type === 'Debit' ? 'text-red-600' : 'text-green-600'}`}>
+                                        {t.type === 'Debit' ? '-₹' : '₹'}{t.amount.toLocaleString()}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400">{t.type}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex justify-center">
+                                        <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold w-fit ${t.status === 'Success' ? 'bg-green-100 text-green-700' :
+                                            t.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                            }`}>
+                                            {t.status === 'Success' ? <CheckCircle className="w-3 h-3" /> :
+                                                t.status === 'Pending' ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                                            {t.status}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-right space-x-2">
+                                    {t.status === 'Pending' && (
+                                        <button
+                                            onClick={() => handleUpdateTransactionStatus(t.id, 'Success')}
+                                            className="bg-green-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-green-700 transition"
+                                        >
+                                            Confirm
+                                        </button>
+                                    )}
+                                    {t.status === 'Pending' && (
+                                        <button
+                                            onClick={() => handleUpdateTransactionStatus(t.id, 'Failed')}
+                                            className="bg-white text-red-600 border border-red-100 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-red-50 transition"
+                                        >
+                                            Reject
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -1984,7 +2055,7 @@ export const Admin: React.FC = () => {
 
     const renderLogistics = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Logistics</h2><div className="grid gap-4">{orders.filter(o => o.status === 'Shipped' || o.status === 'Packed').map(o => (<div key={o.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center"><div><p className="font-bold text-lg">{o.id}</p><p className="text-sm text-gray-500">To: {o.shippingAddress}</p><div className="mt-2 flex gap-2"><span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">{o.status}</span>{o.trackingNumber && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{o.courier}: {o.trackingNumber}</span>}</div></div><div className="flex flex-col gap-2"><button className="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-100">Assign Courier</button></div></div>))}</div></div>);
     const renderReturns = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Return Requests</h2><div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left">Return ID</th><th className="px-6 py-3">Product</th><th className="px-6 py-3">Reason</th><th className="px-6 py-3">Status</th><th className="px-6 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{returns.map(r => (<tr key={r.id}><td className="px-6 py-4">{r.id}</td><td className="px-6 py-4">{r.productName}</td><td className="px-6 py-4 text-red-500">{r.reason}</td><td className="px-6 py-4 font-bold">{r.status}</td><td className="px-6 py-4 text-right space-x-2">{r.status === 'Pending' && (<><button className="text-green-600 hover:underline text-xs">Approve</button><button className="text-red-600 hover:underline text-xs">Reject</button></>)}</td></tr>))}</tbody></table></div></div>);
-    const renderReviews = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Reviews Moderation</h2><div className="grid gap-4">{reviews.map(r => (<div key={r._id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex justify-between"><div className="flex items-center gap-2"><div className="flex text-yellow-400">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div><span className="font-bold text-gray-800">{r.productName}</span></div><span className={`text-xs px-2 py-0.5 rounded ${r.status === 'Flagged' || r.status === 'Rejected' ? 'bg-red-100 text-red-800' : r.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100'}`}>{r.status}</span></div><p className="text-gray-600 mt-2 text-sm">"{r.comment}"</p><div className="mt-3 flex justify-end gap-2"><button onClick={() => handleReviewAction(r._id, 'Delete')} className="text-gray-600 text-xs font-bold hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button></div></div>))}</div></div>);
+    const renderReviews = () => (<div className="space-y-4"><h2 className="text-xl font-bold">Reviews Moderation</h2><div className="grid gap-4">{reviews.map(r => (<div key={r._id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"><div className="flex justify-between"><div className="flex items-center gap-2"><div className="flex text-yellow-400">{"â˜…".repeat(r.rating)}{"â˜†".repeat(5 - r.rating)}</div><span className="font-bold text-gray-800">{r.productName}</span></div><span className={`text-xs px-2 py-0.5 rounded ${r.status === 'Flagged' || r.status === 'Rejected' ? 'bg-red-100 text-red-800' : r.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100'}`}>{r.status}</span></div><p className="text-gray-600 mt-2 text-sm">"{r.comment}"</p><div className="mt-3 flex justify-end gap-2"><button onClick={() => handleReviewAction(r._id, 'Delete')} className="text-gray-600 text-xs font-bold hover:underline flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button></div></div>))}</div></div>);
     const renderCoupons = () => (
         <div className="space-y-4">
             <div className="flex justify-between items-center">

@@ -15,6 +15,7 @@ export const Cart: React.FC = () => {
   const [missingDetails, setMissingDetails] = React.useState<string[]>([]);
   const [showMissingDetailsModal, setShowMissingDetailsModal] = React.useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = React.useState<string | null>(null);
+  const [paymentUTR, setPaymentUTR] = React.useState('');
   const [isUploadingPayment, setIsUploadingPayment] = React.useState(false);
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [verificationAlert, setVerificationAlert] = React.useState<{ title: string; message: string; details?: string } | null>(null);
@@ -26,7 +27,7 @@ export const Cart: React.FC = () => {
 
   // Payment Method State
   const [paymentMethod, setPaymentMethod] = React.useState<'UPI' | 'COD'>('UPI');
- 
+
   const COD_FEE = 70;
 
   const [availableCoupons, setAvailableCoupons] = React.useState<Coupon[]>([]);
@@ -282,6 +283,7 @@ export const Cart: React.FC = () => {
         paymentMethod: paymentMethod,
         paymentStatus: paymentMethod === 'COD' ? 'Unpaid' : 'Paid',
         paymentScreenshot: paymentMethod === 'COD' ? null : paymentScreenshot,
+        paymentId: paymentMethod === 'UPI' ? paymentUTR : null,
         orderId: generatedOrderId,
         date: new Date()
       };
@@ -662,27 +664,26 @@ export const Cart: React.FC = () => {
                       <span className={`text-xs font-bold ${paymentMethod === 'UPI' ? 'text-primary' : 'text-gray-600'}`}>Online UPI</span>
                     </button>
 
-                  <button
-  type="button"
-  onClick={() => {
-    setPaymentMethod('COD');
-    setIsPaymentConfirmed(false);
-    setPaymentScreenshot(null);
-  }}
-  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
-    paymentMethod === 'COD'
-      ? 'border-primary bg-purple-50'
-      : 'border-gray-100 bg-white hover:border-gray-200'
-  }`}
->
-  <Wallet className={`w-6 h-6 mb-2 ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-400'}`} />
-  <span className={`text-xs font-bold ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-600'}`}>
-    Cash on Delivery
-  </span>
-</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod('COD');
+                        setIsPaymentConfirmed(false);
+                        setPaymentScreenshot(null);
+                      }}
+                      className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${paymentMethod === 'COD'
+                          ? 'border-primary bg-purple-50'
+                          : 'border-gray-100 bg-white hover:border-gray-200'
+                        }`}
+                    >
+                      <Wallet className={`w-6 h-6 mb-2 ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-400'}`} />
+                      <span className={`text-xs font-bold ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-600'}`}>
+                        Cash on Delivery
+                      </span>
+                    </button>
 
                   </div>
-                
+
                 </div>
 
                 {paymentMethod === 'UPI' ? (
@@ -1045,34 +1046,47 @@ export const Cart: React.FC = () => {
 
                 {/* Payment Screenshot Upload (Only for UPI) */}
                 {paymentMethod === 'UPI' && (
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Upload Payment Screenshot <span className="text-red-500">*</span></label>
-                    <div className="flex items-center justify-center w-full">
-                      <label htmlFor="payment-screenshot" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${paymentScreenshot ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}`}>
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {isUploadingPayment ? (
-                            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
-                          ) : paymentScreenshot ? (
-                            <>
-                              <img src={paymentScreenshot} alt="Payment Proof" className="h-20 object-contain mb-1 rounded shadow-sm" />
-                              <p className="text-xs text-green-600 font-semibold">Screenshot Uploaded!</p>
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                              <p className="text-xs text-gray-500"><span className="font-semibold">Click to upload</span> payment proof</p>
-                            </>
-                          )}
-                        </div>
-                        <input
-                          id="payment-screenshot"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handlePaymentScreenshotUpload}
-                          disabled={isUploadingPayment}
-                        />
-                      </label>
+                  <div className="mb-4 text-left">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Upload Payment Screenshot <span className="text-red-500">*</span></label>
+                      <div className="flex items-center justify-center w-full">
+                        <label htmlFor="payment-screenshot" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${paymentScreenshot ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}`}>
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {isUploadingPayment ? (
+                              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                            ) : paymentScreenshot ? (
+                              <>
+                                <img src={paymentScreenshot} alt="Payment Proof" className="h-20 object-contain mb-1 rounded shadow-sm" />
+                                <p className="text-xs text-green-600 font-semibold">Screenshot Uploaded!</p>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                <p className="text-xs text-gray-500"><span className="font-semibold">Click to upload</span> payment proof</p>
+                              </>
+                            )}
+                          </div>
+                          <input
+                            id="payment-screenshot"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handlePaymentScreenshotUpload}
+                            disabled={isUploadingPayment}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Transaction ID / UTR Number (Optional)</label>
+                      <input
+                        type="text"
+                        value={paymentUTR}
+                        onChange={(e) => setPaymentUTR(e.target.value)}
+                        placeholder="e.g. 132456789012"
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1 italic">Providing the UTR number helps us confirm your payment faster.</p>
                     </div>
                   </div>
                 )}

@@ -212,6 +212,10 @@ export interface Transaction {
   status: 'Success' | 'Pending' | 'Failed';
   date: string;
   method: string;
+  customerName: string;
+  customerEmail?: string;
+  screenshot?: string;
+  referenceId?: string;
 }
 
 export interface ReturnRequest {

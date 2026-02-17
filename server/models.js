@@ -77,6 +77,8 @@ const OrderSchema = new mongoose.Schema({
   status: { type: String, default: 'Design Pending' },
   paymentMethod: String,
   paymentStatus: { type: String, default: 'Unpaid' },
+  paymentScreenshot: String,
+  paymentDetails: Object, // For Razorpay/Stripe response
   shippingAddress: Object,
   date: { type: Date, default: Date.now },
   orderId: String,
@@ -199,10 +201,13 @@ const TransactionSchema = new mongoose.Schema({
   orderId: String,
   amount: Number,
   type: { type: String, default: 'Credit' }, // Credit, Debit, Payout
-  status: { type: String, default: 'Completed' },
+  status: { type: String, default: 'Pending' }, // Pending, Success, Failed
   date: { type: Date, default: Date.now },
   method: String,
-  customerName: String
+  customerName: String,
+  customerEmail: String,
+  screenshot: String,
+  referenceId: String // UTR / Payment ID
 }, { collection: 'transactions' });
 
 // Return Request Schema

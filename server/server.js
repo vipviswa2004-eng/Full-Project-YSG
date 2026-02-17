@@ -461,14 +461,17 @@ app.post("/api/orders", async (req, res) => {
         status: order.paymentStatus === 'Paid' ? 'Success' : 'Pending',
         method: order.paymentMethod,
         customerName: order.user?.name || 'Guest',
+        customerEmail: order.user?.email || '',
+        screenshot: order.paymentScreenshot || '',
+        referenceId: order.paymentId || '',
         date: new Date()
       });
       await transaction.save();
       console.log(`✅ Transaction recorded for order ${order.orderId}`);
     } catch (txErr) {
       console.error("❌ Failed to record transaction:", txErr);
-      // Don't fail the order if transaction recording fails
-    }
+    }  // Don't fail the order if transaction recording fails
+
 
     // Notify Admin via WhatsApp for COD orders
     if (order.paymentMethod === 'COD') {
@@ -1725,10 +1728,59 @@ app.delete("/api/sellers/:id", async (req, res) => {
 });
 
 // ---------- TRANSACTIONS ----------
+// Get All Transactions (Admin)
 app.get("/api/transactions", async (req, res) => {
   try {
     const transactions = await Transaction.find().sort({ date: -1 });
     res.json(transactions);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Create Manual Transaction (Admin)
+app.post("/api/transactions", async (req, res) => {
+  try {
+    const transaction = new Transaction({
+      ...req.body,
+      id: req.body.id || `txn_${Date.now()}`,
+      date: req.body.date || new Date()
+    });
+    await transaction.save();
+    res.json(transaction);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update Transaction Status (Admin)
+app.put("/api/transactions/:id", async (req, res) => {
+  try {
+    // Find by either _id or custom id
+    let query = { _id: req.params.id.match(/^[0-9a-fA-F]{24}$/) ? req.params.id : null };
+    if (!query._id) query = { id: req.params.id };
+    else query = { $or: [{ _id: req.params.id }, { id: req.params.id }] };
+
+    const transaction = await Transaction.findOneAndUpdate(
+      query,
+      { $set: req.body },
+      { new: true }
+    );
+
+    if (!transaction) return res.status(404).json({ error: "Transaction not found" });
+
+    // If transaction status is updated to Success, and it's linked to an order, 
+    // we should also update the order's payment status
+    if (req.body.status === 'Success' && transaction.orderId) {
+      const order = await Order.findOne({ orderId: transaction.orderId });
+      if (order && order.paymentStatus !== 'Paid') {
+        order.paymentStatus = 'Paid';
+        await order.save();
+        console.log(`✅ Auto-synced Order ${order.orderId} to Paid via Transaction Update`);
+      }
+    }
+
+    res.json(transaction);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
