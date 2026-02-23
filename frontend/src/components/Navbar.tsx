@@ -11,10 +11,9 @@ import { useCart } from '../context';
 import { Product } from '../types';
 
 export const Navbar: React.FC = () => {
-  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products, isLoginModalOpen, setIsLoginModalOpen, currency, setCurrency } = useCart();
+  const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products, isLoginModalOpen, setIsLoginModalOpen, currency, setCurrency, isMobileSearchOpen, setIsMobileSearchOpen } = useCart();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -429,14 +428,14 @@ export const Navbar: React.FC = () => {
         {/* Mobile Search Overlay */}
         {isMobileSearchOpen && (
           <div className="fixed inset-0 z-[60] bg-gray-900 animate-fade-in flex flex-col">
-            <div className="flex items-center gap-3 p-4 border-b">
-              <button onClick={() => setIsMobileSearchOpen(false)} className="p-1" title="Back"><ArrowLeft className="w-6 h-6" /></button>
+            <div className="flex items-center gap-3 p-4 border-b border-gray-800">
+              <button onClick={() => setIsMobileSearchOpen(false)} className="p-1 text-white hover:bg-gray-800 rounded-full transition-colors" title="Back"><ArrowLeft className="w-6 h-6" /></button>
               <div className="relative flex-1">
                 <input
                   type="text"
                   autoFocus
                   placeholder={placeholderText}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full pl-9 pr-3 py-2.5 bg-gray-800 border border-gray-700 rounded-full text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent focus:bg-gray-700 transition-all placeholder:text-gray-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -464,9 +463,9 @@ export const Navbar: React.FC = () => {
                       className="flex items-center gap-4 p-2 active:bg-gray-50 rounded-xl"
                     >
                       <img src={product.image} alt="" className="w-12 h-12 rounded-lg object-cover border" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{product.name}</p>
-                        <p className="text-xs text-gray-500">{product.category}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white line-clamp-1">{product.name}</p>
+                        <p className="text-xs text-gray-400">{product.category}</p>
                       </div>
                     </div>
                   ))}
@@ -489,7 +488,7 @@ export const Navbar: React.FC = () => {
                           handleRecentSearchClick(term);
                           setIsMobileSearchOpen(false);
                         }}
-                        className="px-4 py-2 bg-gray-100 rounded-full text-xs font-bold text-gray-700 active:bg-primary active:text-white transition-colors"
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-full text-xs font-bold text-gray-200 active:bg-accent active:text-white transition-colors"
                       >
                         {term}
                       </button>

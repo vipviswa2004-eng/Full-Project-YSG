@@ -21,6 +21,8 @@ interface AppContextType {
     setIsLoginModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     products: Product[]; // Exposed products from DB
     isLoadingProducts: boolean;
+    isMobileSearchOpen: boolean;
+    setIsMobileSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -71,6 +73,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
     const [isGiftAdvisorOpen, setIsGiftAdvisorOpen] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
     // API Base URL
     // API Base URL
@@ -322,7 +325,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, isLoginModalOpen, setIsLoginModalOpen, products: dbProducts, isLoadingProducts }}>
+        <AppContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, wishlist, toggleWishlist, user, setUser, currency, setCurrency, isGiftAdvisorOpen, setIsGiftAdvisorOpen, isLoginModalOpen, setIsLoginModalOpen, products: dbProducts, isLoadingProducts, isMobileSearchOpen, setIsMobileSearchOpen }}>
             {children}
         </AppContext.Provider>
     );

@@ -47,7 +47,7 @@ export const SEO: React.FC<SEOProps> = ({
 
     const fullImage = image ? (image.startsWith('http') ? image : `${DOMAIN}${image}`) : DEFAULT_IMAGE;
 
-    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'home decor', 'corporate gifts', 'gift shop india', 'Sign Galaxy India'];
+    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'corporate gifts', 'gift shop globally', 'ai', 'ai driven customised products', 'Sign Galaxy '];
     const allKeywords = [...new Set([...defaultKeywords, ...keywords])].join(', ');
 
     const structuredData = productData
