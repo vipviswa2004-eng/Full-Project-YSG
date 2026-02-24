@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { SEO } from '../components/SEO';
 import { RecentlyViewedDetails } from './RecentlyViewedDetails';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search, Tag } from 'lucide-react';
 import { getCachedProduct, setCachedProduct } from '../utils/productCache';
-import { ProductCard } from '../components/ProductCard';
 import { Coupon, VariationOption, Review } from '../types';
 
 export const ProductDetails: React.FC = () => {
@@ -2058,21 +2057,70 @@ export const ProductDetails: React.FC = () => {
 
                         <div
                             ref={relatedScrollRef}
-                            className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0"
+                            className="grid grid-flow-col auto-cols-[calc((100%-32px)/3)] md:auto-cols-[calc((100%-64px)/5)] gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0"
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                         >
                             {products
                                 .filter(p => p.category === product.category && p.id !== product.id)
                                 .slice(0, 10)
-                                .map(related => (
-                                    <div key={related.id} className="min-w-[160px] md:min-w-[220px] snap-start relative group">
-                                        <ProductCard
-                                            product={related}
-                                            formatPrice={formatPrice}
-                                            onProductClick={(id) => { navigate(`/product/${id}`); window.scrollTo(0, 0); }}
-                                        />
-                                    </div>
-                                ))}
+                                .map(related => {
+                                    const prices = calculatePrice(related);
+                                    const relatedId = related.id || (related as any)._id;
+                                    const isInRelatedWishlist = wishlist.some(p => p.id === relatedId);
+
+                                    return (
+                                        <div key={relatedId} className="snap-start relative group">
+                                            <Link
+                                                to={`/product/${relatedId}`}
+                                                onClick={() => window.scrollTo(0, 0)}
+                                                className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full"
+                                            >
+                                                <div className="relative aspect-square bg-white overflow-hidden">
+                                                    <img
+                                                        className="w-full h-full object-contain p-2 md:p-3 transition-transform duration-500 group-hover:scale-105"
+                                                        src={related.image}
+                                                        alt={related.name}
+                                                        loading="lazy"
+                                                    />
+                                                    {(related.discount ?? 0) > 0 && (
+                                                        <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">
+                                                            {related.discount}% OFF
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="p-2 md:p-2.5 flex flex-col flex-grow">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-[10px] md:text-xs font-semibold text-gray-800 line-clamp-2 h-7 md:h-8 leading-tight group-hover:text-primary transition-colors">
+                                                            {related.name}
+                                                        </h3>
+                                                    </div>
+                                                    <div className="mt-1 md:mt-2 flex items-baseline gap-1 md:gap-1.5">
+                                                        <span className="text-xs md:text-sm font-bold text-gray-900">
+                                                            {currency === 'INR' ? `₹${prices.final.toLocaleString('en-IN')}` : `$${(prices.final * 0.012).toFixed(2)}`}
+                                                        </span>
+                                                        {(related.discount ?? 0) > 0 && (
+                                                            <span className="text-[9px] md:text-[10px] text-gray-400 line-through">
+                                                                {currency === 'INR' ? `₹${prices.original.toLocaleString('en-IN')}` : `$${(prices.original * 0.012).toFixed(2)}`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </Link>
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    toggleWishlist(related);
+                                                }}
+                                                className={`absolute top-1 right-1 md:top-1.5 md:right-1.5 p-1 bg-white rounded-full shadow-sm transition-all hover:scale-110 z-20 ${isInRelatedWishlist ? 'text-red-500' : 'text-gray-300 hover:text-red-500'}`}
+                                            >
+                                                <Heart className={`w-3 h-3 md:w-3.5 md:h-3.5 ${isInRelatedWishlist ? 'fill-current' : ''}`} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                         </div>
 
                         <button onClick={() => navigate(`/shop?category=${encodeURIComponent(product.category)}`)} className="w-full md:hidden flex justify-center items-center gap-2 text-primary font-bold py-3 bg-gray-50 rounded-xl mt-4 border border-gray-100">
