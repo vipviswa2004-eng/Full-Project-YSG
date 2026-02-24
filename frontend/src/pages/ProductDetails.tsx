@@ -13,7 +13,7 @@ import { Coupon, VariationOption, Review } from '../types';
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen } = useCart();
+    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen, isLoadingProducts } = useCart();
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
@@ -29,45 +29,54 @@ export const ProductDetails: React.FC = () => {
     const [product, setProduct] = useState(initialProduct);
     const [isFetching, setIsFetching] = useState(!initialProduct || !initialProduct.description);
 
-    // Unified Product Fetching Logic
+    // Update product when products context changes
+    // Unified Product Fetching Logic (Context + API Fallback)
     useEffect(() => {
         const loadProduct = async () => {
-            // Force reset to show skeleton immediately
+            const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
+            const cachedProduct = getCachedProduct(id!);
+
+            // If we have full details in context or cache, we can skip fetching
+            if (cachedProduct && cachedProduct.description) {
+                setProduct(cachedProduct);
+                setIsFetching(false);
+                return;
+            }
+
+            if (ctxProduct && ctxProduct.description) {
+                setProduct(ctxProduct);
+                setIsFetching(false);
+                return;
+            }
+
             setIsFetching(true);
-            setProduct(undefined);
-
             try {
-                // 1. Try to find the best available data immediately (Sync)
-                const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
-                const cachedProduct = getCachedProduct(id!);
-
-                // Priority: Cache (with description) > Context
-                const bestMatch = (cachedProduct && cachedProduct.description) ? cachedProduct : ctxProduct;
-
-                if (bestMatch) {
-                    setProduct(bestMatch);
-                    if (bestMatch.description) {
-                        setIsFetching(false);
-                        return; // Exit if we already have full cached data
-                    }
+                if (ctxProduct) {
+                    setProduct(prev => {
+                        if (prev && (prev.id === id || (prev as any)._id === id) && prev.description) {
+                            return prev;
+                        }
+                        return ctxProduct;
+                    });
                 }
 
-                // 2. Fetch from API (Async)
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
                 if (res.ok) {
                     const fullProduct = await res.json();
                     setProduct(fullProduct);
                     setCachedProduct(id!, fullProduct);
+                } else {
+                    console.error("Product not found in API");
                 }
             } catch (err) {
-                console.error("Failed to fetch product:", err);
+                console.error("Failed to fetch full product details:", err);
             } finally {
                 setIsFetching(false);
             }
         };
 
         if (id) loadProduct();
-    }, [id]); // Reset strictly when ID changes
+    }, [products, id]);
 
     const [extraHeads, setExtraHeads] = useState(0);
     const [symbolNumber, setSymbolNumber] = useState('');
@@ -416,14 +425,14 @@ export const ProductDetails: React.FC = () => {
         </div>
     );
 
-    if (isFetching) {
+    if (isLoadingProducts || (isFetching && !product)) {
         return <ProductSkeleton />;
     }
 
     if (!product) return (
         <div className="flex flex-col items-center justify-center min-h-screen pt-20 text-center px-4">
             <div className="text-xl font-bold text-gray-800 mb-2">Product Not Found</div>
-            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for or it's still loading...</p>
+            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for.</p>
             <button
                 onClick={() => navigate('/products')}
                 className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
