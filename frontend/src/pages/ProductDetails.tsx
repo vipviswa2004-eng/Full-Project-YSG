@@ -13,7 +13,7 @@ import { Coupon, VariationOption, Review } from '../types';
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen, isLoadingProducts } = useCart();
+    const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen } = useCart();
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
