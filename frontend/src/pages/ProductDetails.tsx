@@ -25,34 +25,30 @@ export const ProductDetails: React.FC = () => {
 
 
 
-    const initialProduct = products.find(p => p.id === id || (p as any)._id === id) || localProducts.find(p => p.id === id);
-    const [product, setProduct] = useState(initialProduct);
-    const [isFetching, setIsFetching] = useState(!initialProduct || !initialProduct.description);
+    const [product, setProduct] = useState<any>(null);
+    const [isFetching, setIsFetching] = useState(true);
 
     // Unified Product Fetching Logic
     useEffect(() => {
-        const loadProduct = async () => {
-            // Force reset to show skeleton immediately
+        const fetchProduct = async () => {
             setIsFetching(true);
-            setProduct(undefined);
+            setProduct(null);
 
             try {
-                // 1. Try to find the best available data immediately (Sync)
+                // 1. Try context/cache first
                 const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
                 const cachedProduct = getCachedProduct(id!);
-
-                // Priority: Cache (with description) > Context
                 const bestMatch = (cachedProduct && cachedProduct.description) ? cachedProduct : ctxProduct;
 
                 if (bestMatch) {
                     setProduct(bestMatch);
                     if (bestMatch.description) {
                         setIsFetching(false);
-                        return; // Exit if we already have full cached data
+                        // If we have full data, skip API but keep checking for updates
                     }
                 }
 
-                // 2. Fetch from API (Async)
+                // 2. Always fetch latest from API if we don't have description
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
                 if (res.ok) {
                     const fullProduct = await res.json();
@@ -66,8 +62,8 @@ export const ProductDetails: React.FC = () => {
             }
         };
 
-        if (id) loadProduct();
-    }, [id]); // Reset strictly when ID changes
+        if (id) fetchProduct();
+    }, [id]); // ONLY depend on id to avoid infinite loops
 
     const [extraHeads, setExtraHeads] = useState(0);
     const [symbolNumber, setSymbolNumber] = useState('');
