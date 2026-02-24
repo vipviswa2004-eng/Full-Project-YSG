@@ -32,29 +32,27 @@ export const ProductDetails: React.FC = () => {
     // Unified Product Fetching Logic
     useEffect(() => {
         const loadProduct = async () => {
-            // 1. Reset/Start fetching state
+            // Force reset to show skeleton immediately
             setIsFetching(true);
+            setProduct(undefined);
 
-            // 2. Try to find the best available data immediately (Sync)
-            const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
-            const cachedProduct = getCachedProduct(id!);
-
-            // Priority: Cache (with description) > Context > Initial State
-            const bestMatch = (cachedProduct && cachedProduct.description) ? cachedProduct : ctxProduct;
-
-            if (bestMatch) {
-                setProduct(bestMatch);
-                // If it already has description, we might not need to fetch, 
-                // but let's fetch anyway to ensure latest data, while showing current data
-                if (bestMatch.description) {
-                    setIsFetching(false);
-                }
-            } else {
-                setProduct(undefined);
-            }
-
-            // 3. Fetch from API (Async)
             try {
+                // 1. Try to find the best available data immediately (Sync)
+                const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
+                const cachedProduct = getCachedProduct(id!);
+
+                // Priority: Cache (with description) > Context
+                const bestMatch = (cachedProduct && cachedProduct.description) ? cachedProduct : ctxProduct;
+
+                if (bestMatch) {
+                    setProduct(bestMatch);
+                    if (bestMatch.description) {
+                        setIsFetching(false);
+                        return; // Exit if we already have full cached data
+                    }
+                }
+
+                // 2. Fetch from API (Async)
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
                 if (res.ok) {
                     const fullProduct = await res.json();
@@ -69,7 +67,7 @@ export const ProductDetails: React.FC = () => {
         };
 
         if (id) loadProduct();
-    }, [id, products.length > 0]); // Re-run only on ID change or when initial products load
+    }, [id]); // Reset strictly when ID changes
 
     const [extraHeads, setExtraHeads] = useState(0);
     const [symbolNumber, setSymbolNumber] = useState('');
@@ -418,14 +416,14 @@ export const ProductDetails: React.FC = () => {
         </div>
     );
 
-    if (isLoadingProducts || (isFetching && !product)) {
+    if (isFetching) {
         return <ProductSkeleton />;
     }
 
     if (!product) return (
         <div className="flex flex-col items-center justify-center min-h-screen pt-20 text-center px-4">
             <div className="text-xl font-bold text-gray-800 mb-2">Product Not Found</div>
-            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for.</p>
+            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for or it's still loading...</p>
             <button
                 onClick={() => navigate('/products')}
                 className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
