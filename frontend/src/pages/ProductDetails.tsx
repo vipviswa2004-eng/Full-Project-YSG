@@ -29,54 +29,47 @@ export const ProductDetails: React.FC = () => {
     const [product, setProduct] = useState(initialProduct);
     const [isFetching, setIsFetching] = useState(!initialProduct || !initialProduct.description);
 
-    // Update product when products context changes
-    // Unified Product Fetching Logic (Context + API Fallback)
+    // Unified Product Fetching Logic
     useEffect(() => {
         const loadProduct = async () => {
+            // 1. Reset/Start fetching state
+            setIsFetching(true);
+
+            // 2. Try to find the best available data immediately (Sync)
             const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
             const cachedProduct = getCachedProduct(id!);
 
-            // If we have full details in context or cache, we can skip fetching
-            if (cachedProduct && cachedProduct.description) {
-                setProduct(cachedProduct);
-                setIsFetching(false);
-                return;
-            }
+            // Priority: Cache (with description) > Context > Initial State
+            const bestMatch = (cachedProduct && cachedProduct.description) ? cachedProduct : ctxProduct;
 
-            if (ctxProduct && ctxProduct.description) {
-                setProduct(ctxProduct);
-                setIsFetching(false);
-                return;
-            }
-
-            setIsFetching(true);
-            try {
-                if (ctxProduct) {
-                    setProduct(prev => {
-                        if (prev && (prev.id === id || (prev as any)._id === id) && prev.description) {
-                            return prev;
-                        }
-                        return ctxProduct;
-                    });
+            if (bestMatch) {
+                setProduct(bestMatch);
+                // If it already has description, we might not need to fetch, 
+                // but let's fetch anyway to ensure latest data, while showing current data
+                if (bestMatch.description) {
+                    setIsFetching(false);
                 }
+            } else {
+                setProduct(undefined);
+            }
 
+            // 3. Fetch from API (Async)
+            try {
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
                 if (res.ok) {
                     const fullProduct = await res.json();
                     setProduct(fullProduct);
                     setCachedProduct(id!, fullProduct);
-                } else {
-                    console.error("Product not found in API");
                 }
             } catch (err) {
-                console.error("Failed to fetch full product details:", err);
+                console.error("Failed to fetch product:", err);
             } finally {
                 setIsFetching(false);
             }
         };
 
         if (id) loadProduct();
-    }, [products, id]);
+    }, [id, products.length > 0]); // Re-run only on ID change or when initial products load
 
     const [extraHeads, setExtraHeads] = useState(0);
     const [symbolNumber, setSymbolNumber] = useState('');
