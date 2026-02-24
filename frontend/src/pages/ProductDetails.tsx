@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { SEO } from '../components/SEO';
 import { RecentlyViewedDetails } from './RecentlyViewedDetails';
 import { useParams, useNavigate } from 'react-router-dom';
-import { products as localProducts, calculatePrice } from '../data/products';
+import { calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search, Tag } from 'lucide-react';
 import { getCachedProduct, setCachedProduct } from '../utils/productCache';
 import { ProductCard } from '../components/ProductCard';
-import { Coupon, VariationOption, Review } from '../types';
+import { Coupon, VariationOption, Review, Product, Variation } from '../types';
 
 export const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -25,7 +25,7 @@ export const ProductDetails: React.FC = () => {
 
 
 
-    const [product, setProduct] = useState<any>(null);
+    const [product, setProduct] = useState<Product | null>(null);
     const [isFetching, setIsFetching] = useState(true);
 
     // Unified Product Fetching Logic
@@ -300,9 +300,9 @@ export const ProductDetails: React.FC = () => {
         if (product) {
             if (product.variations) {
                 const defaults: Record<string, VariationOption> = {};
-                product.variations.forEach(v => {
+                product.variations.forEach((v: any) => {
                     // Search for marked default first
-                    const markedDefault = v.options.find(o => o.isDefault);
+                    const markedDefault = v.options.find((o: any) => o.isDefault);
                     if (markedDefault) {
                         defaults[v.id] = markedDefault;
                         if (markedDefault.image) {
@@ -457,7 +457,7 @@ export const ProductDetails: React.FC = () => {
     const handleVariationChange = (variationId: string, option: VariationOption, variationName?: string) => {
         setSelectedVariations(prev => {
             // Find variation to check properties
-            const variation = product.variations?.find(v => v.id === variationId);
+            const variation = product.variations?.find((v: any) => v.id === variationId);
             const isToggleable = variation?.disableAutoSelect || (variationName && (variationName.toLowerCase().includes('light base') || variationName.toLowerCase().includes('shape')));
 
             if (isToggleable) {
@@ -733,7 +733,7 @@ export const ProductDetails: React.FC = () => {
 
 
 
-    const variationImages = product.variations?.flatMap(v => v.options.map(o => o.image).filter(Boolean)) || [] as string[];
+    const variationImages = product.variations?.flatMap((v: any) => v.options.map((o: any) => o.image).filter(Boolean)) || [] as string[];
     const allImages = [product.image, ...variationImages, ...(product.gallery || [])].filter((img, idx, self) => img && self.indexOf(img) === idx) as string[];
 
     return (
@@ -908,11 +908,11 @@ export const ProductDetails: React.FC = () => {
                                     v.name.toLowerCase() !== 'shape' &&
                                     v.name.toLowerCase() !== 'color' &&
                                     v.options && v.options.length > 0
-                                ).map((v) => (
+                                ).map((v: any) => (
                                     <div key={v.id}>
                                         <h3 className="text-sm font-medium text-gray-900 mb-2">{v.name}</h3>
                                         <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                            {v.options.map((opt) => (
+                                            {v.options.map((opt: any) => (
                                                 <button
                                                     key={opt.id}
                                                     onClick={() => handleVariationChange(v.id, opt, v.name)}
@@ -996,7 +996,7 @@ export const ProductDetails: React.FC = () => {
                                     // If it's a combo offer, show it as an inclusion list instead of a selection
                                     if (product.isComboOffer && sizeVariation) {
                                         // Calculate total items dynamically
-                                        const totalItems = sizeVariation.options.reduce((sum, opt) => {
+                                        const totalItems = sizeVariation.options.reduce((sum: number, opt: any) => {
                                             const qty = parseInt(opt.label.match(/\d+/)?.[0] || '1');
                                             return sum + qty;
                                         }, 0);
@@ -1016,7 +1016,7 @@ export const ProductDetails: React.FC = () => {
                                                 </div>
 
                                                 <div className="space-y-4">
-                                                    {sizeVariation.options.map((opt, i) => (
+                                                    {sizeVariation.options.map((opt: VariationOption, i: number) => (
                                                         <motion.div
                                                             key={opt.id}
                                                             initial={{ opacity: 0, x: -20 }}
@@ -1040,7 +1040,7 @@ export const ProductDetails: React.FC = () => {
                                                                 </div>
                                                                 <div className="flex items-center gap-2 mt-1">
                                                                     <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">Size: {opt.size || opt.description || 'Standard'}</span>
-                                                                    {opt.description && opt.size && <span className="text-[10px] text-primary/60 font-medium italic">{opt.description}</span>}
+                                                                    {(opt.description && opt.size) && <span className="text-[10px] text-primary/60 font-medium italic">{opt.description}</span>}
                                                                 </div>
                                                             </div>
                                                         </motion.div>
@@ -1087,14 +1087,14 @@ export const ProductDetails: React.FC = () => {
 
                                 {/* Shape Variation */}
                                 {(() => {
-                                    const shapeVariation = product.variations?.find(v => v.name.toLowerCase() === 'shape');
+                                    const shapeVariation = product.variations?.find((v: Variation) => v.name.toLowerCase() === 'shape');
                                     if (!shapeVariation) return null;
 
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">Select Shape</h3>
                                             <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                                {shapeVariation.options.map((opt) => (
+                                                {shapeVariation.options.map((opt: VariationOption) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(shapeVariation.id, opt, shapeVariation.name)}
@@ -1119,14 +1119,14 @@ export const ProductDetails: React.FC = () => {
 
                                 {/* Color Variation */}
                                 {(() => {
-                                    const colorVariation = product.variations?.find(v => v.name.toLowerCase() === 'color');
+                                    const colorVariation = product.variations?.find((v: Variation) => v.name.toLowerCase() === 'color');
                                     if (!colorVariation || !colorVariation.options || colorVariation.options.length === 0) return null;
 
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">Select Color</h3>
                                             <div className="flex flex-nowrap md:flex-wrap gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                                                {colorVariation.options.map((opt) => (
+                                                {colorVariation.options.map((opt: VariationOption) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(colorVariation.id, opt, colorVariation.name)}
@@ -1154,14 +1154,14 @@ export const ProductDetails: React.FC = () => {
 
                                 {/* Light Base Variation - Displayed under Size */}
                                 {(() => {
-                                    const lightBaseVariation = product.variations?.find(v => v.name.toLowerCase().includes('light base'));
+                                    const lightBaseVariation = product.variations?.find((v: Variation) => v.name.toLowerCase().includes('light base'));
                                     if (!lightBaseVariation || !lightBaseVariation.options || lightBaseVariation.options.length === 0) return null;
 
                                     return (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-900 mb-2">{lightBaseVariation.name}</h3>
                                             <div className="flex flex-nowrap md:flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                                {lightBaseVariation.options.map((opt) => (
+                                                {lightBaseVariation.options.map((opt: VariationOption) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => handleVariationChange(lightBaseVariation.id, opt, lightBaseVariation.name)}
@@ -1258,8 +1258,8 @@ export const ProductDetails: React.FC = () => {
                                                         </div>
                                                         <div className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
                                                             {COUNTRIES
-                                                                .filter(c => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) || c.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
-                                                                .map(country => (
+                                                                .filter((c: { name: string; code: string; }) => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) || c.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
+                                                                .map((country: { code: string; flag: string; name: string; }) => (
                                                                     <button
                                                                         key={country.code}
                                                                         onClick={() => {
@@ -1277,7 +1277,7 @@ export const ProductDetails: React.FC = () => {
                                                                     </button>
                                                                 ))
                                                             }
-                                                            {COUNTRIES.filter(c => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) || c.code.toLowerCase().includes(countrySearchQuery.toLowerCase())).length === 0 && (
+                                                            {COUNTRIES.filter((c: { name: string; code: string; }) => c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) || c.code.toLowerCase().includes(countrySearchQuery.toLowerCase())).length === 0 && (
                                                                 <div className="p-3 text-center text-xs text-gray-400">
                                                                     No country found
                                                                 </div>
@@ -1355,12 +1355,12 @@ export const ProductDetails: React.FC = () => {
                                             ];
 
                                             // Get custom sections that aren't one of the standard three (by checking aliases)
-                                            const customSections = (product.aboutSections || []).filter(s =>
+                                            const customSections = (product.aboutSections || []).filter((s: { isHidden: boolean; id: string; }) =>
                                                 !s.isHidden &&
                                                 !['description', 'desc', 'instructions', 'instr', 'inst', 'delivery', 'del'].includes(s.id.toLowerCase())
                                             );
 
-                                            return [...standardTabs, ...customSections].map((tab) => (
+                                            return [...standardTabs, ...customSections].map((tab: { id: string; title: string; }) => (
                                                 <button
                                                     key={tab.id}
                                                     onClick={() => setDescriptionTab(descriptionTab === tab.id ? null : tab.id)}
@@ -1484,7 +1484,7 @@ export const ProductDetails: React.FC = () => {
                                                     };
                                                 })();
 
-                                                const currentSection = product.aboutSections?.find(s => s.id === descriptionTab);
+                                                const currentSection = product.aboutSections?.find((s: { id: string; }) => s.id === descriptionTab);
                                                 const dbContent = currentSection?.content;
 
                                                 if (descriptionTab === 'description' || descriptionTab === 'desc') {
@@ -1493,14 +1493,14 @@ export const ProductDetails: React.FC = () => {
                                                             <h5 className="font-bold text-gray-900 mb-2">Product Details:</h5>
                                                             <div className="space-y-2 mb-4">
                                                                 {dbContent ? (
-                                                                    dbContent.split('\n').map((line, idx) => (
+                                                                    dbContent.split('\n').map((line: string, idx: number) => (
                                                                         <p key={idx} className="flex gap-2">
                                                                             <span className="text-gray-400 mt-1.5">•</span>
                                                                             <span>{line}</span>
                                                                         </p>
                                                                     ))
                                                                 ) : (
-                                                                    dynamic.description.map((line, idx) => (
+                                                                    dynamic.description.map((line: string, idx: number) => (
                                                                         <p key={idx} className="flex gap-2">
                                                                             <span className="text-gray-400 mt-1.5">•</span>
                                                                             <span>{line}</span>
@@ -1519,14 +1519,14 @@ export const ProductDetails: React.FC = () => {
                                                     return (
                                                         <div className="animate-fade-in space-y-3">
                                                             {dbContent ? (
-                                                                dbContent.split('\n').map((line, idx) => (
+                                                                dbContent.split('\n').map((line: string, idx: number) => (
                                                                     <p key={idx} className="flex gap-2">
                                                                         <span className="text-gray-400 mt-1.5">•</span>
                                                                         <span>{line}</span>
                                                                     </p>
                                                                 ))
                                                             ) : (
-                                                                dynamic.instructions.map((line, idx) => (
+                                                                dynamic.instructions.map((line: string, idx: number) => (
                                                                     <p key={idx} className="flex gap-2">
                                                                         <span className="text-gray-400 mt-1.5">•</span>
                                                                         <span>{line}</span>
@@ -1574,7 +1574,7 @@ export const ProductDetails: React.FC = () => {
                                                 if (currentSection?.content) {
                                                     return (
                                                         <div className="animate-fade-in whitespace-pre-wrap">
-                                                            {currentSection.content.split('\n').map((line, idx) => (
+                                                            {currentSection.content.split('\n').filter(Boolean).map((line: string, idx: number) => (
                                                                 <p key={idx} className="flex gap-2 mb-2 last:mb-0">
                                                                     <span className="text-gray-400 mt-1.5">•</span>
                                                                     <span>{line}</span>
