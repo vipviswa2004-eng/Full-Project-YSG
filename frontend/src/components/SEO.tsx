@@ -18,8 +18,8 @@ interface SEOProps {
 }
 
 const DOMAIN = 'https://ucgoc.com';
-const DEFAULT_TITLE = 'Sign Galaxy | Premium Personalized Gifts & Custom Creations';
-const DEFAULT_DESCRIPTION = "Shop premium personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Sign Galaxy. Discover customized gifts for birthdays, anniversaries, and special occasions with fast delivery across India.";
+const DEFAULT_TITLE = 'Sign Galaxy | Premium Customized Gifts & Personalized Gifts';
+const DEFAULT_DESCRIPTION = "Shop premium personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Sign Galaxy. Discover customized gifts for birthdays, anniversaries, and special occasions with fast and secure delivery.";
 const DEFAULT_IMAGE = `${DOMAIN}/logo-large.png`;
 
 export const SEO: React.FC<SEOProps> = ({

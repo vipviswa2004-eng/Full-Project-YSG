@@ -27,33 +27,32 @@ export const ProductDetails: React.FC = () => {
 
     const initialProduct = products.find(p => p.id === id || (p as any)._id === id) || localProducts.find(p => p.id === id);
     const [product, setProduct] = useState(initialProduct);
+    const [isFetching, setIsFetching] = useState(!initialProduct || !initialProduct.description);
 
     // Update product when products context changes
     // Unified Product Fetching Logic (Context + API Fallback)
     useEffect(() => {
         const loadProduct = async () => {
-            // 1. Try finding in Context (Fastest)
             const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
-
-            // 2. Try Cache (Prefetched data)
             const cachedProduct = getCachedProduct(id!);
+
+            // If we have full details in context or cache, we can skip fetching
             if (cachedProduct && cachedProduct.description) {
                 setProduct(cachedProduct);
+                setIsFetching(false);
                 return;
             }
 
-            // If context has full details (e.g. description), use it
             if (ctxProduct && ctxProduct.description) {
                 setProduct(ctxProduct);
+                setIsFetching(false);
                 return;
             }
 
-            // 3. If missing full version, fetch from API
+            setIsFetching(true);
             try {
-                // Show lite version immediately as placeholder
                 if (ctxProduct) {
                     setProduct(prev => {
-                        // Don't downgrade if we already have full details
                         if (prev && (prev.id === id || (prev as any)._id === id) && prev.description) {
                             return prev;
                         }
@@ -65,13 +64,14 @@ export const ProductDetails: React.FC = () => {
                 if (res.ok) {
                     const fullProduct = await res.json();
                     setProduct(fullProduct);
-                    // Store in cache for next time
                     setCachedProduct(id!, fullProduct);
                 } else {
                     console.error("Product not found in API");
                 }
             } catch (err) {
                 console.error("Failed to fetch full product details:", err);
+            } finally {
+                setIsFetching(false);
             }
         };
 
@@ -397,13 +397,36 @@ export const ProductDetails: React.FC = () => {
         }
     }, [showToast]);
 
-    if (isLoadingProducts) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen pt-20">
-                <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
-                <p className="text-gray-500 text-sm font-medium">Loading details...</p>
+    // Simplified Skeleton Loader
+    const ProductSkeleton = () => (
+        <div className="bg-app-bg min-h-screen pb-24 md:pb-12 animate-pulse">
+            <div className="max-w-7xl mx-auto pt-20 md:pt-8 px-4 lg:px-8">
+                <div className="lg:grid lg:grid-cols-12 lg:gap-x-10">
+                    <div className="lg:col-span-5 space-y-6">
+                        <div className="aspect-square bg-gray-200 rounded-2xl" />
+                        <div className="flex gap-4">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="w-16 h-16 bg-gray-200 rounded-lg" />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="lg:col-span-7 mt-8 lg:mt-0 space-y-6">
+                        <div className="h-4 bg-gray-200 rounded w-1/4" />
+                        <div className="h-10 bg-gray-200 rounded w-3/4" />
+                        <div className="h-6 bg-gray-200 rounded w-1/2" />
+                        <div className="h-20 bg-gray-200 rounded w-full" />
+                        <div className="space-y-4">
+                            <div className="h-12 bg-gray-200 rounded w-full" />
+                            <div className="h-12 bg-gray-200 rounded w-full" />
+                        </div>
+                    </div>
+                </div>
             </div>
-        );
+        </div>
+    );
+
+    if (isLoadingProducts || (isFetching && !product)) {
+        return <ProductSkeleton />;
     }
 
     if (!product) return (
