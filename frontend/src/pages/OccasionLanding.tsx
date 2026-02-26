@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Gift, ChevronRight, ArrowRight, ChevronLeft, ChevronDown } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { SpecialOccasion, ShopCategory } from '../types';
-import valentineBanner from '../assets/valentine_banner.png';
+import valentineBanner from '../assets/valentine_banner.webp';
 
 export const OccasionLanding: React.FC = () => {
     const { occasionId } = useParams();

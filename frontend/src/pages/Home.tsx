@@ -3,14 +3,18 @@ import { SEO } from '../components/SEO';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context';
 import { ChevronLeft, ChevronRight, Gift, Truck, ShieldCheck, Heart, Zap, User, Sparkles, ArrowRight, Wallet } from 'lucide-react';
-import birthdayImg from '../assets/birthday.png';
-import corporateBg from '../assets/corporate_bg.png';
-import corporateProduct from '../assets/corporate_gift_product.png';
-import personalizedBg from '../assets/personalized_bg.png';
-import personalizedProduct from '../assets/personalized_product.png';
-import specialBg from '../assets/special_bg.png';
-import specialProduct from '../assets/special_product.png';
-import occasionBg from '../assets/occasion_bg.png';
+import birthdayImg from '../assets/birthday.webp';
+import corporateBg from '../assets/corporate_bg.webp';
+import corporateProduct from '../assets/corporate_gift_product.webp';
+import personalizedBg from '../assets/personalized_bg.webp';
+import personalizedProduct from '../assets/personalized_product.webp';
+import specialBg from '../assets/special_bg.webp';
+import specialProduct from '../assets/special_product.webp';
+import occasionBg from '../assets/occasion_bg.webp';
+import anniversaryImg from '../assets/anniversary.webp';
+import loveImg from '../assets/love.webp';
+import kidsImg from '../assets/kids.webp';
+import comboBg from '../assets/combo_bg.webp';
 
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion, SubCategory } from '../types';
@@ -19,17 +23,17 @@ import { ProductCard } from '../components/ProductCard';
 
 const OCCASIONS = [
   { id: 'birthday', name: 'Birthday', image: birthdayImg, color: 'from-pink-500 to-rose-500' },
-  { id: 'anniversary', name: 'Wedding & Anniversary', image: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=400&auto=format&fit=crop', color: 'from-red-500 to-pink-600' },
-  { id: 'love', name: 'Love & Romance', image: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?q=80&w=400&auto=format&fit=crop', color: 'from-purple-500 to-indigo-500' },
-  { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', color: 'from-yellow-400 to-orange-500' },
+  { id: 'anniversary', name: 'Wedding & Anniversary', image: anniversaryImg, color: 'from-red-500 to-pink-600' },
+  { id: 'love', name: 'Love & Romance', image: loveImg, color: 'from-purple-500 to-indigo-500' },
+  { id: 'kids', name: 'For Kids', image: kidsImg, color: 'from-yellow-400 to-orange-500' },
 ];
 
 const RECIPIENTS = [
-  { id: 'rec_him', name: 'Him', image: '/recipients/recipient_him.png', link: '/products?recipient=Him' },
-  { id: 'rec_her', name: 'Her', image: '/recipients/recipient_her.png', link: '/products?recipient=Her' },
-  { id: 'rec_couples', name: 'Couples', image: '/recipients/recipient_couples.png', link: '/products?recipient=Couples' },
-  { id: 'rec_kids', name: 'Kids', image: '/recipients/recipient_kids.png', link: '/products?recipient=Kids' },
-  { id: 'rec_parents', name: 'Parents', image: '/recipients/recipient_parents.png', link: '/products?recipient=Parents' },
+  { id: 'rec_him', name: 'Him', image: '/recipients/recipient_him.webp', link: '/products?recipient=Him' },
+  { id: 'rec_her', name: 'Her', image: '/recipients/recipient_her.webp', link: '/products?recipient=Her' },
+  { id: 'rec_couples', name: 'Couples', image: '/recipients/recipient_couples.webp', link: '/products?recipient=Couples' },
+  { id: 'rec_kids', name: 'Kids', image: '/recipients/recipient_kids.webp', link: '/products?recipient=Kids' },
+  { id: 'rec_parents', name: 'Parents', image: '/recipients/recipient_parents.webp', link: '/products?recipient=Parents' },
 ];
 
 const HERO_SLIDES = [
@@ -83,7 +87,7 @@ const HERO_SLIDES = [
   {
     id: 'recipient',
     image: personalizedBg,
-    productImage: '/recipients/recipient_her.png',
+    productImage: '/recipients/recipient_her.webp',
     title: 'Shop by Recipient',
     subtitle: 'Thoughtful gifts curated for everyone you love.',
     cta: 'Browse for Them',
@@ -94,7 +98,7 @@ const HERO_SLIDES = [
   }
 ];
 
-const COMBO_BANNER_BG = 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?q=80&w=2070&auto=format&fit=crop';
+const COMBO_BANNER_BG = comboBg;
 
 const BUDGET_OPTIONS = [
   { label: 'Under ₹499', value: '0-499', color: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600' },
@@ -205,8 +209,7 @@ export const Home: React.FC = () => {
 
   // Get Combo Offer Products
   const comboOffers = displayProducts.filter(p => !!p.isComboOffer);
-  console.log('🔍 Home Debug - Total Products:', displayProducts.length, 'Combo Offers:', comboOffers.length);
-
+  // console.log('🔍 Home Debug - Total Products:', displayProducts.length, 'Combo Offers:', comboOffers.length);
   // Dynamically build hero slides including combo offers
   const dynamicHeroSlides = [...HERO_SLIDES];
 

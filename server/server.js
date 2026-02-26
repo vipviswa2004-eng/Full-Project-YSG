@@ -22,11 +22,11 @@ const seedRecipients = async () => {
   try {
     console.log("Seeding/Updating default Shop Recipients...");
     const defaults = [
-      { id: 'rec_him', name: 'For Him', link: '/products?recipient=Him', order: 1, image: '/recipients/recipient_him.png' },
-      { id: 'rec_her', name: 'For Her', link: '/products?recipient=Her', order: 2, image: '/recipients/recipient_her.png' },
-      { id: 'rec_couples', name: 'For Couples', link: '/products?recipient=Couples', order: 3, image: '/recipients/recipient_couples.png' },
-      { id: 'rec_kids', name: 'For Kids', link: '/products?recipient=Kids', order: 4, image: '/recipients/recipient_kids.png' },
-      { id: 'rec_parents', name: 'For Parents', link: '/products?recipient=Parents', order: 5, image: '/recipients/recipient_parents.png' }
+      { id: 'rec_him', name: 'For Him', link: '/products?recipient=Him', order: 1, image: '/recipients/recipient_him.webp' },
+      { id: 'rec_her', name: 'For Her', link: '/products?recipient=Her', order: 2, image: '/recipients/recipient_her.webp' },
+      { id: 'rec_couples', name: 'For Couples', link: '/products?recipient=Couples', order: 3, image: '/recipients/recipient_couples.webp' },
+      { id: 'rec_kids', name: 'For Kids', link: '/products?recipient=Kids', order: 4, image: '/recipients/recipient_kids.webp' },
+      { id: 'rec_parents', name: 'For Parents', link: '/products?recipient=Parents', order: 5, image: '/recipients/recipient_parents.webp' }
     ];
 
     for (const rec of defaults) {
@@ -1381,13 +1381,13 @@ app.delete("/api/shop-categories/:id", async (req, res) => {
 app.get("/api/admin/fix-images", async (req, res) => {
   try {
     const CAT_IMAGE_MAP = {
-      'PHOTO FRAME': '/categories/photo_frame.png',
-      '3D CRYSTAL': '/categories/3d_crystal.png',
-      'MUGS': '/categories/mugs.png',
-      'NEON LIGHTS': '/categories/neon_lights.png',
-      'PILLOWS': '/categories/pillows.png',
-      'WALLETS': '/categories/wallets.png',
-      'WOODEN ENGRAVING & COLOR PRINTING': '/categories/wooden_engraving.png'
+      'PHOTO FRAME': '/categories/photo_frame.webp',
+      '3D CRYSTAL': '/categories/3d_crystal.webp',
+      'MUGS': '/categories/mugs.webp',
+      'NEON LIGHTS': '/categories/neon_lights.webp',
+      'PILLOWS': '/categories/pillows.webp',
+      'WALLETS': '/categories/wallets.webp',
+      'WOODEN ENGRAVING & COLOR PRINTING': '/categories/wooden_engraving.webp'
     };
 
     const cats = await ShopCategory.find();

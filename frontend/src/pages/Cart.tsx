@@ -219,8 +219,9 @@ export const Cart: React.FC = () => {
   const PAYEE_NAME = "SIGN GALAXY";
 
 
-  // Use static QR code image instead of dynamically generated one
-  const qrCodeUrl = "/upi-qr-code-updated.jpg";
+  // Dynamic QR code with total amount
+  const upiPayload = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Order Payment')}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(upiPayload)}`;
 
   const formatPrice = (price: number) => {
     return currency === 'INR'
@@ -672,8 +673,8 @@ export const Cart: React.FC = () => {
                         setPaymentScreenshot(null);
                       }}
                       className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${paymentMethod === 'COD'
-                          ? 'border-primary bg-purple-50'
-                          : 'border-gray-100 bg-white hover:border-gray-200'
+                        ? 'border-primary bg-purple-50'
+                        : 'border-gray-100 bg-white hover:border-gray-200'
                         }`}
                     >
                       <Wallet className={`w-6 h-6 mb-2 ${paymentMethod === 'COD' ? 'text-primary' : 'text-gray-400'}`} />
@@ -696,6 +697,9 @@ export const Cart: React.FC = () => {
                     <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 inline-block mb-3">
                       <img src={qrCodeUrl} alt="Payment QR Code" className="w-40 h-40 object-contain mx-auto" />
                     </div>
+                    <p className="text-[10px] text-gray-500 max-w-xs mx-auto leading-relaxed mb-4">
+                      Scan to pay <span className="font-bold text-gray-900">{formatPrice(total)}</span> using any UPI app. Amount is pre-filled — just scan and enter your UPI PIN. After payment, please upload the payment screenshot below to confirm your order.
+                    </p>
                   </>
                 ) : (
                   <div className="bg-purple-50 rounded-xl p-5 border border-purple-100 mb-6 text-left">
@@ -1083,8 +1087,8 @@ export const Cart: React.FC = () => {
                         type="text"
                         value={paymentUTR}
                         onChange={(e) => setPaymentUTR(e.target.value)}
-                        placeholder="e.g. 132456789012"
-                        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                        placeholder="Enter Transaction ID / UTR number"
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm placeholder:text-[10px] focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                       <p className="text-[10px] text-gray-500 mt-1 italic">Providing the UTR number helps us confirm your payment faster.</p>
                     </div>

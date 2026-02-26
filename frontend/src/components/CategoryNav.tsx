@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Zap, Layers, Sparkles, Award, X } from 'lucide-react';
-import birthdayImg from '../assets/birthday.png';
+import birthdayImg from '../assets/birthday.webp';
+import anniversaryImg from '../assets/anniversary.webp';
+import loveImg from '../assets/love.webp';
+import kidsImg from '../assets/kids.webp';
+import specialNavImg from '../assets/special_items_nav.webp';
+import comboBg from '../assets/combo_bg.webp';
+import fallbackSection from '../assets/fallback_section.webp';
+import fallbackPersonal from '../assets/fallback_personal.webp';
+import fallbackCorporate from '../assets/fallback_corporate.webp';
+import fallbackOccasion from '../assets/fallback_occasion.webp';
 
 interface SubCategory {
     id: string;
@@ -33,9 +42,9 @@ interface SpecialOccasion {
 
 const STATIC_OCCASIONS = [
     { id: 'birthday', name: 'Birthday', image: birthdayImg, description: 'Celebrate another year of greatness with a gift that shines as bright as they do.' },
-    { id: 'love', name: 'Love & Romance', image: 'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?q=80&w=400&auto=format&fit=crop', description: 'Express your deepest feelings with keepsakes that say what words cannot.' },
-    { id: 'kids', name: 'For Kids', image: 'https://images.unsplash.com/photo-1566004100631-35d015d6a491?q=80&w=400&auto=format&fit=crop', description: 'Magical moments and playful wonders for the little ones in your life.' },
-    { id: 'wedding', name: 'Wedding & Anniversary', image: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=400&auto=format&fit=crop', description: 'Honor a lifetime of love with elegant, timeless custom masterpieces.' }
+    { id: 'love', name: 'Love & Romance', image: loveImg, description: 'Express your deepest feelings with keepsakes that say what words cannot.' },
+    { id: 'kids', name: 'For Kids', image: kidsImg, description: 'Magical moments and playful wonders for the little ones in your life.' },
+    { id: 'wedding', name: 'Wedding & Anniversary', image: anniversaryImg, description: 'Honor a lifetime of love with elegant, timeless custom masterpieces.' }
 ];
 
 export const CategoryNav: React.FC = () => {
@@ -106,14 +115,14 @@ export const CategoryNav: React.FC = () => {
                 const safeMap = (data: any) => Array.isArray(data) ? data : [];
                 const processedSections = safeMap(secData).map((s: any) => {
                     const title = s.title || s.name;
-                    let fallbackImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=150&auto=format&fit=crop';
-                    if (title.toLowerCase().includes('personal')) fallbackImage = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=150&auto=format&fit=crop';
-                    else if (title.toLowerCase().includes('corporate')) fallbackImage = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=150&auto=format&fit=crop';
+                    let fallbackImage = fallbackSection;
+                    if (title.toLowerCase().includes('personal')) fallbackImage = fallbackPersonal;
+                    else if (title.toLowerCase().includes('corporate')) fallbackImage = fallbackCorporate;
                     return { id: s.id || s._id, title: title, image: s.image || fallbackImage };
                 });
                 setAllSections(processedSections);
                 setSections(processedSections.filter((s: any) => s.title.toLowerCase().includes('personal') || s.title.toLowerCase().includes('corporate')));
-                setOccasions(safeMap(occData).map((o: any) => ({ id: o.id || o._id, name: o.name, image: o.image || 'https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=150&auto=format&fit=crop', description: o.description, link: o.link })));
+                setOccasions(safeMap(occData).map((o: any) => ({ id: o.id || o._id, name: o.name, image: o.image || fallbackOccasion, description: o.description, link: o.link })));
                 setCategories(safeMap(catData).map((c: any) => ({ id: c.id || c._id, name: c.name, sectionIds: c.sectionIds || (c.sectionId ? [c.sectionId] : []), image: c.image })));
                 setSubCategories(safeMap(subData).map((s: any) => ({ id: s.id || s._id, name: s.name, categoryId: s.categoryId })));
             } catch (error) { console.error('Failed to fetch navigation data:', error); } finally { setLoading(false); }
@@ -150,8 +159,8 @@ export const CategoryNav: React.FC = () => {
 
     const NAV_ITEMS = [
         ...sections.map(s => ({ ...s, type: 'section' })),
-        { id: 'occasions_all', name: 'Shop by Occasion', type: 'occasions', image: 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?q=80&w=200&auto=format&fit=crop' },
-        { id: 'special_items', name: 'Special Occasions', type: 'special_occasions', image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?q=80&w=200&auto=format&fit=crop' }
+        { id: 'occasions_all', name: 'Shop by Occasion', type: 'occasions', image: comboBg },
+        { id: 'special_items', name: 'Special Occasions', type: 'special_occasions', image: specialNavImg }
     ];
 
     return (
@@ -194,11 +203,11 @@ export const CategoryNav: React.FC = () => {
                             <>
                                 <Link to="/products?filter=trending" className="flex items-center gap-2 px-3 py-2 shrink-0 group">
                                     <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100"><Zap className="w-4 h-4 text-orange-500 fill-orange-500" /></div>
-                                    <div className="flex flex-col"><span className="text-[9.5px] font-black text-gray-900 lowercase">TRENDING</span><span className="text-[8px] text-gray-400 font-bold">HOT NOW</span></div>
+                                    <div className="flex flex-col"><span className="text-[9.5px] font-black text-gray-900 upercase">TRENDING</span><span className="text-[8px] text-gray-400 font-bold">HOT NOW</span></div>
                                 </Link>
                                 <Link to="/products?filter=bestseller" className="flex items-center gap-2 px-3 py-2 shrink-0 group">
                                     <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center border border-yellow-100"><Award className="w-4 h-4 text-yellow-600 fill-yellow-600" /></div>
-                                    <div className="flex flex-col"><span className="text-[9.5px] font-black text-gray-900 lowercase">BESTSELLER</span><span className="text-[8px] text-gray-400 font-bold">TOP RATED</span></div>
+                                    <div className="flex flex-col"><span className="text-[9.5px] font-black text-gray-900 upercase">BESTSELLER</span><span className="text-[8px] text-gray-400 font-bold">TOP RATED</span></div>
                                 </Link>
                             </>
                         )}

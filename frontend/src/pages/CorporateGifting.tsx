@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SEO } from '../components/SEO';
 import { Mail, Phone, Building, CheckCircle, Gift, Award, Users } from 'lucide-react';
+import officeImg from '../assets/corporate_office.webp';
 
 export const CorporateGifting: React.FC = () => {
     const [formData, setFormData] = useState({
@@ -36,9 +37,9 @@ export const CorporateGifting: React.FC = () => {
             <div className="relative bg-gray-900 text-white py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
                 <div className="absolute inset-0">
                     <img
-                        src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2070&auto=format&fit=crop"
+                        src={officeImg}
                         alt="Corporate Office"
-                        className="w-full h-full object-cover opacity-20"
+                        className="w-full h-full object-cover opacity-30"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-900/90 to-transparent"></div>
                 </div>

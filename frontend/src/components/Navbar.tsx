@@ -268,18 +268,18 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-gray-900 shadow-md border-b border-gray-800">
+      <nav className="sticky top-0 z-50 bg-gray-900 shadow-[0_4px_30px_rgba(0,0,0,0.1)] border-b border-gray-800 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white hover:text-[#f5ebd0] md:hidden p-1" title="Open menu">
                 <Menu className="h-6 w-6" />
               </button>
-              <Link to="/" className="flex-shrink-0 flex items-center gap-0 focus:outline-none -ml-4">
-                <img src="/logo-icon.jpg" alt="UC" className="h-16 w-auto object-contain mix-blend-screen brightness-110 -mr-4" />
+              <Link to="/" className="flex-shrink-0 flex items-center gap-0 focus:outline-none -ml-4 group">
+                <img src="/logo-icon.jpg" alt="UC" className="h-16 w-auto object-contain mix-blend-screen brightness-125 -mr-4 group-hover:scale-110 transition-transform duration-500" />
                 <div className="flex flex-col">
-                  <span className="font-black text-xl tracking-tighter text-[#FFB300] leading-none block">SIGN GALAXY</span>
-                  <span className="text-[10px] text-gray-400 tracking-widest uppercase block">Personalized Gifts</span>
+                  <span className="font-black text-xl tracking-tighter bg-gradient-to-br from-[#FFD700] via-[#FFB300] to-[#B8860B] bg-clip-text text-transparent leading-none block drop-shadow-sm">SIGN GALAXY</span>
+                  <span className="text-[9px] text-gray-400 tracking-[0.3em] font-bold uppercase block mt-0.5">Personalized Gifts</span>
                 </div>
               </Link>
             </div>
@@ -370,7 +370,13 @@ export const Navbar: React.FC = () => {
                 {user?.isAdmin && <Link to="/admin" className="text-red-500 hover:text-red-400 font-medium transition-colors">Admin</Link>}
               </div>
               <div className="flex items-center space-x-3">
-                <button onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)} className="text-white hover:text-[#f5ebd0] p-1 md:hidden" title="Search"><Search className="h-6 w-6" /></button>
+                <button
+                  onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                  className="text-white hover:text-accent p-2 rounded-full bg-white/5 md:hidden transition-all active:scale-90"
+                  title="Search"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
                 <button onClick={() => setIsGiftAdvisorOpen(true)} className="text-white hover:text-[#f5ebd0] p-1 hidden md:block" title="Gift Genie"><Gift className="h-6 w-6" /></button>
                 <Link to="/wishlist" className="relative text-white hover:text-[#f5ebd0] p-1 hidden md:block">
                   <Heart className="h-6 w-6" />
@@ -428,7 +434,7 @@ export const Navbar: React.FC = () => {
         {/* Mobile Search Overlay */}
         {isMobileSearchOpen && (
           <div className="fixed inset-0 z-[60] bg-gray-900 animate-fade-in flex flex-col">
-            <div className="flex items-center gap-3 p-4 border-b border-gray-800">
+            <div className="flex items-center gap-3 p-4 border-b border-slate-800">
               <button onClick={() => setIsMobileSearchOpen(false)} className="p-1 text-white hover:bg-gray-800 rounded-full transition-colors" title="Back"><ArrowLeft className="w-6 h-6" /></button>
               <div className="relative flex-1">
                 <input
