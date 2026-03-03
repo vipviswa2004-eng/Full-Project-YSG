@@ -785,7 +785,7 @@ export const GiftAdvisor: React.FC = () => {
                   onClick={startCharacterAnalysis}
                   className="text-xs font-bold text-purple-600 hover:text-purple-800 underline decoration-wavy underline-offset-4 flex items-center justify-center gap-1 mx-auto"
                 >
-                  👉 Let me help you choose 🎁
+                  👉 Let me help you to choose 🎁
                 </button>
               </div>
             )}

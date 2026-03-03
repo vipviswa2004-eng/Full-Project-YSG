@@ -15,6 +15,8 @@ import anniversaryImg from '../assets/anniversary.webp';
 import loveImg from '../assets/love.webp';
 import kidsImg from '../assets/kids.webp';
 import comboBg from '../assets/combo_bg.webp';
+import womensDayBg from '../assets/womens_day.png';
+import womensDayProduct from '../assets/recipient_her.webp';
 
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion, SubCategory } from '../types';
@@ -37,6 +39,18 @@ const RECIPIENTS = [
 ];
 
 const HERO_SLIDES = [
+  {
+    id: 'womens-day',
+    image: womensDayBg,
+    productImage: womensDayProduct,
+    title: "Women's Day Special",
+    subtitle: 'Celebrate the strength, grace, and beauty of every woman with our exclusive collection.',
+    cta: 'Shop Special Edition',
+    type: 'link',
+    link: '/shop?filter=combo',
+    tag: 'Limited Edition',
+    color: 'text-pink-400'
+  },
   {
     id: 'personalized',
     image: personalizedBg,
