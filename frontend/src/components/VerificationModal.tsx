@@ -24,8 +24,12 @@ export const VerificationModal: React.FC = () => {
         setLoading(true);
         setError('');
 
+        const apiUrl = import.meta.env.VITE_API_URL === 'https://api.ucgoc.com' && window.location.hostname === 'localhost'
+            ? 'http://localhost:5000'
+            : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
+
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-otp-email`, {
+            const response = await fetch(`${apiUrl}/api/auth/send-otp-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email })
@@ -52,8 +56,12 @@ export const VerificationModal: React.FC = () => {
         setLoading(true);
         setError('');
 
+        const apiUrl = import.meta.env.VITE_API_URL === 'https://api.ucgoc.com' && window.location.hostname === 'localhost'
+            ? 'http://localhost:5000'
+            : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
+
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp-email`, {
+            const response = await fetch(`${apiUrl}/api/auth/verify-otp-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

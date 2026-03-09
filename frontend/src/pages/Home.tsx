@@ -15,8 +15,6 @@ import anniversaryImg from '../assets/anniversary.webp';
 import loveImg from '../assets/love.webp';
 import kidsImg from '../assets/kids.webp';
 import comboBg from '../assets/combo_bg.webp';
-import womensDayBg from '../assets/womens_day.png';
-import womensDayProduct from '../assets/recipient_her.webp';
 
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion, SubCategory } from '../types';
@@ -39,18 +37,6 @@ const RECIPIENTS = [
 ];
 
 const HERO_SLIDES = [
-  {
-    id: 'womens-day',
-    image: womensDayBg,
-    productImage: womensDayProduct,
-    title: "Women's Day Special",
-    subtitle: 'Celebrate the strength, grace, and beauty of every woman with our exclusive collection.',
-    cta: 'Shop Special Edition',
-    type: 'link',
-    link: '/shop?filter=combo',
-    tag: 'Limited Edition',
-    color: 'text-pink-400'
-  },
   {
     id: 'personalized',
     image: personalizedBg,
@@ -230,7 +216,7 @@ export const Home: React.FC = () => {
   // Add generic Combo Offer slide if combos exist
   if (comboOffers.length > 0) {
     const firstCombo = comboOffers[0];
-    dynamicHeroSlides.splice(1, 0, {
+    dynamicHeroSlides.splice(0, 0, {
       id: "special-combo-offers",
       image: COMBO_BANNER_BG,
       productImage: firstCombo.image,
