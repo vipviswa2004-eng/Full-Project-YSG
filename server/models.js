@@ -54,8 +54,9 @@ const UserSchema = new mongoose.Schema({
   image: String,
   isAdmin: { type: Boolean, default: false },
   phone: String,
+  phoneVerified: { type: Boolean, default: false },
   password: { type: String, select: false },
-  emailVerified: { type: Boolean, default: false },
+  emailVerified: { type: Boolean, default: true }, // Default to true now as we're removing email verification
   cart: [Object], // Flexible to store productId, quantity, customization, etc. without strict schema validation for now
   wishlist: [String] // Array of product IDs
 }, { timestamps: true, collection: 'users' });

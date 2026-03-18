@@ -5,6 +5,7 @@ import { Product } from '../types';
 import { calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { prefetchProduct } from '../utils/productCache';
+import { generateSlug } from '../utils/url';
 
 interface ProductCardProps {
     product: Product;
@@ -20,6 +21,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
 
     const prices = calculatePrice(product);
     const productId = product.id || (product as any)._id;
+    const productUrlId = product.name ? generateSlug(product.name) : productId;
 
     const allImages = useMemo(() => {
         const images = [product.image];
@@ -64,15 +66,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
     const handleMouseEnter = () => {
         setIsHovered(true);
         // Prefetch full details on hover (instant subsequent load)
-        if (productId) {
-            prefetchProduct(productId, import.meta.env.VITE_API_URL);
+        if (productUrlId) {
+            prefetchProduct(productUrlId, import.meta.env.VITE_API_URL);
         }
     };
 
     const handleMouseDown = () => {
         // Backup prefetch on click start for even faster response
-        if (productId) {
-            prefetchProduct(productId, import.meta.env.VITE_API_URL);
+        if (productUrlId) {
+            prefetchProduct(productUrlId, import.meta.env.VITE_API_URL);
         }
     };
 
@@ -84,8 +86,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
             onMouseDown={handleMouseDown}
         >
             <Link
-                to={`/product/${productId}`}
-                onClick={(e) => onProductClick(productId, e)}
+                to={`/product/${productUrlId}`}
+                onClick={(e) => onProductClick(productUrlId, e)}
                 className="flex flex-col h-full"
             >
                 <div className="relative aspect-[3/4] bg-white overflow-hidden p-3 bg-gradient-to-b from-gray-50/50 to-white">

@@ -134,6 +134,7 @@ export interface User {
   displayName?: string;
   image?: string;
   phone?: string;
+  phoneVerified?: boolean;
   emailVerified?: boolean;
   address?: string; // Added address field
   pincode?: string; // Added pincode field

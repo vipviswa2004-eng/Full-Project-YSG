@@ -15,6 +15,7 @@ import anniversaryImg from '../assets/anniversary.webp';
 import loveImg from '../assets/love.webp';
 import kidsImg from '../assets/kids.webp';
 import comboBg from '../assets/combo_bg.webp';
+import { generateSlug } from '../utils/url';
 
 import { ShopSection } from '../components/ShopSection';
 import { Section, ShopCategory, SpecialOccasion, ShopRecipient, ShopOccasion, SubCategory } from '../types';
@@ -793,7 +794,7 @@ export const Home: React.FC = () => {
                     {comboOffers.slice(0, 6).map(combo => (
                       <Link
                         key={combo.id}
-                        to={`/product/${combo.id}`}
+                        to={`/product/${combo.name ? generateSlug(combo.name) : combo.id}`}
                         className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white hover:text-rose-600 text-white px-3 py-2 md:px-5 md:py-2.5 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all transform hover:scale-105 hover:shadow-lg flex items-center gap-1.5 md:gap-2"
                       >
                         <Heart className="w-3 h-3 md:w-4 md:h-4 fill-current" /> {combo.name}
@@ -822,7 +823,7 @@ export const Home: React.FC = () => {
                           transition={{ delay: i * 0.2 }}
                           className={`bg-white rounded-xl md:rounded-2xl p-1.5 md:p-2 shadow-2xl transform hover:scale-105 transition-transform cursor-pointer overflow-hidden ${i === 1 ? 'md:-translate-y-8' : ''} ${i === 2 ? 'hidden md:block' : ''}`}
                         >
-                          <Link to={`/product/${combo.id}`} className="block">
+                          <Link to={`/product/${combo.name ? generateSlug(combo.name) : combo.id}`} className="block">
                             <div className="aspect-square relative overflow-hidden rounded-lg md:rounded-xl bg-gray-50">
                               <img src={combo.image} alt={combo.name} className="w-full h-full object-contain" />
                             </div>

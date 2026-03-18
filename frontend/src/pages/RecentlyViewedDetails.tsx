@@ -3,6 +3,7 @@ import { useCart } from '../context';
 import { calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
 import { History, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { generateSlug } from '../utils/url';
 
 export const RecentlyViewedDetails: React.FC = () => {
     const { products: allProducts, currency, wishlist, toggleWishlist } = useCart();
@@ -86,12 +87,13 @@ export const RecentlyViewedDetails: React.FC = () => {
                     {recentProducts.map((product) => {
                         const prices = calculatePrice(product);
                         const productId = product.id || (product as any)._id;
+                        const productUrlId = product.name ? generateSlug(product.name) : productId;
                         return (
                             <div
                                 key={productId}
                                 className="snap-start relative group"
                             >
-                                <Link to={`/product/${productId}`} onClick={() => window.scrollTo(0, 0)} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
+                                <Link to={`/product/${productUrlId}`} onClick={() => window.scrollTo(0, 0)} className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
                                     <div className="relative aspect-square bg-white overflow-hidden">
                                         <img className="w-full h-full object-contain p-2 md:p-3 transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} loading="lazy" />
                                         {product.discount && <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">{product.discount}% OFF</div>}

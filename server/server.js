@@ -220,59 +220,53 @@ const memoryCache = {
   }
 };
 
-// Email OTP Routes
-app.post("/api/auth/send-otp-email", async (req, res) => {
+// Phone OTP Routes (Keeping Phone OTP while removing Email OTP)
+app.post("/api/auth/send-otp-phone", async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email is required" });
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: "Phone number is required" });
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Store in memory cache (Expires in 10 minutes)
-    memoryCache.set(`otp_${email.toLowerCase()}`, otp, 600);
+    // Use phone as key for phone OTP
+    memoryCache.set(`phone_otp_${phone}`, otp, 600);
 
-    const mailOptions = {
-      from: `"Yathes Sign Galaxy" <${process.env.EMAIL_USER || 'signgalaxy31@gmail.com'}>`,
-      to: email,
-      subject: 'Your Verification Code - Yathes Sign Galaxy',
-      html: `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 20px; text-align: center; background: #ffffff;">
-            <div style="margin-bottom: 20px;">
-                <h1 style="color: #4F46E5; margin: 0; font-weight: 800; font-size: 24px;">Yathes Sign Galaxy</h1>
-            </div>
-            <h2 style="color: #1f2937; margin-bottom: 20px; font-weight: 700;">Verify Your Email</h2>
-            <p style="color: #4b5563; font-size: 16px; margin-bottom: 30px;">Use the following code to complete your verification. This code will expire in 10 minutes.</p>
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 12px; font-size: 32px; font-weight: 900; color: #4F46E5; letter-spacing: 12px; margin-bottom: 30px;">
-                ${otp}
-            </div>
-            <p style="color: #9ca3af; font-size: 12px;">If you didn't request this, please ignore this email.</p>
-          </div>
-        `
-    };
+    // Simulation log (In production, this would use an SMS/WhatsApp service)
+    console.log(`🚀 [PHONE OTP] For ${phone}: ${otp}`);
 
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      await transporter.sendMail(mailOptions);
-      res.json({ success: true, message: "OTP sent to your email" });
-    } else {
-      console.log(`[EMAIL OTP] For ${email}: ${otp}`);
-      res.json({ success: true, message: "OTP sent (Simulated - Check server logs)", otp });
+    // If WhatsApp service is configured, we could send it here
+    /*
+    if (process.env.INTERAKT_API_KEY) {
+      const { sendWhatsAppMessage } = require('./services/whatsapp');
+      await sendWhatsAppMessage({
+        to: phone,
+        message: `Your verification code is: ${otp}. This code is valid for 10 minutes.`
+      });
     }
+    */
+
+    res.json({ 
+      success: true, 
+      message: "Verification code sent to your phone (Check server logs for simulation)",
+      otp: process.env.NODE_ENV === 'development' ? otp : undefined // Return OTP only in dev or simulation
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.post("/api/auth/verify-otp-email", async (req, res) => {
+app.post("/api/auth/verify-otp-phone", async (req, res) => {
   try {
     const { email, otp, phone } = req.body;
-    if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+    if (!phone || !otp) return res.status(400).json({ error: "Phone number and OTP are required" });
 
-    const storedOtp = memoryCache.get(`otp_${email.toLowerCase()}`);
+    const storedOtp = memoryCache.get(`phone_otp_${phone}`);
 
     if (otp === storedOtp || otp === "999999") { // Allow 999999 for testing
-      const updateData = { emailVerified: true };
-      if (phone) updateData.phone = phone;
+      // Update user with phone and mark as verified
+      const updateData = { phone, phoneVerified: true, emailVerified: true };
 
       const user = await User.findOneAndUpdate(
         { email: email.toLowerCase() },
@@ -280,8 +274,8 @@ app.post("/api/auth/verify-otp-email", async (req, res) => {
         { new: true }
       );
 
-      memoryCache.clear(`otp_${email.toLowerCase()}`);
-      return res.json({ success: true, message: "Email verified", user });
+      memoryCache.clear(`phone_otp_${phone}`);
+      return res.json({ success: true, message: "Phone number verified and email sync complete", user });
     }
 
     res.status(400).json({ error: "Invalid or expired OTP" });
@@ -551,7 +545,8 @@ app.get("/api/products", async (req, res) => {
   console.log("📥 GET /api/products requested");
   try {
     // res.set("Cache-Control", "public, max-age=300"); // Disabled for real-time updates
-    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    // Allow short-term cache for performance, especially for lighthouse scores
+    res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
 
     // Server-Side In-Memory Cache
     if (productCache && (Date.now() - lastCacheTime < CACHE_DURATION)) {
@@ -584,17 +579,37 @@ app.get("/api/products", async (req, res) => {
 
 app.get("/api/products/:id", async (req, res) => {
   try {
-    let query = { id: req.params.id };
-    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      // Check if it's a valid ObjectId, if so allow finding by _id OR id
-      // But simpler to just check:
-      const byId = await Product.findById(req.params.id);
+    const paramId = req.params.id;
+    if (paramId.match(/^[0-9a-fA-F]{24}$/)) {
+      const byId = await Product.findById(paramId);
       if (byId) return res.json(byId);
     }
-    const product = await Product.findOne({ id: req.params.id });
+    const product = await Product.findOne({ id: paramId });
 
-    if (!product) return res.status(404).json({ error: "Product not found" });
-    res.json(product);
+    if (product) return res.json(product);
+
+    // If not found by ID, try finding by matching slugified name
+    console.log(`🔍 [PRODUCT-DEBUG] Slug lookup for: "${paramId}"`);
+    const allProducts = await Product.find().select('id name status').lean();
+    console.log(`📦 Checking against ${allProducts.length} total products`);
+    
+    const productBySlug = allProducts.find(p => {
+        if (!p.name) return false;
+        const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        if (slug === paramId.toLowerCase()) {
+            console.log(`🎯 Match found! Name: "${p.name}", Status: ${p.status}`);
+            return true;
+        }
+        return false;
+    });
+
+    if (productBySlug) {
+        const fullProduct = await Product.findById(productBySlug._id || productBySlug.id);
+        return res.json(fullProduct);
+    }
+
+    console.warn(`❌ No slug match for: ${paramId}`);
+    return res.status(404).json({ error: "Product not found" });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

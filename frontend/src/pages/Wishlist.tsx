@@ -4,6 +4,7 @@ import { calculatePrice } from '../data/products';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Trash2, ArrowRight, LogIn } from 'lucide-react';
 import { SEO } from '../components/SEO';
+import { generateSlug } from '../utils/url';
 
 export const Wishlist: React.FC = () => {
     const { wishlist, toggleWishlist, currency, user, setIsLoginModalOpen } = useCart();
@@ -72,9 +73,10 @@ export const Wishlist: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {wishlist.map(product => {
                         const prices = calculatePrice(product);
+                        const productUrlId = product.name ? generateSlug(product.name) : product.id;
                         return (
                             <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group hover:shadow-md transition-all">
-                                <Link to={`/product/${product.id}`} className="relative aspect-square bg-gray-50 p-6">
+                                <Link to={`/product/${productUrlId}`} className="relative aspect-square bg-gray-50 p-6">
                                     <img src={product.image} alt={product.name} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
                                     <button
                                         onClick={(e) => {
@@ -90,7 +92,7 @@ export const Wishlist: React.FC = () => {
 
                                 <div className="p-4 flex flex-col flex-1">
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{product.category}</p>
-                                    <Link to={`/product/${product.id}`} className="text-lg font-bold text-gray-900 line-clamp-1 hover:text-primary transition-colors">
+                                    <Link to={`/product/${productUrlId}`} className="text-lg font-bold text-gray-900 line-clamp-1 hover:text-primary transition-colors">
                                         {product.name}
                                     </Link>
 
@@ -99,7 +101,7 @@ export const Wishlist: React.FC = () => {
                                             <p className="text-xl font-bold text-gray-900">{formatPrice(prices.final)}</p>
                                             <p className="text-xs text-gray-400 line-through">{formatPrice(prices.original)}</p>
                                         </div>
-                                        <Link to={`/product/${product.id}`} className="bg-primary text-white p-2.5 rounded-lg hover:bg-purple-800 transition-colors shadow-sm">
+                                        <Link to={`/product/${productUrlId}`} className="bg-primary text-white p-2.5 rounded-lg hover:bg-purple-800 transition-colors shadow-sm">
                                             <ShoppingCart className="w-5 h-5" />
                                         </Link>
                                     </div>

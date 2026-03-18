@@ -6,6 +6,7 @@ import { VariationOption, Coupon } from '../types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { verifyPaymentAmount } from '../services/gemini';
 import { SEO } from '../components/SEO';
+import { generateSlug } from '../utils/url';
 
 export const Cart: React.FC = () => {
   const { cart, removeFromCart, updateCartItemQuantity, currency, user, clearCart } = useCart();
@@ -512,7 +513,7 @@ export const Cart: React.FC = () => {
               {cart.map((item) => (
                 <li key={item.cartId} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-                    <div className="h-24 w-24 sm:h-32 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)}>
+                    <div className="h-24 w-24 sm:h-32 sm:w-32 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 cursor-pointer" onClick={() => navigate(`/product/${item.name ? generateSlug(item.name) : item.id}`)}>
                       <img
                         src={(() => {
                           if (item.customDesign?.preview) return item.customDesign.preview;
@@ -537,7 +538,7 @@ export const Cart: React.FC = () => {
                         <div>
                           <h3
                             className="text-lg font-bold text-gray-900 line-clamp-2 cursor-pointer hover:text-primary transition-colors"
-                            onClick={() => navigate(`/product/${item.id}`)}
+                            onClick={() => navigate(`/product/${item.name ? generateSlug(item.name) : item.id}`)}
                           >
                             {item.name}
                           </h3>

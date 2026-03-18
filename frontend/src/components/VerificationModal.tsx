@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Mail, ShieldCheck, CheckCircle2, Loader2, ArrowRight, Key, Phone } from 'lucide-react';
 import { useCart } from '../context';
 
@@ -10,16 +10,11 @@ export const VerificationModal: React.FC = () => {
     const [error, setError] = useState('');
     const [phone, setPhone] = useState(user?.phone || '');
 
-    // Auto-send OTP on mount or when user changes
-    useEffect(() => {
-        if (user && !user.emailVerified && step === 'info') {
-            // We could auto-send here, but let's let them click a button to "Start Verification" 
-            // to ensure they are ready to check their email.
-        }
-    }, [user]);
-
     const handleSendOTP = async () => {
-        if (!user?.email) return;
+        if (!phone) {
+            setError('Phone number is required');
+            return;
+        }
 
         setLoading(true);
         setError('');
@@ -29,10 +24,10 @@ export const VerificationModal: React.FC = () => {
             : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
         try {
-            const response = await fetch(`${apiUrl}/api/auth/send-otp-email`, {
+            const response = await fetch(`${apiUrl}/api/auth/send-otp-phone`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: user.email })
+                body: JSON.stringify({ phone })
             });
 
             const data = await response.json();
@@ -61,13 +56,13 @@ export const VerificationModal: React.FC = () => {
             : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
         try {
-            const response = await fetch(`${apiUrl}/api/auth/verify-otp-email`, {
+            const response = await fetch(`${apiUrl}/api/auth/verify-otp-phone`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: user?.email,
                     otp: otp,
-                    phone: phone // Sync phone if updated/provided
+                    phone: phone
                 })
             });
 
@@ -82,6 +77,7 @@ export const VerificationModal: React.FC = () => {
                 await setUser({
                     ...user,
                     emailVerified: true,
+                    phoneVerified: true,
                     phone: phone
                 });
             }
@@ -107,7 +103,7 @@ export const VerificationModal: React.FC = () => {
                             {step === 'info' ? <Mail className="w-8 h-8 text-white" /> : <Key className="w-8 h-8 text-white" />}
                         </div>
                         <h2 className="text-2xl font-black tracking-tight leading-tight mb-2">
-                            {step === 'info' ? 'Email Verification' : 'Verify OTP'}
+                            {step === 'info' ? 'Phone Verification' : 'Verify OTP'}
                         </h2>
                         <div className="flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">
                             <ShieldCheck className="w-3 h-3 text-white" /> Secure Verification
@@ -121,32 +117,29 @@ export const VerificationModal: React.FC = () => {
                         <div className="space-y-6">
                             <div className="text-center">
                                 <p className="text-gray-500 font-medium leading-relaxed">
-                                    We need to verify your email <span className="text-purple-600 font-bold">{user.email}</span> to secure your account and send order updates.
+                                    We need to verify your phone number to secure your account and send order updates.
                                 </p>
                             </div>
 
-                            {/* Phone Collection if missing (especially for Google users) */}
-                            {!user.phone && (
-                                <div className="space-y-1.5">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
-                                        Phone Number (Required)
-                                    </label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <Phone className="w-4 h-4 text-gray-400 group-focus-within:text-purple-600 transition-colors" />
-                                        </div>
-                                        <input
-                                            type="tel"
-                                            required
-                                            placeholder="91XXXXXXXX"
-                                            className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent text-gray-900 font-bold rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all outline-none"
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                                        />
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    Phone Number (Required)
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Phone className="w-4 h-4 text-gray-400 group-focus-within:text-purple-600 transition-colors" />
                                     </div>
-                                    <p className="text-[10px] text-gray-400 italic ml-1">Needed for delivery notifications.</p>
+                                    <input
+                                        type="tel"
+                                        required
+                                        placeholder="91XXXXXXXX"
+                                        className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-transparent text-gray-900 font-bold rounded-xl focus:bg-white focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all outline-none"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                                    />
                                 </div>
-                            )}
+                                <p className="text-[10px] text-gray-400 italic ml-1">Needed for delivery notifications.</p>
+                            </div>
 
                             {error && (
                                 <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2 animate-head-shake">
@@ -168,7 +161,7 @@ export const VerificationModal: React.FC = () => {
                             <div className="text-center">
                                 <p className="text-gray-500 font-medium">
                                     We've sent a 6-digit code to <br />
-                                    <span className="text-gray-900 font-bold">{user.email}</span>
+                                    <span className="text-gray-900 font-bold">{phone}</span>
                                 </p>
                             </div>
 
@@ -208,7 +201,7 @@ export const VerificationModal: React.FC = () => {
                                 onClick={() => setStep('info')}
                                 className="w-full py-2 text-xs font-bold text-gray-400 hover:text-purple-600 transition-colors"
                             >
-                                Re-send email or change details
+                                Re-send code or change number
                             </button>
                         </form>
                     )}

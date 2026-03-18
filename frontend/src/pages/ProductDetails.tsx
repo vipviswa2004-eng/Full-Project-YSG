@@ -1,18 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { SEO } from '../components/SEO';
-import { RecentlyViewedDetails } from './RecentlyViewedDetails';
+const RecentlyViewedDetails = React.lazy(() => import('./RecentlyViewedDetails').then(module => ({ default: module.RecentlyViewedDetails })));
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { products as localProducts, calculatePrice } from '../data/products';
 import { useCart } from '../context';
 import { Plus, Minus, ShoppingCart, CheckCircle, Sparkles, Share2, Heart, ArrowLeft, Star, X, Truck, RefreshCcw, Award, ArrowRight, Eye, Clock, MessageCircle, Loader2, ChevronLeft, ChevronRight, MapPin, ChevronDown, Search, Tag } from 'lucide-react';
 import { getCachedProduct, setCachedProduct } from '../utils/productCache';
 import { Coupon, VariationOption, Review } from '../types';
+import { generateSlug } from '../utils/url';
 
 export const ProductDetails: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { productName } = useParams<{ productName: string }>();
     const navigate = useNavigate();
     const { addToCart, currency, wishlist, toggleWishlist, user, products, setIsLoginModalOpen, isLoadingProducts } = useCart();
+
+    const getOptimizedUrl = (url: string, width: number = 800) => {
+        if (!url || typeof url !== 'string' || !url.includes('cloudinary.com')) return url;
+        // If it already has transformations, append width
+        if (url.match(/\/upload\/[^\/]+\//)) {
+            if (url.includes(`w_${width}`)) return url;
+            return url.replace(/\/upload\/([^\/]+)\//, `/upload/$1,w_${width}/`);
+        }
+        return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+    };
 
     const reviewsRef = useRef<HTMLDivElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
@@ -24,7 +35,7 @@ export const ProductDetails: React.FC = () => {
 
 
 
-    const initialProduct = products.find(p => p.id === id || (p as any)._id === id) || localProducts.find(p => p.id === id);
+    const initialProduct = products.find(p => p.id === productName || (p as any)._id === productName || (p.name && generateSlug(p.name) === productName?.toLowerCase())) || localProducts.find(p => p.id === productName || (p.name && generateSlug(p.name) === productName?.toLowerCase()));
     const [product, setProduct] = useState(initialProduct);
     const [isFetching, setIsFetching] = useState(!initialProduct || !initialProduct.description);
 
@@ -32,8 +43,8 @@ export const ProductDetails: React.FC = () => {
     // Unified Product Fetching Logic (Context + API Fallback)
     useEffect(() => {
         const loadProduct = async () => {
-            const ctxProduct = products.find(p => p.id === id || (p as any)._id === id);
-            const cachedProduct = getCachedProduct(id!);
+            const ctxProduct = products.find(p => p.id === productName || (p as any)._id === productName || (p.name && generateSlug(p.name) === productName?.toLowerCase()));
+            const cachedProduct = getCachedProduct(productName!);
 
             // If we have full details in context or cache, we can skip fetching
             if (cachedProduct && cachedProduct.description) {
@@ -52,18 +63,18 @@ export const ProductDetails: React.FC = () => {
             try {
                 if (ctxProduct) {
                     setProduct(prev => {
-                        if (prev && (prev.id === id || (prev as any)._id === id) && prev.description) {
+                        if (prev && (prev.id === productName || (prev as any)._id === productName) && prev.description) {
                             return prev;
                         }
                         return ctxProduct;
                     });
                 }
 
-                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${productName}`);
                 if (res.ok) {
                     const fullProduct = await res.json();
                     setProduct(fullProduct);
-                    setCachedProduct(id!, fullProduct);
+                    setCachedProduct(productName!, fullProduct);
                 } else {
                     console.error("Product not found in API");
                 }
@@ -74,8 +85,8 @@ export const ProductDetails: React.FC = () => {
             }
         };
 
-        if (id) loadProduct();
-    }, [products, id]);
+        if (productName) loadProduct();
+    }, [products, productName]);
 
     const [extraHeads, setExtraHeads] = useState(0);
     const [symbolNumber, setSymbolNumber] = useState('');
@@ -105,6 +116,13 @@ export const ProductDetails: React.FC = () => {
     const [activeImage, setActiveImage] = useState<string>('');
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
     const [isZoomed, setIsZoomed] = useState(false);
+
+    // Initialize active image when product loads
+    useEffect(() => {
+        if (product?.image) {
+            setActiveImage(product.image);
+        }
+    }, [product?.id, product?.image]);
 
     // Save to recently viewed
     useEffect(() => {
@@ -306,7 +324,7 @@ export const ProductDetails: React.FC = () => {
         if (detailsContainerRef.current) {
             detailsContainerRef.current.scrollTop = 0;
         }
-    }, [id]);
+    }, [productName]);
 
     useEffect(() => {
         if (product) {
@@ -396,56 +414,57 @@ export const ProductDetails: React.FC = () => {
         }
     }, [showToast]);
 
-    // Simplified Skeleton Loader
-    const ProductSkeleton = () => (
-        <div className="bg-app-bg min-h-screen pb-24 md:pb-12 animate-pulse">
-            <div className="max-w-7xl mx-auto pt-20 md:pt-8 px-4 lg:px-8">
-                <div className="lg:grid lg:grid-cols-12 lg:gap-x-10">
-                    <div className="lg:col-span-5 space-y-6">
-                        <div className="aspect-square bg-gray-200 rounded-2xl" />
-                        <div className="flex gap-4">
-                            {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="w-16 h-16 bg-gray-200 rounded-lg" />
-                            ))}
-                        </div>
-                    </div>
-                    <div className="lg:col-span-7 mt-8 lg:mt-0 space-y-6">
-                        <div className="h-4 bg-gray-200 rounded w-1/4" />
-                        <div className="h-10 bg-gray-200 rounded w-3/4" />
-                        <div className="h-6 bg-gray-200 rounded w-1/2" />
-                        <div className="h-20 bg-gray-200 rounded w-full" />
-                        <div className="space-y-4">
-                            <div className="h-12 bg-gray-200 rounded w-full" />
-                            <div className="h-12 bg-gray-200 rounded w-full" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 
-    if (isLoadingProducts || (isFetching && !product)) {
-        return <ProductSkeleton />;
-    }
+    // Restore pending customization after login
+    useEffect(() => {
+        // We use 'productName' from useParams as it's available immediately on mount
+        if (user && productName) {
+            const pendingKey = `pending_customization_${productName}`;
+            const savedData = localStorage.getItem(pendingKey) || (product?.id ? localStorage.getItem(`pending_customization_${product.id}`) : null);
 
-    if (!product) return (
-        <div className="flex flex-col items-center justify-center min-h-screen pt-20 text-center px-4">
-            <div className="text-xl font-bold text-gray-800 mb-2">Product Not Found</div>
-            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for.</p>
-            <button
-                onClick={() => navigate('/products')}
-                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
-            >
-                Browse All Products
-            </button>
-        </div>
-    );
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    console.log("🔄 Found pending customization to restore:", data);
 
-    const prices = calculatePrice(product, extraHeads, selectedVariations);
-    const isInWishlist = wishlist.some(p => p.id === product.id);
-    const formatPrice = (price: number) => { return currency === 'INR' ? `₹${price.toLocaleString('en-IN')}` : `$${(price * 0.012).toFixed(2)}`; };
-    const shareUrl = window.location.href;
-    const shareText = `Check out ${product.name} on Sign Galaxy!`;
+                    // Only restore if it's reasonably fresh (last 1 hour)
+                    if (Date.now() - data.timestamp < 3600000) {
+                        // Restore state for UI
+                        if (data.customText) setCustomText(data.customText);
+                        if (data.customImages) setCustomImages(data.customImages);
+                        if (data.selectedVariations) setSelectedVariations(data.selectedVariations);
+                        if (data.extraHeads !== undefined) setExtraHeads(data.extraHeads);
+                        if (data.symbolNumber) setSymbolNumber(data.symbolNumber);
+                        if (data.receiverLocation) setReceiverLocation(data.receiverLocation);
+                        if (data.receiverCountry) setReceiverCountry(data.receiverCountry);
+
+                        // Small delay to ensure state hydration is processed and then execute
+                        setTimeout(() => {
+                            const finalImageValue = data.customImages && data.customImages.length > 0
+                                ? JSON.stringify(data.customImages)
+                                : null;
+
+                            console.log("🚀 Executing auto-add-to-cart after restoration");
+                            executeAddToCart(false, finalImageValue, data.customText || "", {
+                                extraHeads: data.extraHeads,
+                                symbolNumber: data.symbolNumber,
+                                selectedVariations: data.selectedVariations,
+                                receiverLocation: data.receiverLocation,
+                                receiverCountry: data.receiverCountry
+                            });
+
+                            showNotification("Restored and added your customized product to cart!", "success");
+                        }, 2500);
+                    } else {
+                        console.log("⌛ Pending customization too old, clearing");
+                        localStorage.removeItem(pendingKey);
+                    }
+                } catch (e) {
+                    console.error("❌ Failed to restore pending customization", e);
+                }
+            }
+        }
+    }, [user, productName, product?.id]);
 
     const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
         setToastMessage(message);
@@ -453,40 +472,7 @@ export const ProductDetails: React.FC = () => {
         setShowToast(true);
     };
 
-    const handleNativeShare = async () => {
-        if (navigator.share) {
-            try {
-                await navigator.share({ title: product.name, text: shareText, url: shareUrl });
-            } catch (err) {
-                console.log('Error sharing', err);
-            }
-        } else {
-            navigator.clipboard.writeText(shareUrl);
-            showNotification("Link copied to clipboard!", "info");
-        }
-    };
-
-    const handleVariationChange = (variationId: string, option: VariationOption, variationName?: string) => {
-        setSelectedVariations(prev => {
-            // Find variation to check properties
-            const variation = product.variations?.find(v => v.id === variationId);
-            const isToggleable = variation?.disableAutoSelect || (variationName && (variationName.toLowerCase().includes('light base') || variationName.toLowerCase().includes('shape')));
-
-            if (isToggleable) {
-                // If already selected, deselect it
-                if (prev[variationId]?.id === option.id) {
-                    const newVariations = { ...prev };
-                    delete newVariations[variationId];
-                    return newVariations;
-                }
-            }
-            // For all variations, set the selected option
-            return { ...prev, [variationId]: option };
-        });
-        if (option.image) { setActiveImage(option.image); }
-    };
-
-    const executeAddToCart = (
+    function executeAddToCart(
         redirect: boolean,
         finalCustomImage: string | null,
         finalCustomText: string,
@@ -497,7 +483,9 @@ export const ProductDetails: React.FC = () => {
             receiverLocation?: string,
             receiverCountry?: string
         }
-    ) => {
+    ) {
+        if (!product) return;
+        
         console.log("🛒 executeAddToCart triggered", {
             hasUser: !!user,
             redirect,
@@ -549,19 +537,14 @@ export const ProductDetails: React.FC = () => {
                     timestamp: Date.now()
                 };
                 console.log("💾 Saving pending customization backup", pendingData);
-                // Use route parameter 'id' for the key to be consistent across reloads
-                localStorage.setItem(`pending_customization_${id}`, JSON.stringify(pendingData));
+                localStorage.setItem(`pending_customization_${productName}`, JSON.stringify(pendingData));
                 setIsLoginModalOpen(true);
                 return;
             }
 
             // Clear any pending data if logged in
-            localStorage.removeItem(`pending_customization_${id}`);
+            localStorage.removeItem(`pending_customization_${productName}`);
             localStorage.removeItem(`pending_customization_${product.id}`);
-
-            // Clear any pending customization for this product after successful add
-            localStorage.removeItem(`pending_customization_${id}`);
-            localStorage.removeItem(`pending_customization_${product.id}`); // Clear old key format too if exists
 
             if (redirect) {
                 navigate(`/cart${redirect ? '?buyNow=true' : ''}`);
@@ -572,59 +555,7 @@ export const ProductDetails: React.FC = () => {
             console.error("Add to cart failed", error);
             showNotification("Failed to add to cart. Please try again.", "error");
         }
-    };
-
-    // Restore pending customization after login
-    useEffect(() => {
-        // We use 'id' from useParams as it's available immediately on mount
-        if (user && id) {
-            const pendingKey = `pending_customization_${id}`;
-            const savedData = localStorage.getItem(pendingKey) || (product?.id ? localStorage.getItem(`pending_customization_${product.id}`) : null);
-
-            if (savedData) {
-                try {
-                    const data = JSON.parse(savedData);
-                    console.log("🔄 Found pending customization to restore:", data);
-
-                    // Only restore if it's reasonably fresh (last 1 hour)
-                    if (Date.now() - data.timestamp < 3600000) {
-                        // Restore state for UI
-                        if (data.customText) setCustomText(data.customText);
-                        if (data.customImages) setCustomImages(data.customImages);
-                        if (data.selectedVariations) setSelectedVariations(data.selectedVariations);
-                        if (data.extraHeads !== undefined) setExtraHeads(data.extraHeads);
-                        if (data.symbolNumber) setSymbolNumber(data.symbolNumber);
-                        if (data.receiverLocation) setReceiverLocation(data.receiverLocation);
-                        if (data.receiverCountry) setReceiverCountry(data.receiverCountry);
-
-                        // Small delay to ensure state hydration is processed and then execute
-                        setTimeout(() => {
-                            const finalImageValue = data.customImages && data.customImages.length > 0
-                                ? JSON.stringify(data.customImages)
-                                : null;
-
-                            console.log("🚀 Executing auto-add-to-cart after restoration");
-                            executeAddToCart(false, finalImageValue, data.customText || "", {
-                                extraHeads: data.extraHeads,
-                                symbolNumber: data.symbolNumber,
-                                selectedVariations: data.selectedVariations,
-                                receiverLocation: data.receiverLocation,
-                                receiverCountry: data.receiverCountry
-                            });
-
-                            showNotification("Restored and added your customized product to cart!", "success");
-                        }, 2500);
-                    } else {
-                        console.log("⌛ Pending customization too old, clearing");
-                        localStorage.removeItem(pendingKey);
-                    }
-                } catch (e) {
-                    console.error("❌ Failed to restore pending customization", e);
-                }
-            }
-        }
-    }, [user, id, product?.id]);
-
+    }
 
     const handleAddToCartClick = () => {
         setIsCustomizeModalOpen(true);
@@ -632,26 +563,7 @@ export const ProductDetails: React.FC = () => {
     };
 
     const handleBuyNowClick = () => {
-        // For buy now, we can either skip customization or open it with a flag. 
-        // For now, let's open the customization modal too, but we need to know we are buying now.
-        // Or simpler, just let Buy Now act as "Skip & Buy" if the user wants quick checkout, 
-        // BUT for personalized gifts, customization is key.
-        // Let's open the modal for Buy Now as well to ensure data is captured.
-        // However, the user specifically asked to change "Add to Cart". 
-        // I will link Buy Now to the same flow but maybe with a different final action?
-        // Let's stick to the request for "Add to Cart". 
-        // Existing Buy Now behavior adds to cart and redirects.
-        // I'll keep Buy Now as is (direct add without customization) OR update it.
-        // Given it's a personalized site, Buy Now should probably also customize.
-        // But to avoid overstepping, I will invoke the modal for Add to Cart.
-        // And maybe for Buy Now I will just do the old behavior (add current state).
-        // Actually, let's make the "Add to Cart" inside the modal handle the final logic.
-
-        // If the user clicks "Buy Now", maybe they expect to skip? 
-        // I will keep Buy Now as 'Direct Add' for now, or maybe open modal?
-        // Let's just implement the new flow for "Add to Cart" button as requested.
-
-        executeAddToCart(true, null, ""); // Direct Buy Now (no custom image/text unless gathered elsewhere)
+        executeAddToCart(true, null, "");
     };
 
     const handleWishlistToggle = () => {
@@ -659,8 +571,9 @@ export const ProductDetails: React.FC = () => {
             setIsLoginModalOpen(true);
             return;
         }
+        if (!product) return;
         toggleWishlist(product);
-        const isAdded = !isInWishlist;
+        const isAdded = !wishlist.some(p => p.id === product.id);
         showNotification(
             isAdded ? "❤️ Added to Wishlist" : "💔 Removed from Wishlist",
             isAdded ? "success" : "info"
@@ -668,14 +581,14 @@ export const ProductDetails: React.FC = () => {
     };
 
     const handleReviewSubmit = async () => {
-        if (!user) {
+        if (!user || !product) {
             showNotification("Please login to submit a review", "info");
             return;
         }
         try {
             const newReview = {
-                productId: product?.id,
-                productName: product?.name,
+                productId: product.id,
+                productName: product.name,
                 userId: user.email,
                 userName: user.displayName || user.email.split('@')[0],
                 rating: reviewRating,
@@ -691,17 +604,14 @@ export const ProductDetails: React.FC = () => {
                 body: JSON.stringify(newReview)
             });
 
-            // Update local reviews list
             const updatedReviews = [newReview as Review, ...productReviews];
             setProductReviews(updatedReviews);
 
-            // Calculate new average rating
             const totalRating = updatedReviews.reduce((sum, review) => sum + review.rating, 0);
             const newAverageRating = totalRating / updatedReviews.length;
             const newReviewsCount = updatedReviews.length;
 
-            // Update product rating and count in database
-            if (product && (product as any)._id) {
+            if ((product as any)._id) {
                 await fetch(`${import.meta.env.VITE_API_URL}/api/products/${(product as any)._id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -712,7 +622,6 @@ export const ProductDetails: React.FC = () => {
                     })
                 });
 
-                // Update local product state immediately
                 setProduct({
                     ...product,
                     rating: parseFloat(newAverageRating.toFixed(1)),
@@ -743,9 +652,90 @@ export const ProductDetails: React.FC = () => {
         setIsZoomed(false);
     };
 
+    // Simplified Skeleton Loader
+    const ProductSkeleton = () => (
+        <div className="bg-app-bg min-h-screen pb-24 md:pb-12 animate-pulse">
+            <div className="max-w-7xl mx-auto pt-20 md:pt-8 px-4 lg:px-8">
+                <div className="lg:grid lg:grid-cols-12 lg:gap-x-10">
+                    <div className="lg:col-span-5 space-y-6">
+                        <div className="aspect-square bg-gray-200 rounded-2xl" />
+                        <div className="flex gap-4">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="w-16 h-16 bg-gray-200 rounded-lg" />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="lg:col-span-7 mt-8 lg:mt-0 space-y-6">
+                        <div className="h-4 bg-gray-200 rounded w-1/4" />
+                        <div className="h-10 bg-gray-200 rounded w-3/4" />
+                        <div className="h-6 bg-gray-200 rounded w-1/2" />
+                        <div className="h-20 bg-gray-200 rounded w-full" />
+                        <div className="space-y-4">
+                            <div className="h-12 bg-gray-200 rounded w-full" />
+                            <div className="h-12 bg-gray-200 rounded w-full" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
+    // Early Returns (must be after all hooks)
+    if (isLoadingProducts || (isFetching && !product)) {
+        return <ProductSkeleton />;
+    }
 
-    const variationImages = product.variations?.flatMap(v => v.options.map(o => o.image).filter(Boolean)) || [] as string[];
+    if (!product) return (
+        <div className="flex flex-col items-center justify-center min-h-screen pt-20 text-center px-4">
+            <div className="text-xl font-bold text-gray-800 mb-2">Product Not Found</div>
+            <p className="text-gray-500 mb-6">We couldn't find the product you're looking for.</p>
+            <button
+                onClick={() => navigate('/products')}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
+            >
+                Browse All Products
+            </button>
+        </div>
+    );
+
+    // Final Derived Data Logic
+    const prices = calculatePrice(product, extraHeads, selectedVariations);
+    const isInWishlist = wishlist.some(p => p.id === product.id);
+    const formatPrice = (price: number) => { return currency === 'INR' ? `₹${price.toLocaleString('en-IN')}` : `$${(price * 0.012).toFixed(2)}`; };
+    const shareUrl = window.location.href;
+    const shareText = `Check out ${product.name} on Sign Galaxy!`;
+
+    const handleNativeShare = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: product.name, text: shareText, url: shareUrl });
+            } catch (err) {
+                console.log('Error sharing', err);
+            }
+        } else {
+            navigator.clipboard.writeText(shareUrl);
+            showNotification("Link copied to clipboard!", "info");
+        }
+    };
+
+    const handleVariationChange = (variationId: string, option: VariationOption, variationName?: string) => {
+        setSelectedVariations(prev => {
+            const variation = product.variations?.find(v => v.id === variationId);
+            const isToggleable = variation?.disableAutoSelect || (variationName && (variationName.toLowerCase().includes('light base') || variationName.toLowerCase().includes('shape')));
+
+            if (isToggleable) {
+                if (prev[variationId]?.id === option.id) {
+                    const newVariations = { ...prev };
+                    delete newVariations[variationId];
+                    return newVariations;
+                }
+            }
+            return { ...prev, [variationId]: option };
+        });
+        if (option.image) { setActiveImage(option.image); }
+    };
+
+    const variationImages = product.variations?.flatMap(v => v.options.map((o: any) => o.image).filter(Boolean)) || [] as string[];
     const allImages = [product.image, ...variationImages, ...(product.gallery || [])].filter((img, idx, self) => img && self.indexOf(img) === idx) as string[];
 
     return (
@@ -783,9 +773,14 @@ export const ProductDetails: React.FC = () => {
                                     <button
                                         key={idx}
                                         onClick={() => setActiveImage(img)}
-                                        className={`border-2 rounded-lg overflow-hidden aspect-square ${activeImage === img ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
+                                        className={`border-2 rounded-lg overflow-hidden aspect-square transition-all duration-200 ${activeImage === img ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-gray-300'}`}
                                     >
-                                        <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                        <img 
+                                            src={getOptimizedUrl(img, 150)} 
+                                            alt="" 
+                                            className="w-full h-full object-cover" 
+                                            loading="lazy" 
+                                        />
                                     </button>
                                 ))}
                             </div>
@@ -799,11 +794,13 @@ export const ProductDetails: React.FC = () => {
                                 >
                                     {/* Normal Image */}
                                     <img
-                                        src={activeImage}
+                                        src={getOptimizedUrl(activeImage, 1000) || undefined}
                                         alt={product.name}
-                                        className={`max-w-full max-h-full object-contain transition-opacity duration-300 select-none pointer-events-none ${isZoomed ? 'opacity-0' : 'opacity-100'}`}
+                                        className={`max-w-full max-h-full object-contain transition-all duration-500 select-none pointer-events-none ${isZoomed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
                                         draggable={false}
                                         onContextMenu={(e) => e.preventDefault()}
+                                        loading="eager"
+                                        fetchPriority="high"
                                     />
 
                                     {/* Zoomed Image Background */}
@@ -1625,9 +1622,9 @@ export const ProductDetails: React.FC = () => {
                                             </div>
                                         ) : availableCoupons.length > 0 ? (
                                             <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                                                {availableCoupons.map((coupon) => (
+                                                {availableCoupons.map((coupon, idx) => (
                                                     <div
-                                                        key={coupon.id}
+                                                        key={`${coupon.id}-${idx}`}
                                                         className="min-w-[220px] p-4 rounded-2xl border-2 border-dashed border-primary/10 bg-gradient-to-br from-white to-purple-50/30 flex flex-col gap-2 relative overflow-hidden group hover:border-primary/30 transition-all"
                                                     >
                                                         <div className="flex items-center justify-between">
@@ -1890,7 +1887,90 @@ export const ProductDetails: React.FC = () => {
                     </div>
                 )}
 
-                {/* Related Products Section */}
+                {/* Why Customers Love This Section - Compact & Unique */}
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 border-t border-gray-100">
+                    <div className="bg-gradient-to-br from-pink-50/80 via-white/40 to-pink-100/60 backdrop-blur-xl rounded-xl md:rounded-2xl border border-white/60 p-4 sm:p-6 md:p-8 shadow-xl relative overflow-hidden group">
+                        {/* Decorative background glass elements */}
+                        <div className="absolute -right-8 -top-8 w-48 h-48 bg-pink-300/15 rounded-full blur-3xl group-hover:bg-pink-400/20 transition-all duration-700 animate-pulse" />
+                        <div className="absolute -left-8 -bottom-8 w-48 h-48 bg-rose-200/15 rounded-full blur-3xl group-hover:bg-rose-300/20 transition-all duration-700" />
+                        
+                        <div className="relative z-10">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-pink-500" />
+                                        <span className="text-pink-600 font-bold text-[9px] uppercase tracking-[0.2em]">Top Highlights</span>
+                                    </div>
+                                    <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Why Customers Love This</h3>
+                                </div>
+                                <div className="flex items-center gap-3 bg-white/40 backdrop-blur-xl px-3 py-1.5 rounded-lg border border-white/60 shadow-sm self-start sm:self-auto">
+                                    <div className="flex -space-x-1.5">
+                                        {[1, 2, 3].map(i => (
+                                            <div key={i} className="w-6 h-6 rounded-full border border-white bg-pink-100 overflow-hidden shadow-sm">
+                                                <img src={`https://i.pravatar.cc/60?u=${i + (product.id || 'p')}`} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="text-[9px] font-bold text-gray-600">
+                                        <span className="text-pink-600">{product.reviewsCount || 50}+</span> Happy Buyers
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-x-8">
+                                {((product.description?.split(/[•\n]/).filter(l => l.trim().length > 10).slice(0, 4) || []).length > 0 ? (
+                                    (product.description?.split(/[•\n]/).filter(l => l.trim().length > 10).slice(0, 4) || []).map((highlight, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-white/30 backdrop-blur-sm border border-white/40 hover:bg-white/50 transition-all duration-300 group/item shadow-sm">
+                                            <div className="mt-0.5 w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center shrink-0 shadow-md group-hover/item:scale-110 transition-all">
+                                                <CheckCircle className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs sm:text-sm text-gray-800 font-black leading-tight">
+                                                    {highlight.includes(':') ? highlight.split(':')[0] : (highlight.length > 25 ? highlight.substring(0, highlight.indexOf(' ', 20)) : highlight)}
+                                                </p>
+                                                <p className="text-[11px] sm:text-xs text-gray-600 mt-1 leading-relaxed line-clamp-2 font-medium">
+                                                    {highlight.includes(':') ? highlight.split(':')[1] : highlight}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <>
+                                        <div className="flex items-start gap-3 p-3 rounded-lg bg-white/30 backdrop-blur-sm border border-white/40">
+                                            <div className="mt-0.5 w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center shrink-0 shadow-md">
+                                                <Award className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-800 font-black leading-tight">Handcrafted Excellence</p>
+                                                <p className="text-xs text-gray-600 mt-1 leading-relaxed font-medium">Unique {product.category} with superior finish.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3 p-3 rounded-lg bg-white/30 backdrop-blur-sm border border-white/40">
+                                            <div className="mt-0.5 w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center shrink-0 shadow-md">
+                                                <Truck className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-800 font-black leading-tight">Secure Shipping</p>
+                                                <p className="text-xs text-gray-600 mt-1 leading-relaxed font-medium">Reliable delivery for every gift.</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ))}
+                            </div>
+
+                            {product.isBestseller && (
+                                <div className="mt-6 pt-4 border-t border-pink-200/40 flex items-center gap-3">
+                                    <div className="bg-pink-500/10 text-pink-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em] flex items-center gap-1.5 border border-pink-500/10 backdrop-blur-md">
+                                        <Award className="w-3 h-3" /> Bestseller
+                                    </div>
+                                    <div className="text-gray-500 text-[10px] font-bold italic">Top rated for its exceptional {product.category.toLowerCase()} quality.</div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Ratings & Reviews Section */}
                 {/* MOVED CUSTOMER REVIEWS SECTION */}
                 <div ref={reviewsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100">
                     <h3 className="text-2xl font-bold text-gray-900 mb-6">Ratings & Reviews</h3>
@@ -2023,7 +2103,9 @@ export const ProductDetails: React.FC = () => {
                     )}
                 </div>
 
-                <RecentlyViewedDetails />
+                <React.Suspense fallback={<div className="h-40 bg-gray-50 animate-pulse rounded-2xl" />}>
+                    <RecentlyViewedDetails />
+                </React.Suspense>
 
                 <div className="py-12 mt-8">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2066,12 +2148,13 @@ export const ProductDetails: React.FC = () => {
                                 .map(related => {
                                     const prices = calculatePrice(related);
                                     const relatedId = related.id || (related as any)._id;
+                                    const relatedUrlId = related.name ? generateSlug(related.name) : relatedId;
                                     const isInRelatedWishlist = wishlist.some(p => p.id === relatedId);
 
                                     return (
                                         <div key={relatedId} className="snap-start relative group">
                                             <Link
-                                                to={`/product/${relatedId}`}
+                                                to={`/product/${relatedUrlId}`}
                                                 onClick={() => window.scrollTo(0, 0)}
                                                 className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full"
                                             >

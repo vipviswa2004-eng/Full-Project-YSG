@@ -4,12 +4,12 @@ import { Navbar } from './components/Navbar';
 import { CategoryNav } from './components/CategoryNav';
 import { Footer } from './components/Footer';
 import { SEO } from './components/SEO';
-import { GiftAdvisor } from './components/GiftAdvisor';
-import { WhatsAppChat } from './components/WhatsAppChat';
-import { VerificationModal } from './components/VerificationModal';
-import { LocationManager } from './components/LocationManager';
+const GiftAdvisor = lazy(() => import('./components/GiftAdvisor').then(module => ({ default: module.GiftAdvisor })));
+const WhatsAppChat = lazy(() => import('./components/WhatsAppChat').then(module => ({ default: module.WhatsAppChat })));
+const VerificationModal = lazy(() => import('./components/VerificationModal').then(module => ({ default: module.VerificationModal })));
+const LocationManager = lazy(() => import('./components/LocationManager').then(module => ({ default: module.LocationManager })));
+const VersionControl = lazy(() => import('./components/VersionControl').then(module => ({ default: module.VersionControl })));
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { VersionControl } from './components/VersionControl';
 import { AnnouncementBar } from './components/AnnouncementBar';
 import { CartProvider, useCart } from './context';
 import { Loader2 } from 'lucide-react';
@@ -100,7 +100,7 @@ const AppContent: React.FC = () => {
             <Route path="/products" element={<Shop />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/customize" element={<Customize />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/product/:productName" element={<ProductDetails />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/wishlist" element={<Wishlist />} />
@@ -115,11 +115,13 @@ const AppContent: React.FC = () => {
           </Routes>
         </Suspense>
       </main>
-      <GiftAdvisor />
-      <WhatsAppChat />
-      {user && (!user.emailVerified || !user.phone) && <VerificationModal />}
-      <LocationManager />
-      <VersionControl />
+      <Suspense fallback={null}>
+        <GiftAdvisor />
+        <WhatsAppChat />
+        {user && (!user.phoneVerified || !user.phone) && <VerificationModal />}
+        <LocationManager />
+        <VersionControl />
+      </Suspense>
       {!isAdminRoute && !location.pathname.startsWith('/product/') && <MobileBottomNav />}
       {!isAdminRoute && <Footer />}
     </div>

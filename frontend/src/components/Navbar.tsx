@@ -7,6 +7,7 @@ import {
   Eye, EyeOff, ArrowRight, ArrowLeft, ArrowUpRight, Clock
 } from 'lucide-react';
 import { useCart } from '../context';
+import { generateSlug } from '../utils/url';
 // import { products } from '../data/products';
 import { Product } from '../types';
 
@@ -255,7 +256,13 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  const handleSuggestionClick = (productId: string) => { navigate(`/product/${productId}`); setSearchQuery(''); setShowSuggestions(false); setIsMenuOpen(false); };
+  const handleSuggestionClick = (product: Product) => {
+    const slug = product.name ? generateSlug(product.name) : product.id;
+    navigate(`/product/${slug}`);
+    setSearchQuery('');
+    setShowSuggestions(false);
+    setIsMenuOpen(false);
+  };
   const handleRecentSearchClick = (term: string) => { setSearchQuery(term); saveRecentSearch(term); navigate(`/products?q=${encodeURIComponent(term)}`); setShowSuggestions(false); };
   const clearRecentSearches = (e: React.MouseEvent) => { e.stopPropagation(); setRecentSearches([]); localStorage.removeItem('recentSearches'); };
 
@@ -298,7 +305,7 @@ export const Navbar: React.FC = () => {
                         {suggestions.map(product => (
                           <div
                             key={product.id}
-                            onClick={() => handleSuggestionClick(product.id)}
+                            onClick={() => handleSuggestionClick(product)}
                             className="flex items-center gap-3 px-4 py-2 hover:bg-gray-700 cursor-pointer transition-colors"
                           >
                             <img
@@ -460,14 +467,14 @@ export const Navbar: React.FC = () => {
                 <div className="space-y-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Suggestions</p>
                   {suggestions.map(product => (
-                    <div
-                      key={product.id}
-                      onClick={() => {
-                        handleSuggestionClick(product.id);
-                        setIsMobileSearchOpen(false);
-                      }}
-                      className="flex items-center gap-4 p-2 active:bg-gray-50 rounded-xl"
-                    >
+                      <div
+                        key={product.id}
+                        onClick={() => {
+                          handleSuggestionClick(product);
+                          setIsMobileSearchOpen(false);
+                        }}
+                        className="flex items-center gap-4 p-2 active:bg-gray-50 rounded-xl"
+                      >
                       <img src={product.image} alt="" className="w-12 h-12 rounded-lg object-cover border" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-white line-clamp-1">{product.name}</p>
@@ -532,7 +539,7 @@ export const Navbar: React.FC = () => {
                     {suggestions.map(product => (
                       <div
                         key={product.id}
-                        onClick={() => handleSuggestionClick(product.id)}
+                        onClick={() => handleSuggestionClick(product)}
                         className="flex items-center gap-3 px-3 py-2 border-b border-gray-50 last:border-0"
                       >
                         <img

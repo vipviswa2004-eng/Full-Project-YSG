@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context';
 import { Product } from '../types';
 import { calculatePrice } from '../data/products';
+import { generateSlug } from '../utils/url';
 
 interface GiftAdvisorProduct extends Product {
   matchScore?: number;
@@ -25,7 +26,7 @@ interface QuestionFlow {
 
 const ProductRecommendationList: React.FC<{
   products: GiftAdvisorProduct[];
-  onProductClick: (id: string) => void;
+  onProductClick: (product: Product) => void;
   showRank?: boolean;
 }> = ({ products, onProductClick, showRank }) => {
   const [expanded, setExpanded] = useState(false);
@@ -58,7 +59,7 @@ const ProductRecommendationList: React.FC<{
         return (
           <div
             key={product.id}
-            onClick={() => onProductClick(product.id)}
+            onClick={() => onProductClick(product)}
             className="bg-white p-3 rounded-xl border border-purple-100 shadow-sm cursor-pointer hover:shadow-xl hover:border-purple-300 transition-all group relative overflow-hidden transform hover:-translate-y-1"
           >
             {showRank && getRankBadge(index)}
@@ -667,8 +668,9 @@ export const GiftAdvisor: React.FC = () => {
     ]);
   };
 
-  const handleProductClick = (productId: string) => {
-    navigate(`/product/${productId}`);
+  const handleProductClick = (product: Product) => {
+    const slug = product.name ? generateSlug(product.name) : product.id;
+    navigate(`/product/${slug}`);
     if (window.innerWidth < 640) {
       setIsGiftAdvisorOpen(false);
     }
