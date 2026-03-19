@@ -27,7 +27,10 @@ export const VerificationModal: React.FC = () => {
             const response = await fetch(`${apiUrl}/api/auth/send-otp-phone`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
+                body: JSON.stringify({ 
+                    phone,
+                    email: user?.email 
+                })
             });
 
             const data = await response.json();

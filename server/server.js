@@ -9,7 +9,18 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Product, User, Order, Review, Category, Shape, Size, Section, ShopCategory, SubCategory, Seller, Transaction, ReturnRequest, Coupon, SpecialOccasion, ShopOccasion, ShopRecipient, GiftGenieQuery, WhatsAppLead } = require('./models');
 const { notifyAdminNewOrder } = require('./services/whatsapp');
 
+// Email Transporter (Moved to top so it's available for all routes)
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Crucial for session/OAuth on Hostinger)
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 console.log("---------------------------------------------------");
@@ -120,7 +131,7 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "secret",
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
       secure: false,        // only true on https
       httpOnly: false,
@@ -138,9 +149,11 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/auth/google/callback",
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || "/auth/google/callback",
+      proxy: true
     },
     async (accessToken, refreshToken, profile, done) => {
+      console.log("📥 [GOOGLE STRATEGY CALLBACK] Received profile:", profile.displayName, profile.emails[0]?.value);
       try {
         let user = await User.findOne({ googleId: profile.id });
 
@@ -163,11 +176,18 @@ passport.use(
                 profile.emails[0].value === "viswakumar2004@gmail.com",
             });
           }
-
           await user.save();
         }
-        done(null, user);
+
+        if (user) {
+          console.log("✅ User processed in DB:", user.email);
+          done(null, user);
+        } else {
+          console.error("❌ Failed to process user for profile:", profile.id);
+          done(null, null);
+        }
       } catch (err) {
+        console.error("❌ ERROR in Google Strategy Callback:", err);
         done(err, null);
       }
     }
@@ -195,9 +215,14 @@ passport.deserializeUser(async (id, done) => {
 
 // ---------- AUTH ROUTES ----------
 // Test endpoint to verify server is working
-app.get("/auth/test", (req, res) => {
+app.get("/auth/test", async (req, res) => {
   console.log("✅ Test endpoint hit!");
-  res.send("Server is working! OAuth should work too.");
+  try {
+    const userCount = await User.countDocuments();
+    res.json({ status: "working", db: "connected", userCount });
+  } catch (err) {
+    res.json({ status: "working", db: "error", error: err.message });
+  }
 });
 
 // ---------- IN-MEMORY CACHE ----------
@@ -223,7 +248,7 @@ const memoryCache = {
 // Phone OTP Routes (Keeping Phone OTP while removing Email OTP)
 app.post("/api/auth/send-otp-phone", async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, email } = req.body;
     if (!phone) return res.status(400).json({ error: "Phone number is required" });
 
     // Generate 6-digit OTP
@@ -236,20 +261,45 @@ app.post("/api/auth/send-otp-phone", async (req, res) => {
     // Simulation log (In production, this would use an SMS/WhatsApp service)
     console.log(`🚀 [PHONE OTP] For ${phone}: ${otp}`);
 
-    // If WhatsApp service is configured, we could send it here
-    /*
-    if (process.env.INTERAKT_API_KEY) {
-      const { sendWhatsAppMessage } = require('./services/whatsapp');
-      await sendWhatsAppMessage({
-        to: phone,
-        message: `Your verification code is: ${otp}. This code is valid for 10 minutes.`
-      });
+    // Send Email as Backup if email is provided
+    if (email) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Your Verification Code - Yathes Sign Galaxy',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px; text-align: center; color: white;">
+              <h2 style="margin: 0; font-size: 24px;">Verify Your Identity</h2>
+            </div>
+            <div style="padding: 30px; color: #374151; line-height: 1.6; text-align: center;">
+              <p>Hi there,</p>
+              <p>Someone (hopefully you!) requested a verification code for your phone number <strong>${phone}</strong>.</p>
+              
+              <div style="margin: 30px 0; padding: 20px; background-color: #f9fafb; border-radius: 8px; font-size: 32px; font-weight: 800; letter-spacing: 0.2em; color: #4F46E5; border: 1px dashed #e5e7eb;">
+                ${otp}
+              </div>
+
+              <p style="font-size: 14px; color: #6B7280;">This code is valid for 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+            </div>
+            <div style="background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #f0f0f0;">
+              © ${new Date().getFullYear()} Yathes Sign Galaxy. All rights reserved.
+            </div>
+          </div>
+        `
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 [EMAIL OTP] Backup sent to ${email}`);
+      } catch (mailErr) {
+        console.error('❌ Failed to send backup OTP email:', mailErr);
+      }
     }
-    */
 
     res.json({ 
       success: true, 
-      message: "Verification code sent to your phone (Check server logs for simulation)",
+      message: email ? "Verification code sent to your email and phone" : "Verification code sent to your phone",
       otp: process.env.NODE_ENV === 'development' ? otp : undefined // Return OTP only in dev or simulation
     });
   } catch (e) {
@@ -339,29 +389,52 @@ app.get('/sitemap.xml', async (req, res) => {
 
 app.get(
   "/auth/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    accessType: 'offline',
-    prompt: 'consent'
-  })
+  (req, res, next) => {
+    console.log("🚀 [GOOGLE AUTH START] Ref:", req.get('referer'));
+    const host = req.get('host');
+    const isLocal = (host.includes('localhost') || host.includes('127.0.0.1')) && !host.includes('ucgoc.com');
+    const callbackURL = isLocal 
+      ? `http://${host}/auth/google/callback` 
+      : (process.env.GOOGLE_CALLBACK_URL || `https://api.ucgoc.com/auth/google/callback`);
+
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      accessType: 'offline',
+      prompt: 'consent',
+      callbackURL: callbackURL
+    })(req, res, next);
+  }
 );
 
 app.get(
   "/auth/google/callback",
   (req, res, next) => {
-    console.log("🔵 Google callback received");
-    passport.authenticate("google", (err, user, info) => {
+    console.log("🔵 Google callback received on host:", req.get('host'));
+    
+    const host = req.get('host');
+    const isLocal = (host.includes('localhost') || host.includes('127.0.0.1')) && !host.includes('ucgoc.com');
+    const callbackURL = isLocal 
+      ? `http://${host}/auth/google/callback` 
+      : (process.env.GOOGLE_CALLBACK_URL || `https://api.ucgoc.com/auth/google/callback`);
+
+    // Determine target client URL for redirect after auth
+    const clientUrl = isLocal
+      ? 'http://localhost:5173'
+      : (process.env.CLIENT_URL || "https://ucgoc.com");
+
+    passport.authenticate("google", { callbackURL }, (err, user, info) => {
       if (err) {
         console.error("❌ Google Auth Error:", err);
-        return res.redirect(`${process.env.CLIENT_URL}?error=auth_failed`);
+        if (err.stack) console.error("Stack Trace:", err.stack);
+        return res.redirect(`${clientUrl}?error=auth_failed`);
       }
       if (!user) {
         console.error("❌ Google Auth Failed: No user returned");
-        console.log("Info:", info);
-        return res.redirect(`${process.env.CLIENT_URL}?error=no_user`);
+        console.log("ℹ️ Auth Info:", JSON.stringify(info || {}, null, 2));
+        return res.redirect(`${clientUrl}?error=no_user`);
       }
 
-      console.log("✅ User authenticated:", user.email);
+      console.log("✅ User authenticated successfully:", user.email);
 
       req.logIn(user, (err) => {
         if (err) {
@@ -373,8 +446,8 @@ app.get(
         console.log("📦 Session ID:", req.sessionID);
         console.log("👤 User in session:", req.user ? req.user.email : 'No user');
 
-        // Redirect with success flag to trigger frontend refresh
-        return res.redirect(`${process.env.CLIENT_URL}?login=success`);
+        // Redirect back to the originating client
+        return res.redirect(`${clientUrl}?login=success`);
       });
     })(req, res, next);
   }
@@ -408,7 +481,10 @@ app.get("/api/logout", (req, res) => {
   req.logout(() => {
     req.session.destroy(() => {
       res.clearCookie("connect.sid");
-      res.redirect(`${process.env.CLIENT_URL}`);
+      const host = req.get('host');
+      const isLocal = (host.includes('localhost') || host.includes('127.0.0.1')) && !host.includes('ucgoc.com');
+      const clientUrl = isLocal ? 'http://localhost:5173' : (process.env.CLIENT_URL || "https://ucgoc.com");
+      res.redirect(`${clientUrl}`);
     });
   });
 });
@@ -2088,15 +2164,8 @@ app.get("/api/sellers", async (req, res) => {
   }
 });
 
-// Email Transporter
-const nodemailer = require('nodemailer');
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+// Email Transporter removed from here and moved to top
+
 
 app.post("/api/sellers", async (req, res) => {
   try {
@@ -2363,6 +2432,12 @@ const warmUpCaches = async () => {
     console.error("⚠️ Cache warming failed (partial?):", e.message);
   }
 };
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("❌ GLOBAL ERROR:", err);
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
+});
 
 mongoose.connect(MONGO_URI, mongooseOptions)
   .then(() => {
