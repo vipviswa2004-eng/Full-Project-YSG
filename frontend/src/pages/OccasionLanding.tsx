@@ -78,8 +78,8 @@ export const OccasionLanding: React.FC = () => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 10, ease: "linear" }}
                     src={occasion.name.toLowerCase().includes('valentine')
-                        ? 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?q=80&w=2074&auto=format&fit=crop'
-                        : (occasion.id === 'valentine' ? valentineBanner : occasion.image)}
+                        ? (occasion.id === 'valentine' ? valentineBanner : '/occasions/valentine_hero.webp')
+                        : occasion.image}
                     alt={occasion.name}
                     className="absolute inset-0 w-full h-full object-cover"
                 />
@@ -169,7 +169,7 @@ export const OccasionLanding: React.FC = () => {
                         <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
                         <img
                             src={occasion.name.toLowerCase().includes('valentine')
-                                ? "https://images.unsplash.com/photo-1549465220-1d8c9d9c6703?q=80&w=400&auto=format&fit=crop"
+                                ? "/occasions/valentine_hero.webp"
                                 : occasion.image}
                             alt=""
                             className="relative max-h-full max-w-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)] transform hover:rotate-6 transition-transform duration-700"
