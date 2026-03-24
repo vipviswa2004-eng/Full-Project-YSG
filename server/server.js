@@ -50,19 +50,11 @@ const seedRecipients = async () => {
 };
 
 // -------- MIDDLEWARE --------
-const allowedOrigins = [
-  'https://ucgoc.com',
-  'https://www.ucgoc.com',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5000'
-];
-
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+    // Allow any origin from ucgoc.com or localhost
+    if (origin.endsWith('ucgoc.com') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -73,9 +65,30 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin", "Cache-Control"]
 };
 
+// Apply CORS globally
 app.use(cors(corsOptions));
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
+
+// Extra safety: Explicitly set CORS headers for all responses (including errors/preflights)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin) {
+    next();
+    return;
+  }
+  
+  if (origin.endsWith('ucgoc.com') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control');
+  
+  // Handle OPTIONS preflight immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
