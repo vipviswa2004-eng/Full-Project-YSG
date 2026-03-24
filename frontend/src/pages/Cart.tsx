@@ -286,6 +286,9 @@ export const Cart: React.FC = () => {
         paymentStatus: paymentMethod === 'COD' ? 'Unpaid' : 'Paid',
         paymentScreenshot: paymentMethod === 'COD' ? null : paymentScreenshot,
         paymentId: paymentMethod === 'UPI' ? paymentUTR : null,
+        codFee: paymentMethod === 'COD' ? COD_FEE : 0,
+        discountAmount: discountAmount,
+        couponCode: appliedCoupon?.code,
         orderId: generatedOrderId,
         date: new Date()
       };

@@ -84,6 +84,9 @@ const OrderSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   orderId: String,
   paymentId: String,
+  codFee: { type: Number, default: 0 },
+  discountAmount: { type: Number, default: 0 },
+  couponCode: String,
   deliveredAt: Date,
   hasRequestedReview: { type: Boolean, default: false }
 }, { collection: 'orders' });

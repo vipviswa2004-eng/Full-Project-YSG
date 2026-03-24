@@ -26,6 +26,9 @@ interface Order {
     orderId: string;
     paymentMethod?: string;
     paymentStatus?: 'Paid' | 'Unpaid' | 'Refunded';
+    codFee?: number;
+    discountAmount?: number;
+    couponCode?: string;
 }
 
 export const Orders: React.FC = () => {
@@ -381,14 +384,32 @@ export const Orders: React.FC = () => {
                                                                                     <strong>${i.name}</strong><br/>
                                                                                     <small>Qty: ${i.quantity}</small>
                                                                                 </div>
-                                                                                <div>₹${i.price}</div>
+                                                                                <div>₹${(i.price * i.quantity).toLocaleString()}</div>
                                                                             </div>
                                                                         `).join('')}
                                                                         
-                                                                        <div class="total">
-                                                                            Total: ₹${order.total?.toLocaleString()}
+                                                                        <div style="margin-top: 20px;">
+                                                                            <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #666; font-size: 14px;">
+                                                                                <span>Subtotal</span>
+                                                                                <span>₹${order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0).toLocaleString()}</span>
+                                                                            </div>
+                                                                            ${(order.paymentMethod === 'COD' || (order.codFee && order.codFee > 0)) ? `
+                                                                                <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #666; font-size: 14px;">
+                                                                                    <span>COD Handling Fee</span>
+                                                                                    <span>₹${order.codFee || 70}</span>
+                                                                                </div>
+                                                                            ` : ''}
+                                                                            ${(order.discountAmount && order.discountAmount > 0) ? `
+                                                                                <div style="display: flex; justify-content: space-between; padding: 5px 0; color: #16a34a; font-size: 14px;">
+                                                                                    <span>Coupon Discount ${order.couponCode ? `(${order.couponCode})` : ''}</span>
+                                                                                    <span>-₹${order.discountAmount.toLocaleString()}</span>
+                                                                                </div>
+                                                                            ` : ''}
+                                                                            <div class="total" style="border-top: 2px solid #5f259f; padding-top: 15px; margin-top: 10px;">
+                                                                                Total: ₹${order.total?.toLocaleString()}
+                                                                            </div>
                                                                         </div>
-
+                                                                        
                                                                         <div class="footer">
                                                                             Thank you for shopping with Sign Galaxy!<br/>
                                                                             For support contact: 6380016798
@@ -420,6 +441,30 @@ export const Orders: React.FC = () => {
                                                     </div>
                                                 </div>
                                             ))}
+                                            
+                                            {/* Order Summary Breakdown */}
+                                            <div className="mt-6 pt-6 border-t border-gray-200/60 max-w-sm ml-auto space-y-3 bg-white/50 p-5 rounded-xl border border-gray-100 shadow-sm">
+                                                <div className="flex justify-between text-sm text-gray-500">
+                                                    <span className="font-medium">Subtotal</span>
+                                                    <span className="font-bold text-gray-700">₹{order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0).toLocaleString()}</span>
+                                                </div>
+                                                {(order.paymentMethod === 'COD' || (order.codFee && order.codFee > 0)) && (
+                                                    <div className="flex justify-between text-sm text-gray-500">
+                                                        <span className="font-medium">COD Handling Fee</span>
+                                                        <span className="font-bold text-primary">₹{order.codFee || 70}</span>
+                                                    </div>
+                                                )}
+                                                {(order.discountAmount && order.discountAmount > 0) && (
+                                                    <div className="flex justify-between text-sm text-green-600">
+                                                        <span className="font-medium">Coupon Discount {order.couponCode ? `(${order.couponCode})` : ''}</span>
+                                                        <span className="font-bold">-₹{order.discountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between text-xl font-black text-gray-900 pt-3 border-t border-dashed border-gray-200">
+                                                    <span>Total Amount</span>
+                                                    <span className="text-primary">₹{order.total?.toLocaleString()}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

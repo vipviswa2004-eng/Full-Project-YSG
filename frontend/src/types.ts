@@ -107,6 +107,9 @@ export interface Order {
   status: OrderStatus;
   paymentMethod: string;
   paymentStatus: 'Paid' | 'Unpaid' | 'Refunded';
+  codFee?: number;
+  discountAmount?: number;
+  couponCode?: string;
   itemsCount: number;
   trackingNumber?: string;
   courier?: string;
