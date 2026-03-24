@@ -50,44 +50,14 @@ const seedRecipients = async () => {
 };
 
 // -------- MIDDLEWARE --------
-// Permissive CORS logic for production subdomains
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    // Allow any origin from ucgoc.com or localhost using a case-insensitive regex
-    if (/ucgoc\.com$/.test(origin) || /localhost/.test(origin) || /127\.0\.0\.1/.test(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`🔒 [CORS] Blocked origin: ${origin}`);
-      callback(null, false); // Don't throw error, just don't allow
-    }
-  },
+  origin: true, // Allow all origins (reflects request origin) to fix CORS issues in dev
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin", "Cache-Control"]
 };
 
-// Apply CORS globally as the first middleware
 app.use(cors(corsOptions));
-
-// Extra safety: Explicitly set CORS headers for all responses
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    if (/ucgoc\.com$/.test(origin) || /localhost/.test(origin) || /127\.0\.0\.1/.test(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log(`🔓 [CORS] Allowed origin: ${origin} for ${req.method} ${req.path}`);
-    }
-  }
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));

@@ -370,27 +370,18 @@ export const Admin: React.FC = () => {
 
             // If image is base64, upload to Cloudinary first
             if (finalData.image && finalData.image.startsWith('data:')) {
-                console.log('🚀 Attempting to upload base64 image to Cloudinary...');
+                console.log('ðŸ“¤ Uploading base64 image to Cloudinary...');
                 try {
-                    // Manual base64 to Blob conversion (more reliable than fetch(dataURL))
-                    const [header, base64Data] = finalData.image.split(',');
-                    const contentType = header.match(/:(.*?);/)?.[1] || 'image/png';
-                    const binary = atob(base64Data);
-                    const array = [];
-                    for (let i = 0; i < binary.length; i++) {
-                        array.push(binary.charCodeAt(i));
-                    }
-                    const blob = new Blob([new Uint8Array(array)], { type: contentType });
+                    // Convert base64 to blob
+                    const response = await fetch(finalData.image);
+                    const blob = await response.blob();
 
                     // Create form data
                     const formData = new FormData();
-                    formData.append('image', blob, `category-image-${Date.now()}.${contentType.split('/')[1] || 'png'}`);
-
-                    const uploadUrl = `${import.meta.env.VITE_API_URL}/api/upload`;
-                    console.log(`📡 Uploading to: ${uploadUrl}`);
+                    formData.append('image', blob, 'category-image.png');
 
                     // Upload to Cloudinary
-                    const uploadResponse = await fetch(uploadUrl, {
+                    const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                         method: 'POST',
                         body: formData
                     });
@@ -398,24 +389,21 @@ export const Admin: React.FC = () => {
                     if (uploadResponse.ok) {
                         const uploadData = await uploadResponse.json();
                         finalData.image = uploadData.url;
-                        console.log('✅ Image uploaded successfully:', uploadData.url);
+                        console.log('âœ… Image uploaded successfully:', uploadData.url);
                     } else {
-                        const errorText = await uploadResponse.text();
-                        console.error('❌ Cloudinary upload failed:', uploadResponse.status, errorText);
-                        console.warn('⚠️ Using base64 as fallback');
+                        console.warn('âš ï¸ Cloudinary upload failed, using base64 as fallback');
+                        // Keep base64 as fallback
                     }
-                } catch (uploadError: any) {
-                    console.error('❌ Network error during image upload:', uploadError);
-                    console.warn('⚠️ Falling back to base64 due to network error');
+                } catch (uploadError) {
+                    console.error('âŒ Image upload error:', uploadError);
+                    console.warn('âš ï¸ Using base64 as fallback');
+                    // Keep base64 as fallback
                 }
             }
 
             const method = finalData._id ? 'PUT' : 'POST';
             const apiPath = type === 'sections' ? 'sections' : type === 'categories' ? 'shop-categories' : type === 'sub-categories' ? 'sub-categories' : type === 'special-occasions' ? 'special-occasions' : type === 'shop-recipients' ? 'shop-recipients' : 'shop-occasions';
             const url = `${import.meta.env.VITE_API_URL}/api/${apiPath}${finalData._id ? `/${finalData._id}` : ''}`;
-
-            console.log(`📡 Saving ${type} to: ${url} (${method})`);
-            console.log(`📦 Payload size: ${JSON.stringify(finalData).length} bytes`);
 
             const res = await fetch(url, {
                 method,
@@ -424,19 +412,16 @@ export const Admin: React.FC = () => {
             });
 
             if (!res.ok) {
-                const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
-                throw new Error(errorData.error || `Failed to save ${type} (Status: ${res.status})`);
+                const errorData = await res.json();
+                throw new Error(errorData.error || `Failed to save ${type}`);
             }
 
             fetchShopData();
             setIsEditingShopItem(null);
             alert(`${type === 'sections' ? 'Section' : type === 'categories' ? 'Category' : type === 'sub-categories' ? 'Sub-category' : type === 'special-occasions' ? 'Special Occasion' : 'Shop Occasion'} saved successfully!`);
         } catch (error: any) {
-            console.error(`❌ ERROR saving ${type}:`, error);
-            const msg = error.message === 'Failed to fetch' 
-                ? 'Failed to fetch: Connection error or CORS issue. Please check if the backend server is running and accessible.' 
-                : error.message;
-            alert(`Error: ${msg}`);
+            console.error(`Failed to save ${type}`, error);
+            alert(`Error: ${error.message}`);
         }
     };
 
@@ -636,20 +621,12 @@ export const Admin: React.FC = () => {
             formData.append('image', file);
 
             try {
-                const uploadUrl = `${import.meta.env.VITE_API_URL}/api/upload`;
-                console.log(`📡 Uploading product image to: ${uploadUrl}`);
-
-                const response = await fetch(uploadUrl, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                     method: 'POST',
                     body: formData
                 });
-
-                if (!response.ok) {
-                    const errorMsg = await response.json().catch(() => ({ error: 'Upload failed' }));
-                    throw new Error(errorMsg.error || `Upload failed (Status: ${response.status})`);
-                }
-
                 const data = await response.json();
+
                 if (data.url) {
                     const imageUrl = data.url;
                     if (target === 'main' && editedProduct) {
@@ -681,12 +658,9 @@ export const Admin: React.FC = () => {
                         });
                     }
                 }
-            } catch (error: any) {
-                console.error("❌ Failed to upload image:", error);
-                const msg = error.message === 'Failed to fetch' 
-                    ? "Failed to connect to the backend server. Please check if the API server is running and CORS is allowed."
-                    : (error.message || "Failed to upload image. Please try again.");
-                alert(`Error: ${msg}`);
+            } catch (error) {
+                console.error("Failed to upload image", error);
+                alert("Failed to upload image. Please try again.");
             }
         }
     };
@@ -3275,20 +3249,14 @@ export const Admin: React.FC = () => {
                                                         const formData = new FormData();
                                                         formData.append('image', file);
                                                         try {
-                                                            const uploadUrl = `${import.meta.env.VITE_API_URL}/api/upload`;
-                                                            console.log(`📡 Uploading gallery image (${file.name}) to: ${uploadUrl}`);
-                                                            const response = await fetch(uploadUrl, {
+                                                            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                                                                 method: 'POST',
                                                                 body: formData
                                                             });
-                                                            if (!response.ok) {
-                                                                console.error(`❌ Gallery upload failed for ${file.name}:`, response.status);
-                                                                return null;
-                                                            }
                                                             const data = await response.json();
                                                             return data.url;
                                                         } catch (error) {
-                                                            console.error(`❌ Network error uploading gallery image ${file.name}:`, error);
+                                                            console.error("Failed to upload gallery image", error);
                                                             return null;
                                                         }
                                                     });
