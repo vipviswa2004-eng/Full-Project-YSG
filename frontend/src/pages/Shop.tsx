@@ -4,6 +4,7 @@ import { Link, useSearchParams, useNavigate, useNavigationType } from 'react-rou
 import { Filter, X, ChevronDown } from 'lucide-react';
 import { useCart } from '../context';
 import { Product } from '../types';
+import { searchProducts } from '../utils/search';
 import { calculatePrice } from '../data/products';
 import { ProductCard } from '../components/ProductCard';
 
@@ -170,17 +171,7 @@ export const Shop: React.FC = () => {
         }
 
         if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const terms = query.split(/ & | and /);
-            result = result.filter(p =>
-                terms.some(term => {
-                    const trimmedTerm = term.trim();
-                    if (!trimmedTerm) return false;
-                    return p.name.toLowerCase().includes(trimmedTerm) ||
-                        (p.category && p.category.toLowerCase().includes(trimmedTerm)) ||
-                        (p.description && p.description.toLowerCase().includes(trimmedTerm));
-                })
-            );
+            result = searchProducts(result, searchQuery);
         }
 
         if (categoryFilter) {

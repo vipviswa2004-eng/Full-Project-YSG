@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context';
 import { generateSlug } from '../utils/url';
-// import { products } from '../data/products';
 import { Product } from '../types';
+import { searchProducts } from '../utils/search';
 
 export const Navbar: React.FC = () => {
   const { cart, wishlist, user, setUser, setIsGiftAdvisorOpen, products, isLoginModalOpen, setIsLoginModalOpen, currency, setCurrency, isMobileSearchOpen, setIsMobileSearchOpen } = useCart();
@@ -96,12 +96,7 @@ export const Navbar: React.FC = () => {
 
   useEffect(() => {
     if (searchQuery.trim() && products.length > 0) {
-      const query = searchQuery.toLowerCase();
-      const filtered = products.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        p.category.toLowerCase().includes(query) ||
-        (p.sku && p.sku.toLowerCase().includes(query))
-      ).slice(0, 6);
+      const filtered = searchProducts(products, searchQuery).slice(0, 6);
       setSuggestions(filtered);
       setShowSuggestions(true);
     } else {

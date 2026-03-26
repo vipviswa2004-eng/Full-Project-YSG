@@ -633,7 +633,7 @@ app.get("/api/products", async (req, res) => {
     console.log("...Fetching Products from DB...");
     const products = await Product.find()
       .limit(5000) // Increase limit to cover full catalog (2000+)
-      .select('id name pdfPrice mrp finalPrice isManualDiscount image variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId isTrending isBestseller isComboOffer status rating reviewsCount occasions shape')
+      .select('id name description pdfPrice mrp finalPrice isManualDiscount image variations discount category subCategoryId shopCategoryId shopCategoryIds sectionId isTrending isBestseller isComboOffer status rating reviewsCount occasions shape')
       .lean()
       .maxTimeMS(10000); // 10s timeout
 
