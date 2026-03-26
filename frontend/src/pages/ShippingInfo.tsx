@@ -1,9 +1,14 @@
 import React from 'react';
 import { Truck, Clock, MapPin } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 export const ShippingInfo: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
+            <SEO 
+                title="Shipping Information" 
+                description="Learn about our shipping times, delivery partners, and shipping charges for orders at Sign Galaxy."
+            />
             <h1 className="text-3xl font-bold mb-8 text-gray-900">Shipping Information</h1>
 
             <div className="grid md:grid-cols-3 gap-6 mb-12">

@@ -1,8 +1,13 @@
 import React from 'react';
+import { SEO } from '../components/SEO';
 
 export const PrivacyPolicy: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
+            <SEO 
+                title="Privacy Policy" 
+                description="Read our Privacy Policy to understand how Sign Galaxy collects, uses, and protects your personal information."
+            />
             <h1 className="text-3xl font-bold mb-8 text-gray-900">Privacy Policy</h1>
 
             <div className="prose prose-purple max-w-none text-gray-700 space-y-6">

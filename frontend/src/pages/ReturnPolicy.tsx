@@ -1,8 +1,13 @@
 import React from 'react';
+import { SEO } from '../components/SEO';
 
 export const ReturnPolicy: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
+            <SEO 
+                title="Replacement Policy" 
+                description="Understand our replacement policy for damaged or defective custom gifts. Learn about our unboxing video requirement and process."
+            />
             <h1 className="text-3xl font-bold mb-8 text-gray-900">Replacement Policy</h1>
 
             <div className="prose prose-purple max-w-none text-gray-700 space-y-6">
