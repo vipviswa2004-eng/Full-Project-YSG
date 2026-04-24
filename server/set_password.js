@@ -36,4 +36,4 @@ async function setPassword(email, plainPassword) {
 }
 
 // Run for the user in the screenshot
-setPassword('signgalaxy31@gmail.com', 'password123');
+setPassword('jr10102112@gmail.com', 'password123');

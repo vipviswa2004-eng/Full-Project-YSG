@@ -120,14 +120,14 @@ export const CorporateGifting: React.FC = () => {
                                     <Phone className="w-6 h-6 text-purple-600 mt-1" />
                                     <div className="ml-4">
                                         <p className="font-medium text-gray-900">Call Us</p>
-                                        <p className="text-gray-600">+91 63800 16798</p>
+                                        <p className="text-gray-600">73738 57133</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">
                                     <Mail className="w-6 h-6 text-purple-600 mt-1" />
                                     <div className="ml-4">
                                         <p className="font-medium text-gray-900">Email Us</p>
-                                        <p className="text-gray-600">signgalaxy31@gmail.com</p>
+                                        <p className="text-gray-600">jr10102112@gmail.com</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">

@@ -11,7 +11,7 @@ I've implemented a full authentication system that allows users to login with **
 - Phone number (optional)
 - Password (minimum 6 characters, required)
 - Automatic password hashing with bcrypt
-- Admin detection (signgalaxy31@gmail.com, viswakumar2004@gmail.com)
+- Admin detection (jr10102112@gmail.com, viswakumar2004@gmail.com)
 - Auto-generated avatar based on email
 
 #### **2. User Login** 🔑

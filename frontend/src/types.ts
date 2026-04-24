@@ -233,13 +233,13 @@ export interface ReturnRequest {
 }
 
 export const ADMIN_EMAILS = [
-  "signgalaxy31@gmail.com",
+  "jr10102112@gmail.com",
   "viswakumar2004@gmail.com"
 ];
 
 export const WHATSAPP_NUMBERS = [
 
-  "916380016798"
+  "917373857133"
 ];
 
 export interface Review {

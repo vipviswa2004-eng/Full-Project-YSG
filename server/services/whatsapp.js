@@ -66,7 +66,7 @@ async function sendWhatsAppMessage({ to, message, templateName, components }) {
  */
 async function notifyAdminNewOrder(orderId, orderData) {
     // Notify multiple admins if needed
-    const adminNumbers = ['916380016798'];
+    const adminNumbers = ['917373857133'];
 
     for (const num of adminNumbers) {
         await sendWhatsAppMessage({

@@ -343,7 +343,7 @@ export const Orders: React.FC = () => {
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const message = `Hi, I would like to track my order #${order.orderId || order._id}.`;
-                                                                window.open(`https://wa.me/916380016798?text=${encodeURIComponent(message)}`, '_blank');
+                                                                window.open(`https://wa.me/917373857133?text=${encodeURIComponent(message)}`, '_blank');
                                                             }}
                                                             className="flex-1 sm:flex-none w-full sm:w-32 py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
                                                         >
@@ -412,7 +412,7 @@ export const Orders: React.FC = () => {
                                                                         
                                                                         <div class="footer">
                                                                             Thank you for shopping with Sign Galaxy!<br/>
-                                                                            For support contact: 6380016798
+                                                                            For support contact: 73738 57133
                                                                         </div>
                                                                         <script>window.print();</script>
                                                                     </body>

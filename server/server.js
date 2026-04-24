@@ -153,6 +153,7 @@ passport.use(
       proxy: true
     },
     async (accessToken, refreshToken, profile, done) => {
+      console.log("📥 [GOOGLE STRATEGY CALLBACK] AccessToken Recv:", accessToken ? "YES" : "NO");
       console.log("📥 [GOOGLE STRATEGY CALLBACK] Received profile:", profile.displayName, profile.emails[0]?.value);
       try {
         let user = await User.findOne({ googleId: profile.id });
@@ -172,7 +173,7 @@ passport.use(
               image: profile.photos[0].value,
               emailVerified: true,
               isAdmin:
-                profile.emails[0].value === "signgalaxy31@gmail.com" ||
+                profile.emails[0].value === "jr10102112@gmail.com" ||
                 profile.emails[0].value === "viswakumar2004@gmail.com",
             });
           }
@@ -297,8 +298,8 @@ app.post("/api/auth/send-otp-phone", async (req, res) => {
       }
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: email ? "Verification code sent to your email and phone" : "Verification code sent to your phone",
       otp: process.env.NODE_ENV === 'development' ? otp : undefined // Return OTP only in dev or simulation
     });
@@ -393,8 +394,8 @@ app.get(
     console.log("🚀 [GOOGLE AUTH START] Ref:", req.get('referer'));
     const host = req.get('host');
     const isLocal = (host.includes('localhost') || host.includes('127.0.0.1')) && !host.includes('ucgoc.com');
-    const callbackURL = isLocal 
-      ? `http://${host}/auth/google/callback` 
+    const callbackURL = isLocal
+      ? `http://${host}/auth/google/callback`
       : (process.env.GOOGLE_CALLBACK_URL || `https://api.ucgoc.com/auth/google/callback`);
 
     passport.authenticate("google", {
@@ -410,11 +411,11 @@ app.get(
   "/auth/google/callback",
   (req, res, next) => {
     console.log("🔵 Google callback received on host:", req.get('host'));
-    
+
     const host = req.get('host');
     const isLocal = (host.includes('localhost') || host.includes('127.0.0.1')) && !host.includes('ucgoc.com');
-    const callbackURL = isLocal 
-      ? `http://${host}/auth/google/callback` 
+    const callbackURL = isLocal
+      ? `http://${host}/auth/google/callback`
       : (process.env.GOOGLE_CALLBACK_URL || `https://api.ucgoc.com/auth/google/callback`);
 
     // Determine target client URL for redirect after auth
@@ -425,6 +426,8 @@ app.get(
     passport.authenticate("google", { callbackURL }, (err, user, info) => {
       if (err) {
         console.error("❌ Google Auth Error:", err);
+        console.error("❌ Error Name:", err.name);
+        console.error("❌ Error Message:", err.message);
         if (err.stack) console.error("Stack Trace:", err.stack);
         return res.redirect(`${clientUrl}?error=auth_failed`);
       }
@@ -668,20 +671,20 @@ app.get("/api/products/:id", async (req, res) => {
     console.log(`🔍 [PRODUCT-DEBUG] Slug lookup for: "${paramId}"`);
     const allProducts = await Product.find().select('id name status').lean();
     console.log(`📦 Checking against ${allProducts.length} total products`);
-    
+
     const productBySlug = allProducts.find(p => {
-        if (!p.name) return false;
-        const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-        if (slug === paramId.toLowerCase()) {
-            console.log(`🎯 Match found! Name: "${p.name}", Status: ${p.status}`);
-            return true;
-        }
-        return false;
+      if (!p.name) return false;
+      const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      if (slug === paramId.toLowerCase()) {
+        console.log(`🎯 Match found! Name: "${p.name}", Status: ${p.status}`);
+        return true;
+      }
+      return false;
     });
 
     if (productBySlug) {
-        const fullProduct = await Product.findById(productBySlug._id || productBySlug.id);
-        return res.json(fullProduct);
+      const fullProduct = await Product.findById(productBySlug._id || productBySlug.id);
+      return res.json(fullProduct);
     }
 
     console.warn(`❌ No slug match for: ${paramId}`);
@@ -958,7 +961,7 @@ app.post("/api/user/login", async (req, res) => {
         email,
         cart: [],
         wishlist: [],
-        isAdmin: email === "signgalaxy31@gmail.com" || email === "viswakumar2004@gmail.com"
+        isAdmin: email === "jr10102112@gmail.com" || email === "viswakumar2004@gmail.com"
       });
       await user.save();
     }
@@ -2214,7 +2217,7 @@ app.post("/api/sellers", async (req, res) => {
         }
       });
     } else {
-      console.warn('⚠️ Email credentials (EMAIL_USER, EMAIL_PASS) not found in .env. Skipping email.');
+      console.warn('⚠️ Email credentials (EMAIL_USER=jr10102112@gmail.com) not found in .env. Skipping email.');
     }
 
     res.json(seller);

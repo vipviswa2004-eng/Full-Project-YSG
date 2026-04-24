@@ -41,7 +41,7 @@ export const TermsConditions: React.FC = () => {
 
                 <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">6. Contact Us</h2>
-                    <p>If you have any questions about these Terms, please contact us at signgalaxy31@gmail.com.</p>
+                    <p>If you have any questions about these Terms, please contact us at jr10102112@gmail.com.</p>
                 </section>
             </div>
         </div>

@@ -4,8 +4,8 @@ import { SEO } from '../components/SEO';
 export const ReturnPolicy: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
-            <SEO 
-                title="Replacement Policy" 
+            <SEO
+                title="Replacement Policy"
                 description="Understand our replacement policy for damaged or defective custom gifts. Learn about our unboxing video requirement and process."
             />
             <h1 className="text-3xl font-bold mb-8 text-gray-900">Replacement Policy</h1>
@@ -34,7 +34,7 @@ export const ReturnPolicy: React.FC = () => {
 
                 <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-3">2. How to Request a Replacement</h2>
-                    <p>Please email us at signgalaxy31@gmail.com within 48 hours of delivery. Include your order number, clear photos of the issue, and the <strong>mandatory unboxing video</strong>.</p>
+                    <p>Please email us at jr10102112@gmail.com within 48 hours of delivery. Include your order number, clear photos of the issue, and the <strong>mandatory unboxing video</strong>.</p>
                 </section>
 
                 <section>

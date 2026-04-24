@@ -60,7 +60,7 @@ For admin panel changes to persist:
 
 ### Requirements:
 1. **Must be logged in** as admin email:
-   - `signgalaxy31@gmail.com` OR
+   - `jr10102112@gmail.com` OR
    - `viswakumar2004@gmail.com`
 
 2. **Check console** when saving:

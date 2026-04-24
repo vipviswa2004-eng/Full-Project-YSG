@@ -28,7 +28,7 @@ async function registerUser(email, phone, password) {
             password: hashedPassword,
             displayName: email.split('@')[0],
             image: `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=9333ea&color=fff`,
-            isAdmin: email.toLowerCase() === 'signgalaxy31@gmail.com' || email.toLowerCase() === 'viswakumar2004@gmail.com',
+            isAdmin: email.toLowerCase() === 'jr10102112@gmail.com' || email.toLowerCase() === 'viswakumar2004@gmail.com',
             wishlist: [],
             cart: []
         });

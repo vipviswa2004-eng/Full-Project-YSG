@@ -216,7 +216,7 @@ export const Cart: React.FC = () => {
   const total = Math.max(0, subtotal - discountAmount + (paymentMethod === 'COD' ? COD_FEE : 0));
 
   // UPI Configuration
-  const UPI_ID = "Pos.11391465@indus";
+  const UPI_ID = "jr10102112@okhdfcbank";
   const PAYEE_NAME = "SIGN GALAXY";
 
 
@@ -311,7 +311,7 @@ export const Cart: React.FC = () => {
     }
 
     // 2. Send Details via WhatsApp to MULTIPLE numbers
-    const adminNumbers = ['916380016798']; // Admin phone numbers
+    const adminNumbers = ['917373857133']; // Admin phone numbers
 
     let message = `Hello Sign Galaxy 👋\n`;
     message += `I’ve placed a *${paymentMethod}* order successfully.\n\n`;

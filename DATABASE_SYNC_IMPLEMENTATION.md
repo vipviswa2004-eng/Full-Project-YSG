@@ -207,7 +207,7 @@ const saveProduct = async () => {
 5. **Expected**: Cart and wishlist should still be there!
 
 ### Test Admin Changes:
-1. Login as admin (signgalaxy31@gmail.com or viswakumar2004@gmail.com)
+1. Login as admin (jr10102112@gmail.com or viswakumar2004@gmail.com)
 2. Go to Admin Panel → Inventory
 3. Edit a product (change name, price, stock, etc.)
 4. Click "Save Changes"
