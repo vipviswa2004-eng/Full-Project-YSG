@@ -67,7 +67,7 @@ export const OccasionLanding: React.FC = () => {
     return (
         <div className="min-h-screen bg-app-bg pb-20">
             <SEO
-                title={`${occasion.name} Collections | Sign Galaxy`}
+                title={`${occasion.name} Collections | Printique`}
                 description={`Explore our curated gift collections for ${occasion.name}. Hand-crafted with love.`}
             />
 

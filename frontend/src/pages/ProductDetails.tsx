@@ -703,7 +703,7 @@ export const ProductDetails: React.FC = () => {
     const isInWishlist = wishlist.some(p => p.id === product.id);
     const formatPrice = (price: number) => { return currency === 'INR' ? `₹${price.toLocaleString('en-IN')}` : `$${(price * 0.012).toFixed(2)}`; };
     const shareUrl = window.location.href;
-    const shareText = `Check out ${product.name} on Sign Galaxy!`;
+    const shareText = `Check out ${product.name} on Printique!`;
 
     const handleNativeShare = async () => {
         if (navigator.share) {
@@ -742,14 +742,14 @@ export const ProductDetails: React.FC = () => {
         <div className="bg-app-bg min-h-screen pb-24 md:pb-12 overflow-x-hidden">
             <SEO
                 title={product.name}
-                description={product.description || `Customize and buy ${product.name} at Sign Galaxy. Premium quality, best prices.`}
+                description={product.description || `Customize and buy ${product.name} at Printique. Premium quality, best prices.`}
                 image={product.image}
                 type="product"
                 productData={{
                     price: prices.final,
                     currency: currency,
                     availability: 'InStock',
-                    brand: 'Sign Galaxy'
+                    brand: 'Printique'
                 }}
             />
             {/* Mobile Header */}

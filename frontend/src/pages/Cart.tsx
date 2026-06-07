@@ -217,7 +217,7 @@ export const Cart: React.FC = () => {
 
   // UPI Configuration
   const UPI_ID = "jr10102112@okhdfcbank";
-  const PAYEE_NAME = "SIGN GALAXY";
+  const PAYEE_NAME = "PRINTIQUE";
 
 
   // Dynamic QR code with total amount
@@ -313,7 +313,7 @@ export const Cart: React.FC = () => {
     // 2. Send Details via WhatsApp to MULTIPLE numbers
     const adminNumbers = ['917373857133']; // Admin phone numbers
 
-    let message = `Hello Sign Galaxy 👋\n`;
+    let message = `Hello Printique 👋\n`;
     message += `I’ve placed a *${paymentMethod}* order successfully.\n\n`;
     message += `*ORDER ID:* ${generatedOrderId}\n`;
     message += `*ORDER DETAILS*\n`;
@@ -1153,7 +1153,7 @@ export const Cart: React.FC = () => {
                             setVerificationAlert({
                               title: "Payment couldn't be verified yet",
                               message: "Don't worry— sometimes this happens if the screenshot isn't clear.",
-                              details: "Please upload a screenshot where:\n1. The paid amount matches your order total.\n2. The recipient name 'YATHES SIGN GALAXY' is visible.\n3. The payment details are not blurred or cropped."
+                              details: "Please upload a screenshot where:\n1. The paid amount matches your order total.\n2. The recipient name 'YATHES SIGN GALAXY' or 'PRINTIQUE' is visible.\n3. The payment details are not blurred or cropped."
                             });
                             e.target.checked = false; // Uncheck
                             return;

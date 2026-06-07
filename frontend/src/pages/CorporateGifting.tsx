@@ -64,7 +64,7 @@ export const CorporateGifting: React.FC = () => {
             <div className="py-16 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900">Why Choose Sign Galaxy?</h2>
+                        <h2 className="text-3xl font-bold text-gray-900">Why Choose Printique?</h2>
                         <p className="mt-4 text-gray-600">We specialize in turning corporate gifts into memorable experiences.</p>
                     </div>
 
@@ -135,8 +135,8 @@ export const CorporateGifting: React.FC = () => {
                                     <div className="ml-4">
                                         <p className="font-medium text-gray-900">Visit Us</p>
                                         <p className="text-gray-600">
-                                            150 Post Office Road, Thirunagar Colony,<br />
-                                            Erode, Tamil Nadu 638003
+                                            D - 146, Ramamoorthi Nagar, Krishnampalayam,<br />
+                                            Erode - 638003
                                         </p>
                                     </div>
                                 </div>

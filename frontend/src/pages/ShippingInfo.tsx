@@ -7,7 +7,7 @@ export const ShippingInfo: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 py-12">
             <SEO 
                 title="Shipping Information" 
-                description="Learn about our shipping times, delivery partners, and shipping charges for orders at Sign Galaxy."
+                description="Learn about our shipping times, delivery partners, and shipping charges for orders at Printique."
             />
             <h1 className="text-3xl font-bold mb-8 text-gray-900">Shipping Information</h1>
 

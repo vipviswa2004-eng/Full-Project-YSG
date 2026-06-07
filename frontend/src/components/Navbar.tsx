@@ -280,7 +280,7 @@ export const Navbar: React.FC = () => {
               <Link to="/" className="flex-shrink-0 flex items-center gap-0 focus:outline-none -ml-4 group">
                 <img src="/logo-icon.jpg" alt="UC" className="h-16 w-auto object-contain mix-blend-screen brightness-125 -mr-4 group-hover:scale-110 transition-transform duration-500" />
                 <div className="flex flex-col">
-                  <span className="font-black text-xl tracking-tighter bg-gradient-to-br from-[#FFD700] via-[#FFB300] to-[#B8860B] bg-clip-text text-transparent leading-none block drop-shadow-sm">SIGN GALAXY</span>
+                  <span className="font-black text-xl tracking-tighter bg-gradient-to-br from-[#FFD700] via-[#FFB300] to-[#B8860B] bg-clip-text text-transparent leading-none block drop-shadow-sm">PRINTIQUE</span>
                   <span className="text-[9px] text-gray-400 tracking-[0.3em] font-bold uppercase block mt-0.5">Personalized Gifts</span>
                 </div>
               </Link>
@@ -651,7 +651,7 @@ export const Navbar: React.FC = () => {
                       {authMode === 'login' ? <LogIn className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" /> : <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />}
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight" id="modal-title">
-                      {user ? 'Welcome Back!' : (authMode === 'login' ? 'Sign In' : 'Join the Galaxy')}
+                      {user ? 'Welcome Back!' : (authMode === 'login' ? 'Sign In' : 'Join Printique')}
                     </h3>
                     {!user && (
                       <p className="mt-1 text-sm text-gray-500 font-medium">
@@ -672,7 +672,7 @@ export const Navbar: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <h4 className="text-lg font-bold text-gray-900">{user.displayName || 'Galaxy User'}</h4>
+                      <h4 className="text-lg font-bold text-gray-900">{user.displayName || 'Printique User'}</h4>
                       <p className="text-gray-500 font-medium mb-5">{user.email}</p>
 
                       <div className="space-y-2.5">

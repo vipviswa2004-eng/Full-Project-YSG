@@ -172,9 +172,7 @@ passport.use(
               email: email,
               image: profile.photos[0].value,
               emailVerified: true,
-              isAdmin:
-                profile.emails[0].value === "jr10102112@gmail.com" ||
-                profile.emails[0].value === "viswakumar2004@gmail.com",
+              isAdmin: profile.emails[0].value === "jr10102112@gmail.com",
             });
           }
           await user.save();
@@ -267,7 +265,7 @@ app.post("/api/auth/send-otp-phone", async (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Your Verification Code - Yathes Sign Galaxy',
+        subject: 'Your Verification Code - Printique',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
             <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px; text-align: center; color: white;">
@@ -284,7 +282,7 @@ app.post("/api/auth/send-otp-phone", async (req, res) => {
               <p style="font-size: 14px; color: #6B7280;">This code is valid for 10 minutes. If you didn't request this, you can safely ignore this email.</p>
             </div>
             <div style="background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #f0f0f0;">
-              © ${new Date().getFullYear()} Yathes Sign Galaxy. All rights reserved.
+              © ${new Date().getFullYear()} Printique. All rights reserved.
             </div>
           </div>
         `
@@ -961,7 +959,7 @@ app.post("/api/user/login", async (req, res) => {
         email,
         cart: [],
         wishlist: [],
-        isAdmin: email === "jr10102112@gmail.com" || email === "viswakumar2004@gmail.com"
+        isAdmin: email === "jr10102112@gmail.com"
       });
       await user.save();
     }
@@ -2180,11 +2178,11 @@ app.post("/api/sellers", async (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: seller.email,
-        subject: 'Welcome to Yathes Sign Galaxy - Seller Onboarding',
+        subject: 'Welcome to Printique - Seller Onboarding',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #4F46E5; margin: 0;">Yathes Sign Galaxy</h2>
+              <h2 style="color: #4F46E5; margin: 0;">Printique</h2>
               <p style="color: #666; margin-top: 5px;">Seller Portal</p>
             </div>
             
@@ -2202,7 +2200,7 @@ app.post("/api/sellers", async (req, res) => {
 
             <br/>
             <div style="border-top: 1px solid #eee; padding-top: 20px; color: #888; font-size: 12px; text-align: center;">
-              <p>Best regards,<br/><strong>Yathes Sign Galaxy Team</strong></p>
+              <p>Best regards,<br/><strong>Printique Team</strong></p>
               <p>Need help? Contact us at support@ucgoc.com</p>
             </div>
           </div>
@@ -2291,7 +2289,7 @@ app.post("/api/admin/run-review-automation", async (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: `How is your ${firstItem?.name || 'gift'}? - Yathes Sign Galaxy`,
+        subject: `How is your ${firstItem?.name || 'gift'}? - Printique`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden;">
             <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px; text-align: center; color: white;">
@@ -2310,7 +2308,7 @@ app.post("/api/admin/run-review-automation", async (req, res) => {
               <p style="font-size: 14px; color: #6B7280;">Your feedback helps us continue creating personalized magic for everyone.</p>
             </div>
             <div style="background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #f0f0f0;">
-              © ${new Date().getFullYear()} Yathes Sign Galaxy. All rights reserved.
+              © ${new Date().getFullYear()} Printique. All rights reserved.
             </div>
           </div>
         `

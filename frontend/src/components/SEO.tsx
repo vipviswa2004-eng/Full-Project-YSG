@@ -18,8 +18,8 @@ interface SEOProps {
 }
 
 const DOMAIN = 'https://ucgoc.com';
-const DEFAULT_TITLE = 'Sign Galaxy | Premium Customized Gifts & Personalized Gifts';
-const DEFAULT_DESCRIPTION = "Shop premium personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Sign Galaxy. Discover customized gifts for birthdays, anniversaries, and special occasions with fast and secure delivery.";
+const DEFAULT_TITLE = 'Printique | Premium Customized Gifts & Personalized Gifts';
+const DEFAULT_DESCRIPTION = "Shop premium personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Printique. Discover customized gifts for birthdays, anniversaries, and special occasions with fast and secure delivery.";
 const DEFAULT_IMAGE = `${DOMAIN}/logo-large.png`;
 
 export const SEO: React.FC<SEOProps> = ({
@@ -40,14 +40,14 @@ export const SEO: React.FC<SEOProps> = ({
     // Priority title logic: Brand first on home, Brand last on subpages
     let fullTitle = '';
     if (isHome) {
-        fullTitle = title ? `Sign Galaxy | ${title}` : DEFAULT_TITLE;
+        fullTitle = title ? `Printique | ${title}` : DEFAULT_TITLE;
     } else {
-        fullTitle = title ? `${title} | Sign Galaxy` : `${DEFAULT_TITLE}`;
+        fullTitle = title ? `${title} | Printique` : `${DEFAULT_TITLE}`;
     }
 
     const fullImage = image ? (image.startsWith('http') ? image : `${DOMAIN}${image}`) : DEFAULT_IMAGE;
 
-    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'corporate gifts', 'gift shop globally', 'ai', 'ai driven customised products', 'Sign Galaxy '];
+    const defaultKeywords = ['custom gifts', 'personalized gifts', 'hand-crafted gifts', 'corporate gifts', 'gift shop globally', 'ai', 'ai driven customised products', 'Printique '];
     const allKeywords = [...new Set([...defaultKeywords, ...keywords])].join(', ');
 
     const structuredData = productData
@@ -59,7 +59,7 @@ export const SEO: React.FC<SEOProps> = ({
             image: fullImage,
             brand: {
                 '@type': 'Brand',
-                name: productData.brand || 'Sign Galaxy',
+                name: productData.brand || 'Printique',
             },
             offers: {
                 '@type': 'Offer',
@@ -73,7 +73,7 @@ export const SEO: React.FC<SEOProps> = ({
             ? {
                 '@context': 'https://schema.org',
                 '@type': 'WebSite',
-                name: 'Sign Galaxy',
+                name: 'Printique',
                 url: DOMAIN,
                 potentialAction: {
                     '@type': 'SearchAction',
@@ -104,7 +104,7 @@ export const SEO: React.FC<SEOProps> = ({
             <meta property="og:title" content={fullTitle} />
             <meta property="og:description" content={description} />
             <meta property="og:image" content={fullImage} />
-            <meta property="og:site_name" content="Sign Galaxy" />
+            <meta property="og:site_name" content="Printique" />
 
             {/* Twitter */}
             <meta name="twitter:card" content="summary_large_image" />

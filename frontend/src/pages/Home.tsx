@@ -323,7 +323,7 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-app-bg font-sans pb-0 md:pb-16">
       <SEO
-        description="Shop premium customized & personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Sign Galaxy. Discover customized gifts for birthdays, anniversaries, and special occasions with fast and secure delivery."
+        description="Shop premium customized & personalized gifts, custom neon lights, photo frames, and unique handmade gifts online at Printique. Discover customized gifts for birthdays, anniversaries, and special occasions with fast and secure delivery."
         keywords={['custom gifts', 'personalized items', 'home decor', 'corporate gifts', 'gift shop india', 'unique gifts', 'neon signs india', 'custom photo frames']}
       />
       {!activeHeroView ? (

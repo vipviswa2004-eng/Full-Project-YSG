@@ -29,7 +29,7 @@
 //         `${msg.role === 'user' ? 'User' : 'Genie'}: ${msg.text}`
 //     ).join('\n');
 
-//     const systemInstruction = `You are the "Gift Genie" 🧞‍♂️ for Yathes Sign Galaxy.
+//     const systemInstruction = `You are the "Gift Genie" 🧞‍♂️ for Yathes Printique.
 
 //     **YOUR MISSION:**
 //     Play a "Deep Discovery Game" to find the *perfect* personalized gift. Act like a best friend helping them shop.
@@ -88,7 +88,7 @@
 // export const generateProductDescription = async (name: string, category: string) => {
 //   try {
 //     const model = 'gemini-2.5-flash';
-//     const prompt = `You are an expert copywriter for a premium personalized gift store called "Yathes Sign Galaxy".
+//     const prompt = `You are an expert copywriter for a premium personalized gift store called "Yathes Printique".
 //     Write a compelling, engaging, and detailed product description for:
 
 //     Product Name: "${name}"
@@ -317,7 +317,7 @@ export const getGiftAdvice = async (userMessage: string, chatHistory: { role: st
       `${msg.role === 'user' ? 'User' : 'Genie'}: ${msg.text}`
     ).join('\n');
 
-    const systemInstruction = `You are the "Gift Genie" 🧞‍♂️ for Sign Galaxy.
+    const systemInstruction = `You are the "Gift Genie" 🧞‍♂️ for Printique.
     
     **YOUR MISSION:**
     Help the user find the perfect personalized gift from our catalog based on their answers.
@@ -371,7 +371,7 @@ export const getGiftAdvice = async (userMessage: string, chatHistory: { role: st
 export const generateProductDescription = async (name: string, category: string) => {
   try {
     const model = 'gemini-2.5-flash';
-    const prompt = `You are an expert copywriter for a premium personalized gift store called "Sign Galaxy".
+    const prompt = `You are an expert copywriter for a premium personalized gift store called "Printique".
     Write a compelling, engaging, and detailed product description for:
     
     Product Name: "${name}"
@@ -566,14 +566,14 @@ export const verifyPaymentAmount = async (imageSrc: string, expectedAmount: numb
     const prompt = `Review this payment screenshot. 
     1. Identify the total amount paid/transferred. Look for valid currency formats (e.g., ₹1,499, 1499.00). 
     2. Compare it with the expected amount: ${expectedAmount}.
-    3. CHECK PAYEE NAME: Look for the recipient name "YATHES SIGN GALAXY".
+    3. CHECK PAYEE NAME: Look for the recipient name "YATHES SIGN GALAXY" or "PRINTIQUE" or "YATHES PRINTIQUE".
     
     4. JSON Output strictly: { "verified": boolean, "extractedAmount": number, "extractedPayee": string, "message": "reasoning" }
     
     Rule: verified is true ONLY if:
     a) The extracted amount exactly matches ${expectedAmount} (allow minor formatting differences like .00).
     AND
-    b) The payee name explicitly contains "YATHES SIGN GALAXY" (case-insensitive is okay, but partial matches like "Sign Galaxy" are NOT allowed).`;
+    b) The payee name explicitly contains "YATHES SIGN GALAXY", "PRINTIQUE", or "YATHES PRINTIQUE" (case-insensitive is okay).`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

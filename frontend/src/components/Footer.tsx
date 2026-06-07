@@ -10,7 +10,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-0 -mb-10 -ml-[2rem] -mt-7">
               <img src="/logo-icon.jpg" alt="UC" className="h-48 w-auto object-contain mix-blend-screen brightness-110 -mr-12" />
               <div className="flex flex-col">
-                <h3 className="text-2xl font-black tracking-tighter text-[#FFB300] leading-none">SIGN GALAXY</h3>
+                <h3 className="text-2xl font-black tracking-tighter text-[#FFB300] leading-none">PRINTIQUE</h3>
                 <span className="text-[10px] text-gray-400 tracking-widest uppercase">Personalized Gifts</span>
               </div>
             </div>
@@ -25,9 +25,9 @@ export const Footer: React.FC = () => {
               <p><span className="font-bold text-white">Phone:</span> 73738 57133</p>
               <p><span className="font-bold text-white">Email:</span> jr10102112@gmail.com</p>
               <p><span className="font-bold text-white">Address:</span><br />
-                150 Post Office Road,<br />
-                Thirunagar Colony,<br />
-                Erode, Tamil Nadu 638003</p>
+                D - 146, Ramamoorthi Nagar,<br />
+                Krishnampalayam,<br />
+                Erode - 638003</p>
             </div>
           </div>
           <div>
@@ -59,7 +59,7 @@ export const Footer: React.FC = () => {
         </div>
         <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-500">
           <p className="mb-2 text-xs font-semibold text-gray-400">Protected with Advanced Cyber Security & Secure Encryption</p>
-          <p>© 2026 SIGN GALAXY a unit of uc groups. All rights reserved.</p>
+          <p>© 2026 PRINTIQUE a unit of uc groups. All rights reserved.</p>
         </div>
       </div>
     </footer>

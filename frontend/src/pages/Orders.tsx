@@ -369,7 +369,7 @@ export const Orders: React.FC = () => {
                                                                     </head>
                                                                     <body>
                                                                         <div class="header">
-                                                                            <div class="logo">SIGN GALAXY</div>
+                                                                            <div class="logo">PRINTIQUE</div>
                                                                             <div class="invoice-details">
                                                                                 <p><strong>Order ID:</strong> ${order.orderId || order._id}</p>
                                                                                 <p><strong>Date:</strong> ${new Date(order.date).toLocaleDateString()}</p>
@@ -411,7 +411,7 @@ export const Orders: React.FC = () => {
                                                                         </div>
                                                                         
                                                                         <div class="footer">
-                                                                            Thank you for shopping with Sign Galaxy!<br/>
+                                                                            Thank you for shopping with Printique!<br/>
                                                                             For support contact: 73738 57133
                                                                         </div>
                                                                         <script>window.print();</script>
